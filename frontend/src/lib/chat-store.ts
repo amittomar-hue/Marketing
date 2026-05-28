@@ -10,6 +10,8 @@ export interface Message {
   model?: ModelId;
   createdAt: Date;
   isStreaming?: boolean;
+  interactionId?: string;     // server-side ID for feedback
+  userRating?: 1 | -1 | null; // local UI state for thumbs-up/down
 }
 
 export interface Conversation {

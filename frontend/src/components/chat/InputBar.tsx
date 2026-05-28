@@ -38,12 +38,16 @@ export default function InputBar() {
     try {
       const conv = useChatStore.getState().conversations.find((c) => c.id === convId);
       const history = conv?.messages.filter((m) => m.id !== asstId) ?? [];
-      const final = await streamChat({
+      const { text, interactionId } = await streamChat({
         messages: history,
         model: selectedModel,
         onToken: (acc) => updateMessage(convId!, asstId, { content: acc }),
       });
-      updateMessage(convId, asstId, { content: final, isStreaming: false });
+      updateMessage(convId, asstId, {
+        content: text,
+        isStreaming: false,
+        interactionId: interactionId ?? undefined,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       updateMessage(convId, asstId, {

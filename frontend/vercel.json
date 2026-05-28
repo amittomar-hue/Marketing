@@ -5,5 +5,11 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "outputDirectory": ".next",
-  "regions": ["iad1"]
+  "regions": ["iad1"],
+  "crons": [
+    {
+      "path": "/api/cron/aggregate",
+      "schedule": "0 2 * * 1"
+    }
+  ]
 }

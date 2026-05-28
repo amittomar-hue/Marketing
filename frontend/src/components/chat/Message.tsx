@@ -1,13 +1,15 @@
 "use client";
 
-import { Message as MessageType } from "@/lib/chat-store";
+import { useState } from "react";
+import { Message as MessageType, useChatStore } from "@/lib/chat-store";
 import { getModel } from "@/lib/models";
-import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Sparkles } from "lucide-react";
+import { submitFeedback } from "@/lib/stream-chat";
+import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Sparkles, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 function formatContent(content: string) {
   const lines = content.split("\n");
   return lines.map((line, i) => {
-    // Bold markdown **text**
     const parts = line.split(/(\*\*[^*]+\*\*)/g);
     return (
       <span key={i}>
@@ -25,6 +27,10 @@ function formatContent(content: string) {
 }
 
 export default function Message({ message }: { message: MessageType }) {
+  const updateMessage = useChatStore((s) => s.updateMessage);
+  const activeId = useChatStore((s) => s.activeId);
+  const [copied, setCopied] = useState(false);
+
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
@@ -36,6 +42,23 @@ export default function Message({ message }: { message: MessageType }) {
   }
 
   const model = message.model ? getModel(message.model) : null;
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const rate = async (rating: 1 | -1) => {
+    if (!message.interactionId || !activeId) return;
+    if (message.userRating === rating) return; // already set
+    updateMessage(activeId, message.id, { userRating: rating });
+    try {
+      await submitFeedback(message.interactionId, rating);
+    } catch (err) {
+      console.error("feedback failed:", err);
+    }
+  };
 
   return (
     <div className="flex gap-3">
@@ -64,18 +87,46 @@ export default function Message({ message }: { message: MessageType }) {
         </div>
         {!message.isStreaming && message.content && (
           <div className="flex items-center gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button className="p-1.5 rounded-md hover:bg-[#f0f0f0] text-[#5a5a5a]" title="Copy">
-              <Copy size={13} />
+            <button
+              onClick={copy}
+              className="p-1.5 rounded-md hover:bg-[#f0f0f0] text-[#5a5a5a]"
+              title="Copy"
+            >
+              {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
             </button>
-            <button className="p-1.5 rounded-md hover:bg-[#f0f0f0] text-[#5a5a5a]" title="Good response">
+            <button
+              onClick={() => rate(1)}
+              className={cn(
+                "p-1.5 rounded-md hover:bg-[#f0f0f0] transition-colors",
+                message.userRating === 1 ? "text-emerald-600 bg-emerald-50" : "text-[#5a5a5a]"
+              )}
+              title="Good response — saves as a learning example"
+              disabled={!message.interactionId}
+            >
               <ThumbsUp size={13} />
             </button>
-            <button className="p-1.5 rounded-md hover:bg-[#f0f0f0] text-[#5a5a5a]" title="Bad response">
+            <button
+              onClick={() => rate(-1)}
+              className={cn(
+                "p-1.5 rounded-md hover:bg-[#f0f0f0] transition-colors",
+                message.userRating === -1 ? "text-red-500 bg-red-50" : "text-[#5a5a5a]"
+              )}
+              title="Bad response — won't be used as a future example"
+              disabled={!message.interactionId}
+            >
               <ThumbsDown size={13} />
             </button>
-            <button className="p-1.5 rounded-md hover:bg-[#f0f0f0] text-[#5a5a5a]" title="Regenerate">
+            <button
+              className="p-1.5 rounded-md hover:bg-[#f0f0f0] text-[#5a5a5a]"
+              title="Regenerate"
+            >
               <RotateCcw size={13} />
             </button>
+            {message.interactionId && (
+              <span className="ml-2 text-[10px] text-[#999]">
+                ID {message.interactionId.slice(0, 8)}
+              </span>
+            )}
           </div>
         )}
       </div>

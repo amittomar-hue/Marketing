@@ -56,12 +56,16 @@ export default function WelcomeScreen() {
       isStreaming: true,
     });
     try {
-      const final = await streamChat({
+      const { text, interactionId } = await streamChat({
         messages: [{ id: "u", role: "user", content: prompt, createdAt: new Date() }],
         model: selectedModel,
         onToken: (acc) => updateMessage(id, asstId, { content: acc }),
       });
-      updateMessage(id, asstId, { content: final, isStreaming: false });
+      updateMessage(id, asstId, {
+        content: text,
+        isStreaming: false,
+        interactionId: interactionId ?? undefined,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       updateMessage(id, asstId, { content: `⚠️ ${msg}`, isStreaming: false });

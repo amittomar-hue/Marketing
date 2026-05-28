@@ -7,7 +7,18 @@ interface StreamArgs {
   onToken: (acc: string) => void;
 }
 
-export async function streamChat({ messages, model, onToken }: StreamArgs): Promise<string> {
+interface StreamResult {
+  text: string;
+  interactionId: string | null;
+}
+
+const INTERACTION_ID_RE = /<!--\s*interaction_id:([a-f0-9-]+)\s*-->/;
+
+export async function streamChat({
+  messages,
+  model,
+  onToken,
+}: StreamArgs): Promise<StreamResult> {
   const payload = {
     model,
     messages: messages
@@ -28,13 +39,35 @@ export async function streamChat({ messages, model, onToken }: StreamArgs): Prom
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
-  let acc = "";
+  let raw = "";
 
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
-    acc += decoder.decode(value, { stream: true });
-    onToken(acc);
+    raw += decoder.decode(value, { stream: true });
+    const displayed = raw.replace(INTERACTION_ID_RE, "").trimEnd();
+    onToken(displayed);
   }
-  return acc;
+
+  const match = raw.match(INTERACTION_ID_RE);
+  const interactionId = match ? match[1] : null;
+  const text = raw.replace(INTERACTION_ID_RE, "").trimEnd();
+
+  return { text, interactionId };
+}
+
+export async function submitFeedback(
+  interactionId: string,
+  rating: 1 | -1,
+  userEdit?: string
+): Promise<void> {
+  await fetch("/api/feedback", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      interaction_id: interactionId,
+      rating,
+      user_edit: userEdit,
+    }),
+  });
 }

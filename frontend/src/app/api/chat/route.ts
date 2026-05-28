@@ -1,6 +1,12 @@
 import OpenAI from "openai";
 import { NextRequest } from "next/server";
 import { tavilySearch, formatTavilyForContext } from "@/lib/tavily";
+import { classifyIntent } from "@/lib/supabase";
+import {
+  logInteraction,
+  retrieveExamples,
+  formatExamplesAsContext,
+} from "@/lib/learning";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -11,7 +17,7 @@ const MODEL_MAP: Record<string, string> = {
   "marketing-haiku-4": "llama-3.1-8b-instant",
 };
 
-const SYSTEM_PROMPT = `You are Marketing LLM, an enterprise-grade marketing assistant powered by real-time web research.
+const SYSTEM_PROMPT = `You are Marketing LLM, an enterprise-grade marketing assistant powered by real-time web research and a self-learning feedback loop.
 
 You help marketing teams with:
 - Generating ad copy for Google Ads, Meta, LinkedIn, TikTok, and other channels
@@ -21,9 +27,11 @@ You help marketing teams with:
 - Scoring content against brand voice guidelines
 - Building go-to-market strategies and positioning
 
-You will receive a "Web search results" block before each user question. Use those results as your primary source of truth. When the user asks about a specific company, competitor, market, or current trend, cite the URLs from the search results inline using [1], [2], etc. — and include a Sources section at the end of your reply listing each URL.
-
-Be direct, specific, and data-driven. Format responses in clean markdown with bold section headers.`;
+Behavior rules:
+- When provided "Web search results" context, treat those URLs as the source of truth and cite them inline as [1], [2], etc. End the message with a Sources section listing each URL.
+- When provided "high-rated past examples" context, learn their structure, depth, and tone — do not copy verbatim. Match or exceed their quality.
+- Be direct, specific, and data-driven.
+- Format responses in clean markdown with bold section headers.`;
 
 interface ClientMessage {
   role: "user" | "assistant";
@@ -32,41 +40,49 @@ interface ClientMessage {
 
 function looksLikeWebQuery(text: string): boolean {
   if (text.length < 5) return false;
-  if (/\b(competitor|competit|alternative|vs\.|trend|trending|latest|current|recent|news|today|this week|2024|2025|2026)\b/i.test(text)) return true;
-  if (/\b(www\.|https?:\/\/|\.com|\.io|\.ai|\.org|\.net)\b/i.test(text)) return true;
-  if (/\b(who|what|when|where|how much|how many|price|cost|market share|revenue|funding)\b/i.test(text)) return true;
-  return true; // Default to searching — marketing queries usually benefit from web data
+  return true;
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const messages: ClientMessage[] = body.messages ?? [];
   const modelId: string = body.model ?? "marketing-sonnet-4";
+  const sessionId: string | undefined = body.session_id;
 
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) {
     return new Response(
-      JSON.stringify({
-        error:
-          "GROQ_API_KEY is not configured in Vercel environment variables.",
-      }),
+      JSON.stringify({ error: "GROQ_API_KEY is not configured." }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
   const userQuery = lastUser?.content ?? "";
+  const intent = classifyIntent(userQuery);
 
+  // ── Web search context ─────────────────────────────────────
   let webContext = "";
+  let webUsed = false;
   if (process.env.TAVILY_API_KEY && looksLikeWebQuery(userQuery)) {
     try {
       const tavily = await tavilySearch(userQuery);
       webContext = formatTavilyForContext(tavily);
+      webUsed = true;
     } catch (err) {
       webContext = `(Web search unavailable: ${
         err instanceof Error ? err.message : "unknown error"
       })`;
     }
+  }
+
+  // ── Self-learning: retrieve top-rated past examples for this intent ─
+  let examplesContext = "";
+  try {
+    const examples = await retrieveExamples(intent, userQuery, 3);
+    examplesContext = formatExamplesAsContext(examples);
+  } catch (err) {
+    console.error("retrieve examples failed:", err);
   }
 
   const groq = new OpenAI({
@@ -78,11 +94,15 @@ export async function POST(req: NextRequest) {
     { role: "system", content: SYSTEM_PROMPT },
   ];
 
-  if (webContext) {
+  if (examplesContext) {
     groqMessages.push({
       role: "system",
-      content: webContext,
+      content: `High-rated past examples for intent="${intent}":\n\n${examplesContext}`,
     });
+  }
+
+  if (webContext) {
+    groqMessages.push({ role: "system", content: webContext });
   }
 
   messages.forEach((m) => {
@@ -90,6 +110,8 @@ export async function POST(req: NextRequest) {
   });
 
   const encoder = new TextEncoder();
+  let fullResponse = "";
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -103,8 +125,29 @@ export async function POST(req: NextRequest) {
 
         for await (const chunk of response) {
           const token = chunk.choices[0]?.delta?.content;
-          if (token) controller.enqueue(encoder.encode(token));
+          if (token) {
+            fullResponse += token;
+            controller.enqueue(encoder.encode(token));
+          }
         }
+
+        // Log this interaction for learning (best-effort, non-blocking failure)
+        const interactionId = await logInteraction({
+          user_query: userQuery,
+          intent,
+          response: fullResponse,
+          model: modelId,
+          web_search_used: webUsed,
+          session_id: sessionId,
+        });
+
+        // Emit interaction ID as a trailer so the client can attach feedback to it
+        if (interactionId) {
+          controller.enqueue(
+            encoder.encode(`\n\n<!-- interaction_id:${interactionId} -->`)
+          );
+        }
+
         controller.close();
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Unknown error";
