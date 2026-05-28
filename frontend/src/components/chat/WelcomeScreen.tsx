@@ -1,7 +1,7 @@
 "use client";
 
 import { useChatStore } from "@/lib/chat-store";
-import { generateMockResponse } from "@/lib/mock-responses";
+import { streamChat } from "@/lib/stream-chat";
 import { TrendingUp, Wand2, Mail, Target, Mic2, Crosshair } from "lucide-react";
 
 const SUGGESTIONS = [
@@ -55,14 +55,17 @@ export default function WelcomeScreen() {
       model: selectedModel,
       isStreaming: true,
     });
-    const full = generateMockResponse(prompt, selectedModel);
-    let acc = "";
-    for (let i = 0; i < full.length; i += 4) {
-      acc = full.slice(0, i + 4);
-      await new Promise((r) => setTimeout(r, 18));
-      updateMessage(id, asstId, { content: acc });
+    try {
+      const final = await streamChat({
+        messages: [{ id: "u", role: "user", content: prompt, createdAt: new Date() }],
+        model: selectedModel,
+        onToken: (acc) => updateMessage(id, asstId, { content: acc }),
+      });
+      updateMessage(id, asstId, { content: final, isStreaming: false });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      updateMessage(id, asstId, { content: `⚠️ ${msg}`, isStreaming: false });
     }
-    updateMessage(id, asstId, { content: full, isStreaming: false });
   };
 
   return (

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useChatStore } from "@/lib/chat-store";
-import { generateMockResponse } from "@/lib/mock-responses";
+import { streamChat } from "@/lib/stream-chat";
 import ModelSelector from "./ModelSelector";
 import { Paperclip, ArrowUp, Globe, Hammer } from "lucide-react";
 
@@ -28,7 +28,6 @@ export default function InputBar() {
     addMessage(convId, { role: "user", content: text });
     setValue("");
 
-    // Assistant placeholder for streaming
     const asstId = addMessage(convId, {
       role: "assistant",
       content: "",
@@ -36,15 +35,22 @@ export default function InputBar() {
       isStreaming: true,
     });
 
-    // Simulate streaming
-    const full = generateMockResponse(text, selectedModel);
-    let acc = "";
-    for (let i = 0; i < full.length; i += 4) {
-      acc = full.slice(0, i + 4);
-      await new Promise((r) => setTimeout(r, 18));
-      updateMessage(convId, asstId, { content: acc });
+    try {
+      const conv = useChatStore.getState().conversations.find((c) => c.id === convId);
+      const history = conv?.messages.filter((m) => m.id !== asstId) ?? [];
+      const final = await streamChat({
+        messages: history,
+        model: selectedModel,
+        onToken: (acc) => updateMessage(convId!, asstId, { content: acc }),
+      });
+      updateMessage(convId, asstId, { content: final, isStreaming: false });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      updateMessage(convId, asstId, {
+        content: `⚠️ ${msg}`,
+        isStreaming: false,
+      });
     }
-    updateMessage(convId, asstId, { content: full, isStreaming: false });
   };
 
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
