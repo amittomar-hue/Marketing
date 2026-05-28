@@ -7,11 +7,12 @@ import {
   retrieveExamples,
   formatExamplesAsContext,
 } from "@/lib/learning";
+import { hfStreamGenerate, isFineTunedModelConfigured } from "@/lib/huggingface";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODEL_MAP: Record<string, string> = {
+const GROQ_MODEL_MAP: Record<string, string> = {
   "marketing-opus-4": "llama-3.3-70b-versatile",
   "marketing-sonnet-4": "llama-3.3-70b-versatile",
   "marketing-haiku-4": "llama-3.1-8b-instant",
@@ -111,23 +112,42 @@ export async function POST(req: NextRequest) {
 
   const encoder = new TextEncoder();
   let fullResponse = "";
+  const useFineTuned =
+    modelId === "marketing-tuned-8b" && isFineTunedModelConfigured();
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const response = await groq.chat.completions.create({
-          model: MODEL_MAP[modelId] ?? MODEL_MAP["marketing-sonnet-4"],
-          messages: groqMessages,
-          stream: true,
-          temperature: 0.7,
-          max_tokens: 2048,
-        });
+        if (useFineTuned) {
+          // Build a chat-templated prompt for the fine-tuned model
+          const promptParts: string[] = [];
+          for (const m of groqMessages) {
+            const role =
+              m.role === "system" ? "system" : m.role === "assistant" ? "assistant" : "user";
+            promptParts.push(`<|start_header_id|>${role}<|end_header_id|>\n\n${m.content}<|eot_id|>`);
+          }
+          promptParts.push(`<|start_header_id|>assistant<|end_header_id|>\n\n`);
+          const prompt = `<|begin_of_text|>${promptParts.join("")}`;
 
-        for await (const chunk of response) {
-          const token = chunk.choices[0]?.delta?.content;
-          if (token) {
+          for await (const token of hfStreamGenerate({ prompt, maxTokens: 1024 })) {
             fullResponse += token;
             controller.enqueue(encoder.encode(token));
+          }
+        } else {
+          const response = await groq.chat.completions.create({
+            model: GROQ_MODEL_MAP[modelId] ?? GROQ_MODEL_MAP["marketing-sonnet-4"],
+            messages: groqMessages,
+            stream: true,
+            temperature: 0.7,
+            max_tokens: 2048,
+          });
+
+          for await (const chunk of response) {
+            const token = chunk.choices[0]?.delta?.content;
+            if (token) {
+              fullResponse += token;
+              controller.enqueue(encoder.encode(token));
+            }
           }
         }
 

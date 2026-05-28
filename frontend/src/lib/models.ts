@@ -1,7 +1,8 @@
 export type ModelId =
   | "marketing-opus-4"
   | "marketing-sonnet-4"
-  | "marketing-haiku-4";
+  | "marketing-haiku-4"
+  | "marketing-tuned-8b";
 
 export interface Model {
   id: ModelId;
@@ -39,6 +40,15 @@ export const MODELS: Model[] = [
     description: "Fastest model. Quick ad copy, subject lines, and social posts in under 2 seconds.",
     speed: "Fast",
     color: "text-emerald-600",
+  },
+  {
+    id: "marketing-tuned-8b",
+    name: "Marketing Tuned",
+    label: "Marketing Tuned 8B (fine-tuned)",
+    description: "Llama 3.1 8B fine-tuned on your team's brand voice and approved campaign data. Available after running the Kaggle training pipeline.",
+    badge: "Fine-tuned",
+    speed: "Fast",
+    color: "text-orange-600",
   },
 ];
 

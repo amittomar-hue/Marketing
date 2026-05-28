@@ -1,0 +1,10 @@
+{
+  "name": "marketing-llm-training",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "generate": "node scripts/generate_dataset.js",
+    "merge-feedback": "node scripts/merge_supabase_feedback.js"
+  }
+}
