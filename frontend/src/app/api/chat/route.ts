@@ -176,6 +176,8 @@ export async function POST(req: NextRequest) {
           model: modelId,
           web_search_used: webUsed,
           session_id: sessionId,
+          user_id: userId ?? undefined,
+          user_email: userEmail ?? undefined,
         });
 
         // Emit interaction ID as a trailer so the client can attach feedback to it

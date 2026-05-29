@@ -13,6 +13,8 @@ export async function logInteraction(args: {
   model: string;
   web_search_used: boolean;
   session_id?: string;
+  user_id?: string;
+  user_email?: string;
 }): Promise<string | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
