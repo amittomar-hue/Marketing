@@ -128,3 +128,168 @@
     @apply font-sans;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────
+   DMOOP — Enterprise design tokens
+   ────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --dmoop-accent: #c14a2a;
+  --dmoop-accent-rich: #a83a1f;
+  --dmoop-accent-soft: #f4d4c5;
+  --dmoop-bg-app: #faf8f5;
+  --dmoop-bg-elev: #ffffff;
+  --dmoop-bg-sidebar: linear-gradient(180deg, #f3eee6 0%, #ebe5da 100%);
+  --dmoop-border-soft: rgba(165, 138, 110, 0.18);
+  --dmoop-text-primary: #1a1614;
+  --dmoop-text-secondary: #5c534b;
+  --dmoop-text-tertiary: #94887d;
+
+  /* Multi-layered shadows for depth */
+  --dmoop-shadow-xs: 0 1px 2px rgba(78, 52, 32, 0.04);
+  --dmoop-shadow-sm:
+    0 1px 2px rgba(78, 52, 32, 0.04),
+    0 2px 6px rgba(78, 52, 32, 0.04);
+  --dmoop-shadow-md:
+    0 1px 3px rgba(78, 52, 32, 0.05),
+    0 6px 20px rgba(78, 52, 32, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --dmoop-shadow-lg:
+    0 2px 4px rgba(78, 52, 32, 0.06),
+    0 16px 40px rgba(78, 52, 32, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --dmoop-shadow-xl:
+    0 4px 12px rgba(78, 52, 32, 0.08),
+    0 24px 56px rgba(78, 52, 32, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --dmoop-shadow-accent:
+    0 1px 2px rgba(193, 74, 42, 0.18),
+    0 8px 24px rgba(193, 74, 42, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --dmoop-shadow-inner: inset 0 2px 4px rgba(78, 52, 32, 0.04);
+
+  /* Gradients */
+  --dmoop-gradient-accent: linear-gradient(135deg, #d8593a 0%, #b03e21 100%);
+  --dmoop-gradient-card: linear-gradient(180deg, #ffffff 0%, #fbf8f4 100%);
+  --dmoop-gradient-sheen:
+    linear-gradient(105deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.4) 45%,
+      rgba(255, 255, 255, 0.05) 55%,
+      rgba(255, 255, 255, 0) 100%);
+}
+
+/* Smooth global type rendering */
+html {
+  font-feature-settings: "cv11", "ss01", "ss03";
+  text-rendering: optimizeLegibility;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Animations
+   ────────────────────────────────────────────────────────────── */
+@keyframes dmoop-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dmoop-fade-in-soft {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes dmoop-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes dmoop-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes dmoop-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(193, 74, 42, 0.4); }
+  100% { box-shadow: 0 0 0 12px rgba(193, 74, 42, 0); }
+}
+
+@keyframes dmoop-stagger-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dmoop-fade-in   { animation: dmoop-fade-in 0.35s ease-out both; }
+.dmoop-scale-in  { animation: dmoop-scale-in 0.25s ease-out both; }
+.dmoop-stagger-in { animation: dmoop-stagger-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.dmoop-shimmer {
+  background-image: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: dmoop-shimmer 2s ease-in-out infinite;
+}
+
+/* Utility classes */
+.dmoop-card {
+  background: var(--dmoop-gradient-card);
+  border: 1px solid var(--dmoop-border-soft);
+  box-shadow: var(--dmoop-shadow-md);
+  border-radius: 16px;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dmoop-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--dmoop-shadow-lg);
+  border-color: rgba(193, 74, 42, 0.3);
+}
+
+.dmoop-btn-primary {
+  background: var(--dmoop-gradient-accent);
+  color: white;
+  box-shadow: var(--dmoop-shadow-accent);
+  transition: all 0.15s ease-out;
+}
+.dmoop-btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+.dmoop-btn-primary:active {
+  transform: translateY(0) scale(0.97);
+}
+.dmoop-btn-primary:disabled {
+  background: #e5e0d8;
+  color: #aaa;
+  box-shadow: none;
+}
+
+.dmoop-glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.dmoop-input-elev {
+  background: #ffffff;
+  border: 1px solid var(--dmoop-border-soft);
+  box-shadow: var(--dmoop-shadow-md);
+  transition: all 0.2s ease-out;
+}
+.dmoop-input-elev:focus-within {
+  border-color: rgba(193, 74, 42, 0.45);
+  box-shadow:
+    var(--dmoop-shadow-lg),
+    0 0 0 4px rgba(193, 74, 42, 0.08);
+}
+
+/* Subtle scrollbar */
+.dmoop-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.dmoop-scroll::-webkit-scrollbar-track { background: transparent; }
+.dmoop-scroll::-webkit-scrollbar-thumb {
+  background: rgba(78, 52, 32, 0.15);
+  border-radius: 3px;
+}
+.dmoop-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(78, 52, 32, 0.3);
+}

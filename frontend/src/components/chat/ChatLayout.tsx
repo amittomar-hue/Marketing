@@ -6,7 +6,7 @@ import WelcomeScreen from "./WelcomeScreen";
 import MessageThread from "./MessageThread";
 import InputBar from "./InputBar";
 import { getModel } from "@/lib/models";
-import { Share, MoreHorizontal } from "lucide-react";
+import { Share2, MoreHorizontal, Sparkles } from "lucide-react";
 
 export default function ChatLayout() {
   const conv = useChatStore((s) => s.activeConversation());
@@ -14,19 +14,39 @@ export default function ChatLayout() {
   const current = getModel(selectedModel);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-[var(--dmoop-bg-app)]">
       <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 relative">
+        {/* Ambient background glow */}
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none opacity-40"
+          style={{
+            background: "radial-gradient(ellipse at top, rgba(193, 74, 42, 0.08) 0%, transparent 70%)",
+          }}
+        />
+
         {/* Top bar */}
-        <header className="h-12 border-b border-[#ececec] bg-[#f9f9f8] flex items-center justify-between px-5 shrink-0">
-          <span className="text-sm text-[#5a5a5a] truncate">
-            {conv ? conv.title : current.label}
-          </span>
+        <header
+          className="h-14 flex items-center justify-between px-6 shrink-0 relative z-10"
+          style={{
+            background: "rgba(250, 248, 245, 0.85)",
+            backdropFilter: "blur(12px)",
+            borderBottom: "1px solid var(--dmoop-border-soft)",
+          }}
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-1.5">
+              <Sparkles size={13} className={current.color} strokeWidth={2.2} />
+              <span className="text-[13px] text-[var(--dmoop-text-secondary)] font-medium">
+                {conv ? conv.title : current.label}
+              </span>
+            </div>
+          </div>
           <div className="flex items-center gap-1">
-            <button className="px-2.5 py-1 rounded-md hover:bg-[#ececec] text-[#5a5a5a] text-sm flex items-center gap-1.5">
-              <Share size={13} /> Share
+            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[var(--dmoop-text-secondary)] text-[13px] font-medium transition-all duration-200 hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] hover:text-[var(--dmoop-text-primary)] active:scale-95">
+              <Share2 size={13} strokeWidth={2.2} /> Share
             </button>
-            <button className="p-1.5 rounded-md hover:bg-[#ececec] text-[#5a5a5a]">
+            <button className="p-2 rounded-lg text-[var(--dmoop-text-secondary)] transition-all duration-200 hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] active:scale-95">
               <MoreHorizontal size={14} />
             </button>
           </div>
@@ -40,7 +60,7 @@ export default function ChatLayout() {
         )}
 
         {/* Input */}
-        <div className="shrink-0">
+        <div className="shrink-0 relative z-10">
           <InputBar />
         </div>
       </main>

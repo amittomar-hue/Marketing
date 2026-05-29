@@ -7,37 +7,49 @@ import { TrendingUp, Wand2, Mail, Target, Mic2, Crosshair } from "lucide-react";
 const SUGGESTIONS = [
   {
     icon: Wand2,
-    color: "text-violet-600 bg-violet-50",
+    accent: "from-violet-500 to-fuchsia-500",
+    iconBg: "bg-violet-50",
+    iconColor: "text-violet-600",
     title: "Generate ad copy",
     prompt: "Write 3 Google Ads variants for a B2B SaaS marketing platform targeting growth marketers.",
   },
   {
     icon: TrendingUp,
-    color: "text-blue-600 bg-blue-50",
+    accent: "from-blue-500 to-cyan-500",
+    iconBg: "bg-blue-50",
+    iconColor: "text-blue-600",
     title: "Show me trending topics",
     prompt: "What are the top marketing trends I should know about this week?",
   },
   {
     icon: Mail,
-    color: "text-emerald-600 bg-emerald-50",
+    accent: "from-emerald-500 to-teal-500",
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-600",
     title: "Write an email sequence",
     prompt: "Draft a 5-email product launch sequence for a marketing automation tool.",
   },
   {
     icon: Target,
-    color: "text-amber-600 bg-amber-50",
+    accent: "from-amber-500 to-orange-500",
+    iconBg: "bg-amber-50",
+    iconColor: "text-amber-600",
     title: "Build a GTM strategy",
     prompt: "Help me build a 90-day go-to-market strategy for launching into the mid-market segment.",
   },
   {
     icon: Mic2,
-    color: "text-pink-600 bg-pink-50",
+    accent: "from-pink-500 to-rose-500",
+    iconBg: "bg-pink-50",
+    iconColor: "text-pink-600",
     title: "Score copy against my brand",
     prompt: "Score this copy against my brand voice: 'The world-class, guaranteed cheapest solution your team will love.'",
   },
   {
     icon: Crosshair,
-    color: "text-rose-600 bg-rose-50",
+    accent: "from-rose-500 to-red-500",
+    iconBg: "bg-rose-50",
+    iconColor: "text-rose-600",
     title: "Analyze a competitor",
     prompt: "Analyze a competitor's recent campaign and suggest 3 counter-positioning strategies.",
   },
@@ -73,29 +85,52 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-4 pb-12">
-      <div className="w-full max-w-3xl">
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-serif text-[#c96442] mb-3">
-            <span className="italic">✻</span> Good evening, Amit
+    <div className="flex-1 flex flex-col items-center justify-center px-6 pb-12 overflow-y-auto dmoop-scroll">
+      <div className="w-full max-w-3xl dmoop-fade-in">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-[var(--dmoop-border-soft)] shadow-[var(--dmoop-shadow-xs)] mb-5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+            <span className="text-[11px] font-semibold text-[var(--dmoop-text-secondary)] tracking-wide uppercase">
+              Live · Self-Learning
+            </span>
+          </div>
+          <h1 className="text-[44px] font-light tracking-tight text-[var(--dmoop-text-primary)] mb-3 leading-tight">
+            Good evening, <span style={{
+              background: "var(--dmoop-gradient-accent)",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              fontWeight: 500,
+            }}>Amit</span>
           </h1>
-          <p className="text-[15px] text-[#5a5a5a]">
-            What marketing challenge can I help you crack today?
+          <p className="text-[15px] text-[var(--dmoop-text-secondary)] font-normal">
+            What marketing challenge can DMOOP help you solve today?
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {SUGGESTIONS.map((s) => (
+        <div className="grid grid-cols-2 gap-3.5">
+          {SUGGESTIONS.map((s, i) => (
             <button
               key={s.title}
               onClick={() => startWith(s.prompt)}
-              className="text-left p-4 rounded-2xl bg-white border border-[#e5e5e5] hover:border-[#c96442] hover:shadow-sm transition-all group"
+              style={{ animationDelay: `${100 + i * 60}ms` }}
+              className="group relative text-left p-5 rounded-2xl bg-[var(--dmoop-gradient-card)] border border-[var(--dmoop-border-soft)] overflow-hidden dmoop-card dmoop-stagger-in"
             >
-              <div className={`w-8 h-8 rounded-lg ${s.color} flex items-center justify-center mb-2.5`}>
-                <s.icon size={15} />
+              {/* Hover glow */}
+              <div className={`absolute -top-12 -right-12 w-32 h-32 rounded-full bg-gradient-to-br ${s.accent} opacity-0 group-hover:opacity-20 blur-2xl transition-opacity duration-500`} />
+
+              <div className="relative">
+                <div className={`w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}
+                  style={{ boxShadow: "var(--dmoop-shadow-xs)" }}>
+                  <s.icon size={17} className={s.iconColor} strokeWidth={2.2} />
+                </div>
+                <p className="text-[14px] font-semibold text-[var(--dmoop-text-primary)] mb-1.5 tracking-tight">
+                  {s.title}
+                </p>
+                <p className="text-[12.5px] text-[var(--dmoop-text-secondary)] line-clamp-2 leading-relaxed">
+                  {s.prompt}
+                </p>
               </div>
-              <p className="text-sm font-medium text-[#1a1a1a] mb-1">{s.title}</p>
-              <p className="text-[12px] text-[#777] line-clamp-2 leading-relaxed">{s.prompt}</p>
             </button>
           ))}
         </div>

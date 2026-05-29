@@ -13,26 +13,27 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const GROQ_MODEL_MAP: Record<string, string> = {
-  "marketing-opus-4": "llama-3.3-70b-versatile",
-  "marketing-sonnet-4": "llama-3.3-70b-versatile",
-  "marketing-haiku-4": "llama-3.1-8b-instant",
+  "dmoop-apex": "llama-3.3-70b-versatile",
+  "dmoop-core": "llama-3.3-70b-versatile",
+  "dmoop-pulse": "llama-3.1-8b-instant",
 };
 
-const SYSTEM_PROMPT = `You are Marketing LLM, an enterprise-grade marketing assistant powered by real-time web research and a self-learning feedback loop.
+const SYSTEM_PROMPT = `You are DMOOP, an enterprise-grade marketing intelligence platform powered by real-time web research and a self-learning feedback loop. You serve marketing teams at mid-market and enterprise brands.
 
-You help marketing teams with:
-- Generating ad copy for Google Ads, Meta, LinkedIn, TikTok, and other channels
-- Detecting and analyzing real-time marketing trends
-- Researching competitors with current data, not training-data guesses
-- Writing email sequences, landing page copy, and full campaign strategies
-- Scoring content against brand voice guidelines
-- Building go-to-market strategies and positioning
+Your capabilities:
+- Generate ad copy for Google Ads, Meta, LinkedIn, TikTok, and emerging channels
+- Detect and analyze real-time marketing trends with citation-backed evidence
+- Research competitors with current data, not training-data guesses
+- Write email sequences, landing page copy, and full campaign strategies
+- Score content against brand voice guidelines
+- Build go-to-market strategies, positioning, and channel mixes
 
 Behavior rules:
-- When provided "Web search results" context, treat those URLs as the source of truth and cite them inline as [1], [2], etc. End the message with a Sources section listing each URL.
+- When provided "Web search results" context, treat those URLs as the source of truth. Cite inline as [1], [2], etc. End the message with a Sources section listing each URL.
 - When provided "high-rated past examples" context, learn their structure, depth, and tone — do not copy verbatim. Match or exceed their quality.
-- Be direct, specific, and data-driven.
-- Format responses in clean markdown with bold section headers.`;
+- Be direct, specific, and data-driven. Lead with the recommendation, then the rationale.
+- Format responses in clean markdown with bold section headers and structured bullet lists.
+- Never refer to yourself as "Marketing LLM" or any other name. You are DMOOP.`;
 
 interface ClientMessage {
   role: "user" | "assistant";
@@ -110,10 +111,15 @@ export async function POST(req: NextRequest) {
     groqMessages.push({ role: m.role, content: m.content });
   });
 
+  // Map any legacy model IDs to DMOOP defaults
+  const effectiveModelId = (modelId in GROQ_MODEL_MAP || modelId === "dmoop-tuned")
+    ? modelId
+    : "dmoop-core";
+
   const encoder = new TextEncoder();
   let fullResponse = "";
   const useFineTuned =
-    modelId === "marketing-tuned-8b" && isFineTunedModelConfigured();
+    effectiveModelId === "dmoop-tuned" && isFineTunedModelConfigured();
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -135,7 +141,7 @@ export async function POST(req: NextRequest) {
           }
         } else {
           const response = await groq.chat.completions.create({
-            model: GROQ_MODEL_MAP[modelId] ?? GROQ_MODEL_MAP["marketing-sonnet-4"],
+            model: GROQ_MODEL_MAP[effectiveModelId] ?? GROQ_MODEL_MAP["dmoop-core"],
             messages: groqMessages,
             stream: true,
             temperature: 0.7,

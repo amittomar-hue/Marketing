@@ -8,6 +8,7 @@ import { Paperclip, ArrowUp, Globe, Hammer } from "lucide-react";
 
 export default function InputBar() {
   const [value, setValue] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const { activeId, newConversation, addMessage, updateMessage, selectedModel } = useChatStore();
 
@@ -38,13 +39,13 @@ export default function InputBar() {
     try {
       const conv = useChatStore.getState().conversations.find((c) => c.id === convId);
       const history = conv?.messages.filter((m) => m.id !== asstId) ?? [];
-      const { text, interactionId } = await streamChat({
+      const { text: final, interactionId } = await streamChat({
         messages: history,
         model: selectedModel,
         onToken: (acc) => updateMessage(convId!, asstId, { content: acc }),
       });
       updateMessage(convId, asstId, {
-        content: text,
+        content: final,
         isStreaming: false,
         interactionId: interactionId ?? undefined,
       });
@@ -64,59 +65,85 @@ export default function InputBar() {
     }
   };
 
+  const hasValue = value.trim().length > 0;
+
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 pb-4">
-      <div className="rounded-3xl bg-white border border-[#e5e5e5] shadow-sm focus-within:border-[#c96442] focus-within:shadow-md transition-all">
+    <div className="w-full max-w-3xl mx-auto px-4 pb-5">
+      <div
+        className={`relative rounded-[28px] transition-all duration-300 ease-out dmoop-input-elev ${
+          isFocused ? "scale-[1.005]" : ""
+        }`}
+      >
+        {/* Subtle top sheen */}
+        <div
+          className="absolute inset-x-0 top-0 h-px rounded-t-[28px] pointer-events-none"
+          style={{
+            background: "linear-gradient(90deg, transparent 10%, rgba(193,74,42,0.25) 50%, transparent 90%)",
+          }}
+        />
+
         <textarea
           ref={taRef}
           rows={1}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={onKey}
-          placeholder="How can Marketing LLM help you today?"
-          className="w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] text-[#1a1a1a] placeholder:text-[#9a9a9a] focus:outline-none"
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          placeholder="How can DMOOP help you today?"
+          className="w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] text-[var(--dmoop-text-primary)] placeholder:text-[var(--dmoop-text-tertiary)] focus:outline-none leading-relaxed"
         />
-        <div className="flex items-center justify-between px-3 pb-3 pt-1">
+
+        <div className="flex items-center justify-between px-3 pb-3 pt-1.5">
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              className="p-1.5 rounded-lg hover:bg-[#f0f0f0] transition-colors text-[#5a5a5a]"
-              title="Attach file"
-            >
-              <Paperclip size={16} />
-            </button>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#f0f0f0] transition-colors text-sm text-[#3d3d3d]"
-              title="Web search"
-            >
-              <Globe size={13} />
-              <span>Search</span>
-            </button>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#f0f0f0] transition-colors text-sm text-[#3d3d3d]"
-              title="Use a marketing tool"
-            >
-              <Hammer size={13} />
-              <span>Tools</span>
-            </button>
+            <ToolButton icon={Paperclip} label="Attach" />
+            <ToolButton icon={Globe} label="Search" hasText />
+            <ToolButton icon={Hammer} label="Tools" hasText />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <ModelSelector />
             <button
               onClick={send}
-              disabled={!value.trim()}
-              className="w-8 h-8 rounded-lg bg-[#c96442] text-white flex items-center justify-center disabled:bg-[#e5e0d8] disabled:text-[#aaa] hover:bg-[#b85838] transition-colors"
+              disabled={!hasValue}
+              className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                hasValue ? "dmoop-btn-primary" : "bg-[#e8e2d8] text-[#b8ad9f] cursor-not-allowed"
+              }`}
             >
-              <ArrowUp size={15} />
+              {hasValue && (
+                <span
+                  className="absolute inset-0 opacity-50"
+                  style={{ background: "var(--dmoop-gradient-sheen)" }}
+                />
+              )}
+              <ArrowUp size={16} strokeWidth={2.5} className="relative" />
             </button>
           </div>
         </div>
       </div>
-      <p className="text-center text-[11px] text-[#9a9a9a] mt-2">
-        Marketing LLM can generate creative campaign content. Verify against brand guidelines before publishing.
+      <p className="text-center text-[11px] text-[var(--dmoop-text-tertiary)] mt-3 tracking-wide">
+        DMOOP generates AI-assisted content. Verify against your brand guidelines before publishing.
       </p>
     </div>
+  );
+}
+
+function ToolButton({
+  icon: Icon,
+  label,
+  hasText = false,
+}: {
+  icon: React.ComponentType<{ size: number; strokeWidth?: number }>;
+  label: string;
+  hasText?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className={`flex items-center gap-1.5 ${hasText ? "px-2.5" : "px-2"} py-1.5 rounded-lg text-[13px] text-[var(--dmoop-text-secondary)] transition-all duration-150 hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)] active:scale-95`}
+      title={label}
+    >
+      <Icon size={14} strokeWidth={2} />
+      {hasText && <span className="font-medium">{label}</span>}
+    </button>
   );
 }

@@ -1,8 +1,8 @@
 export type ModelId =
-  | "marketing-opus-4"
-  | "marketing-sonnet-4"
-  | "marketing-haiku-4"
-  | "marketing-tuned-8b";
+  | "dmoop-apex"
+  | "dmoop-core"
+  | "dmoop-pulse"
+  | "dmoop-tuned";
 
 export interface Model {
   id: ModelId;
@@ -12,47 +12,52 @@ export interface Model {
   badge?: string;
   speed: "Fast" | "Balanced" | "Powerful";
   color: string;
+  glow: string;
 }
 
 export const MODELS: Model[] = [
   {
-    id: "marketing-opus-4",
-    name: "Marketing Opus",
-    label: "Marketing Opus 4",
-    description: "Most capable. Deep campaign strategy, competitive analysis, complex multi-channel briefs.",
-    badge: "Most capable",
+    id: "dmoop-apex",
+    name: "DMOOP Apex",
+    label: "DMOOP Apex",
+    description: "Flagship intelligence. Designed for executive-level strategy, complex multi-channel briefs, and deep competitive analysis.",
+    badge: "Flagship",
     speed: "Powerful",
-    color: "text-violet-600",
+    color: "text-violet-700",
+    glow: "from-violet-500/20 to-fuchsia-500/20",
   },
   {
-    id: "marketing-sonnet-4",
-    name: "Marketing Sonnet",
-    label: "Marketing Sonnet 4",
-    description: "Best balance of intelligence and speed. Ideal for daily content generation and trend analysis.",
+    id: "dmoop-core",
+    name: "DMOOP Core",
+    label: "DMOOP Core",
+    description: "The balanced workhorse. Calibrated for daily campaign generation, trend analysis, and content strategy.",
     badge: "Recommended",
     speed: "Balanced",
-    color: "text-blue-600",
+    color: "text-[#c14a2a]",
+    glow: "from-[#d8593a]/25 to-[#b03e21]/25",
   },
   {
-    id: "marketing-haiku-4",
-    name: "Marketing Haiku",
-    label: "Marketing Haiku 4",
-    description: "Fastest model. Quick ad copy, subject lines, and social posts in under 2 seconds.",
+    id: "dmoop-pulse",
+    name: "DMOOP Pulse",
+    label: "DMOOP Pulse",
+    description: "Sub-second responses for quick ad copy, subject lines, and high-volume content iteration.",
     speed: "Fast",
-    color: "text-emerald-600",
+    color: "text-emerald-700",
+    glow: "from-emerald-500/20 to-teal-500/20",
   },
   {
-    id: "marketing-tuned-8b",
-    name: "Marketing Tuned",
-    label: "Marketing Tuned 8B (fine-tuned)",
-    description: "Llama 3.1 8B fine-tuned on your team's brand voice and approved campaign data. Available after running the Kaggle training pipeline.",
-    badge: "Fine-tuned",
+    id: "dmoop-tuned",
+    name: "DMOOP Tuned",
+    label: "DMOOP Tuned",
+    description: "Your fine-tuned model — trained on your brand voice and approved campaign data. Available after running the Kaggle pipeline.",
+    badge: "Custom",
     speed: "Fast",
-    color: "text-orange-600",
+    color: "text-amber-700",
+    glow: "from-amber-500/25 to-orange-500/25",
   },
 ];
 
-export const DEFAULT_MODEL: ModelId = "marketing-sonnet-4";
+export const DEFAULT_MODEL: ModelId = "dmoop-core";
 
 export function getModel(id: ModelId): Model {
   return MODELS.find((m) => m.id === id) ?? MODELS[1];
