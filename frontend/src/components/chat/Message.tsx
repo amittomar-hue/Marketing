@@ -93,7 +93,7 @@ export default function Message({ message }: { message: MessageType }) {
           {model && (
             <span className={`text-[11px] font-medium ${model.color} flex items-center gap-1`}>
               <span className="w-1 h-1 rounded-full bg-current" />
-              {model.name.replace("DMOOP ", "")}
+              {model.name}
             </span>
           )}
           {message.isStreaming && (

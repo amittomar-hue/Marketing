@@ -18,8 +18,8 @@ export interface Model {
 export const MODELS: Model[] = [
   {
     id: "dmoop-apex",
-    name: "DMOOP Apex",
-    label: "DMOOP Apex",
+    name: "Apex",
+    label: "Apex",
     description: "Flagship intelligence. Designed for executive-level strategy, complex multi-channel briefs, and deep competitive analysis.",
     badge: "Flagship",
     speed: "Powerful",
@@ -28,8 +28,8 @@ export const MODELS: Model[] = [
   },
   {
     id: "dmoop-core",
-    name: "DMOOP Core",
-    label: "DMOOP Core",
+    name: "Core",
+    label: "Core",
     description: "The balanced workhorse. Calibrated for daily campaign generation, trend analysis, and content strategy.",
     badge: "Recommended",
     speed: "Balanced",
@@ -38,8 +38,8 @@ export const MODELS: Model[] = [
   },
   {
     id: "dmoop-pulse",
-    name: "DMOOP Pulse",
-    label: "DMOOP Pulse",
+    name: "Pulse",
+    label: "Pulse",
     description: "Sub-second responses for quick ad copy, subject lines, and high-volume content iteration.",
     speed: "Fast",
     color: "text-emerald-700",
@@ -47,8 +47,8 @@ export const MODELS: Model[] = [
   },
   {
     id: "dmoop-tuned",
-    name: "DMOOP Tuned",
-    label: "DMOOP Tuned",
+    name: "Tuned",
+    label: "Tuned",
     description: "Your fine-tuned model — trained on your brand voice and approved campaign data. Available after running the Kaggle pipeline.",
     badge: "Custom",
     speed: "Fast",

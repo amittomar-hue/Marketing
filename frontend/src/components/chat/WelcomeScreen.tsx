@@ -85,54 +85,55 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 pb-12 overflow-y-auto dmoop-scroll">
-      <div className="w-full max-w-3xl dmoop-fade-in">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-[var(--dmoop-border-soft)] shadow-[var(--dmoop-shadow-xs)] mb-5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-            <span className="text-[11px] font-semibold text-[var(--dmoop-text-secondary)] tracking-wide uppercase">
-              Live · Self-Learning
-            </span>
+    <div className="flex-1 overflow-y-auto dmoop-scroll min-h-0">
+      <div className="min-h-full flex flex-col items-center justify-center px-6 py-8">
+        <div className="w-full max-w-3xl dmoop-fade-in">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-[var(--dmoop-border-soft)] shadow-[var(--dmoop-shadow-xs)] mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+              <span className="text-[11px] font-semibold text-[var(--dmoop-text-secondary)] tracking-wide uppercase">
+                Live · Self-Learning
+              </span>
+            </div>
+            <h1 className="text-[36px] sm:text-[40px] font-light tracking-tight text-[var(--dmoop-text-primary)] mb-2.5 leading-tight">
+              Good evening, <span style={{
+                background: "var(--dmoop-gradient-accent)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                fontWeight: 500,
+              }}>Amit</span>
+            </h1>
+            <p className="text-[14.5px] text-[var(--dmoop-text-secondary)] font-normal">
+              What marketing challenge can DMOOP help you solve today?
+            </p>
           </div>
-          <h1 className="text-[44px] font-light tracking-tight text-[var(--dmoop-text-primary)] mb-3 leading-tight">
-            Good evening, <span style={{
-              background: "var(--dmoop-gradient-accent)",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              fontWeight: 500,
-            }}>Amit</span>
-          </h1>
-          <p className="text-[15px] text-[var(--dmoop-text-secondary)] font-normal">
-            What marketing challenge can DMOOP help you solve today?
-          </p>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 gap-3">
           {SUGGESTIONS.map((s, i) => (
             <button
               key={s.title}
               onClick={() => startWith(s.prompt)}
               style={{ animationDelay: `${100 + i * 60}ms` }}
-              className="group relative text-left p-5 rounded-2xl bg-[var(--dmoop-gradient-card)] border border-[var(--dmoop-border-soft)] overflow-hidden dmoop-card dmoop-stagger-in"
+              className="group relative text-left p-4 rounded-2xl bg-[var(--dmoop-gradient-card)] border border-[var(--dmoop-border-soft)] overflow-hidden dmoop-card dmoop-stagger-in"
             >
-              {/* Hover glow */}
               <div className={`absolute -top-12 -right-12 w-32 h-32 rounded-full bg-gradient-to-br ${s.accent} opacity-0 group-hover:opacity-20 blur-2xl transition-opacity duration-500`} />
 
               <div className="relative">
-                <div className={`w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}
+                <div className={`w-9 h-9 rounded-xl ${s.iconBg} flex items-center justify-center mb-2.5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}
                   style={{ boxShadow: "var(--dmoop-shadow-xs)" }}>
-                  <s.icon size={17} className={s.iconColor} strokeWidth={2.2} />
+                  <s.icon size={16} className={s.iconColor} strokeWidth={2.2} />
                 </div>
-                <p className="text-[14px] font-semibold text-[var(--dmoop-text-primary)] mb-1.5 tracking-tight">
+                <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)] mb-1 tracking-tight">
                   {s.title}
                 </p>
-                <p className="text-[12.5px] text-[var(--dmoop-text-secondary)] line-clamp-2 leading-relaxed">
+                <p className="text-[12px] text-[var(--dmoop-text-secondary)] line-clamp-2 leading-relaxed">
                   {s.prompt}
                 </p>
               </div>
             </button>
           ))}
+        </div>
         </div>
       </div>
     </div>

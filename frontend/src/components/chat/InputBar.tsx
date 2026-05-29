@@ -68,9 +68,9 @@ export default function InputBar() {
   const hasValue = value.trim().length > 0;
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 pb-5">
+    <div className="w-full max-w-3xl mx-auto px-4 pb-3 pt-1">
       <div
-        className={`relative rounded-[28px] transition-all duration-300 ease-out dmoop-input-elev ${
+        className={`relative rounded-[24px] transition-all duration-300 ease-out dmoop-input-elev ${
           isFocused ? "scale-[1.005]" : ""
         }`}
       >
@@ -120,7 +120,7 @@ export default function InputBar() {
           </div>
         </div>
       </div>
-      <p className="text-center text-[11px] text-[var(--dmoop-text-tertiary)] mt-3 tracking-wide">
+      <p className="text-center text-[10.5px] text-[var(--dmoop-text-tertiary)] mt-2 tracking-wide">
         DMOOP generates AI-assisted content. Verify against your brand guidelines before publishing.
       </p>
     </div>

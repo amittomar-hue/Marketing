@@ -8,6 +8,7 @@ import {
   formatExamplesAsContext,
 } from "@/lib/learning";
 import { hfStreamGenerate, isFineTunedModelConfigured } from "@/lib/huggingface";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -62,6 +63,16 @@ export async function POST(req: NextRequest) {
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
   const userQuery = lastUser?.content ?? "";
   const intent = classifyIntent(userQuery);
+
+  // Identify the authenticated user (if any)
+  let userId: string | null = null;
+  let userEmail: string | null = null;
+  try {
+    const supa = await createSupabaseServerClient();
+    const { data: { user } } = await supa.auth.getUser();
+    userId = user?.id ?? null;
+    userEmail = user?.email ?? null;
+  } catch {}
 
   // ── Web search context ─────────────────────────────────────
   let webContext = "";
