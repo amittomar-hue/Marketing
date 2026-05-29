@@ -68,9 +68,9 @@ export default function InputBar() {
   const hasValue = value.trim().length > 0;
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 pb-3 pt-1">
+    <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 pb-3 pt-1">
       <div
-        className={`relative rounded-[24px] transition-all duration-300 ease-out dmoop-input-elev ${
+        className={`relative rounded-[20px] sm:rounded-[24px] transition-all duration-300 ease-out dmoop-input-elev ${
           isFocused ? "scale-[1.005]" : ""
         }`}
       >
@@ -139,11 +139,11 @@ function ToolButton({
   return (
     <button
       type="button"
-      className={`flex items-center gap-1.5 ${hasText ? "px-2.5" : "px-2"} py-1.5 rounded-lg text-[13px] text-[var(--dmoop-text-secondary)] transition-all duration-150 hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)] active:scale-95`}
+      className={`flex items-center gap-1.5 ${hasText ? "px-2 sm:px-2.5" : "px-2"} py-1.5 rounded-lg text-[13px] text-[var(--dmoop-text-secondary)] transition-all duration-150 hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)] active:scale-95`}
       title={label}
     >
       <Icon size={14} strokeWidth={2} />
-      {hasText && <span className="font-medium">{label}</span>}
+      {hasText && <span className="font-medium hidden sm:inline">{label}</span>}
     </button>
   );
 }

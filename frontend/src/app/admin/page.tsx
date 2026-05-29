@@ -52,40 +52,41 @@ export default function AdminPage() {
     <div className="min-h-screen" style={{ background: "var(--dmoop-bg-app)" }}>
       {/* Top bar */}
       <header className="sticky top-0 z-20 border-b border-[var(--dmoop-border-soft)] bg-white/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 text-[13px] text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link href="/" className="flex items-center gap-1.5 text-[12.5px] text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors shrink-0">
               <ArrowLeft size={15} />
-              Back to chat
+              <span className="hidden sm:inline">Back to chat</span>
             </Link>
-            <span className="h-4 w-px bg-[var(--dmoop-border-soft)]" />
-            <Image src="/dmoop-logo.png" alt="DMOOP" width={100} height={32} className="h-7 w-auto" />
-            <span className="text-[10px] font-bold tracking-[0.12em] text-[var(--dmoop-accent)] uppercase px-2 py-0.5 rounded-md" style={{ background: "rgba(193,74,42,0.1)" }}>
+            <span className="h-4 w-px bg-[var(--dmoop-border-soft)] hidden sm:block" />
+            <Image src="/dmoop-logo.png" alt="DMOOP" width={100} height={32} className="h-6 sm:h-7 w-auto" />
+            <span className="text-[9.5px] sm:text-[10px] font-bold tracking-[0.12em] text-[var(--dmoop-accent)] uppercase px-1.5 sm:px-2 py-0.5 rounded-md shrink-0" style={{ background: "rgba(193,74,42,0.1)" }}>
               Admin
             </span>
           </div>
           <button onClick={load} disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium text-[var(--dmoop-text-secondary)] transition-all duration-200 hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] hover:text-[var(--dmoop-text-primary)] active:scale-95">
-            <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[13px] font-medium text-[var(--dmoop-text-secondary)] transition-all duration-200 hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] hover:text-[var(--dmoop-text-primary)] active:scale-95 shrink-0">
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Headline */}
-        <div className="mb-7 dmoop-fade-in">
-          <h1 className="text-[28px] font-semibold tracking-tight text-[var(--dmoop-text-primary)]">Admin Dashboard</h1>
-          <p className="text-[13.5px] text-[var(--dmoop-text-secondary)] mt-1">All user activity. Visible only to admins.</p>
+        <div className="mb-6 sm:mb-7 dmoop-fade-in">
+          <h1 className="text-[22px] sm:text-[28px] font-semibold tracking-tight text-[var(--dmoop-text-primary)]">Admin Dashboard</h1>
+          <p className="text-[12.5px] sm:text-[13.5px] text-[var(--dmoop-text-secondary)] mt-1">All user activity. Visible only to admins.</p>
         </div>
 
         {/* KPI cards */}
-        <div className="grid grid-cols-3 gap-4 mb-7">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-7">
           <StatCard label="Total prompts" value={stats?.totals.interactions ?? "—"} icon={MessageSquare} accent="from-violet-500 to-fuchsia-500" />
           <StatCard label="Feedbacks received" value={stats?.totals.feedbacks ?? "—"} icon={ThumbsUp} accent="from-emerald-500 to-teal-500" />
           <StatCard label="Registered users" value={stats?.totals.users ?? "—"} icon={Users} accent="from-amber-500 to-orange-500" />
         </div>
 
-        <div className="grid grid-cols-3 gap-5 mb-7">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 mb-6 sm:mb-7">
           {/* Top intents */}
           <div className="rounded-2xl p-5" style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-3">Top intents</p>
@@ -101,7 +102,7 @@ export default function AdminPage() {
           </div>
 
           {/* Top users */}
-          <div className="col-span-2 rounded-2xl p-5" style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+          <div className="md:col-span-2 rounded-2xl p-5" style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-3">Most active users</p>
             <div className="flex flex-col gap-1.5">
               {(stats?.by_user ?? []).slice(0, 7).map((b) => (
@@ -123,15 +124,15 @@ export default function AdminPage() {
 
         {/* Interactions table */}
         <div className="rounded-2xl overflow-hidden" style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
-          <div className="px-5 py-3.5 border-b border-[var(--dmoop-border-soft)] flex items-center justify-between gap-3">
+          <div className="px-4 sm:px-5 py-3.5 border-b border-[var(--dmoop-border-soft)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)]">
               All prompts <span className="text-[var(--dmoop-text-tertiary)] font-normal">· {total}</span>
             </p>
-            <div className="flex items-center gap-2">
-              <div className="relative">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative flex-1 sm:flex-initial min-w-[140px]">
                 <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--dmoop-text-tertiary)]" />
                 <input value={emailFilter} onChange={(e) => setEmailFilter(e.target.value)} placeholder="Filter by email…" onKeyDown={(e) => e.key === "Enter" && load()}
-                  className="h-8 w-44 pl-7 pr-2.5 rounded-md text-[12px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)]" />
+                  className="h-8 w-full sm:w-44 pl-7 pr-2.5 rounded-md text-[12px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)]" />
               </div>
               <select value={intentFilter} onChange={(e) => { setIntentFilter(e.target.value); }}
                 className="h-8 px-2 rounded-md text-[12px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)]">
@@ -142,7 +143,12 @@ export default function AdminPage() {
                 <option value="strategy">Strategy</option>
                 <option value="competitor">Competitor</option>
                 <option value="brand_voice">Brand voice</option>
-                <option value="social">Social</option>
+                <option value="seo">SEO</option>
+                <option value="aeo_geo">AEO / GEO</option>
+                <option value="abm">ABM</option>
+                <option value="buyer_signals">Buyer signals</option>
+                <option value="company_signals">Company signals</option>
+                <option value="orm">ORM</option>
                 <option value="general">General</option>
               </select>
               <button onClick={load} className="h-8 px-3 rounded-md text-[12px] dmoop-btn-primary font-semibold">Apply</button>
@@ -154,21 +160,21 @@ export default function AdminPage() {
             )}
             {items.map((item) => (
               <button key={item.id} onClick={() => setSelected(item)}
-                className="w-full px-5 py-3.5 border-b border-[var(--dmoop-border-soft)] last:border-0 hover:bg-[#faf6ef] transition-colors text-left flex items-center gap-4">
+                className="w-full px-4 sm:px-5 py-3 sm:py-3.5 border-b border-[var(--dmoop-border-soft)] last:border-0 hover:bg-[#faf6ef] transition-colors text-left flex items-center gap-3 sm:gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[11.5px] font-semibold text-[var(--dmoop-text-primary)]">{item.user_email ?? "anonymous"}</span>
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
+                    <span className="text-[11.5px] font-semibold text-[var(--dmoop-text-primary)] truncate max-w-[160px]">{item.user_email ?? "anonymous"}</span>
                     {item.intent && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#f5f1ea] text-[var(--dmoop-text-secondary)] font-medium uppercase tracking-wide">
+                      <span className="text-[9.5px] sm:text-[10px] px-1.5 py-0.5 rounded-md bg-[#f5f1ea] text-[var(--dmoop-text-secondary)] font-medium uppercase tracking-wide">
                         {item.intent.replace("_", " ")}
                       </span>
                     )}
                     {item.web_search_used && <Globe size={10} className="text-blue-500" />}
-                    <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)] ml-auto">
-                      {new Date(item.created_at).toLocaleString()}
+                    <span className="text-[10px] sm:text-[10.5px] text-[var(--dmoop-text-tertiary)] sm:ml-auto">
+                      {new Date(item.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
-                  <p className="text-[13px] text-[var(--dmoop-text-primary)] line-clamp-1">{item.user_query}</p>
+                  <p className="text-[12.5px] sm:text-[13px] text-[var(--dmoop-text-primary)] line-clamp-1">{item.user_query}</p>
                 </div>
                 <ChevronRight size={14} className="text-[var(--dmoop-text-tertiary)] shrink-0" />
               </button>
@@ -179,28 +185,28 @@ export default function AdminPage() {
 
       {/* Detail drawer */}
       {selected && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center px-4 dmoop-fade-in" onClick={() => setSelected(null)}>
+        <div className="fixed inset-0 z-30 flex items-end sm:items-center justify-center px-0 sm:px-4 dmoop-fade-in" onClick={() => setSelected(null)}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative max-w-3xl w-full max-h-[80vh] rounded-2xl overflow-hidden dmoop-scale-in"
+          <div className="relative max-w-3xl w-full max-h-[85vh] sm:max-h-[80vh] rounded-t-2xl sm:rounded-2xl overflow-hidden dmoop-scale-in"
             style={{ background: "var(--dmoop-gradient-card)", boxShadow: "var(--dmoop-shadow-xl)", border: "1px solid var(--dmoop-border-soft)" }}
             onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-[var(--dmoop-border-soft)] flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[12.5px]">
-                <span className="font-semibold text-[var(--dmoop-text-primary)]">{selected.user_email ?? "anonymous"}</span>
+            <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-[var(--dmoop-border-soft)] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-[11.5px] sm:text-[12.5px] min-w-0 flex-wrap">
+                <span className="font-semibold text-[var(--dmoop-text-primary)] truncate">{selected.user_email ?? "anonymous"}</span>
                 <span className="text-[var(--dmoop-text-tertiary)]">·</span>
                 <span className="text-[var(--dmoop-text-secondary)]">{selected.intent ?? "general"}</span>
-                <span className="text-[var(--dmoop-text-tertiary)]">·</span>
-                <span className="text-[var(--dmoop-text-tertiary)]">{selected.model}</span>
-                <span className="text-[var(--dmoop-text-tertiary)]">·</span>
-                <span className="text-[var(--dmoop-text-tertiary)]">{new Date(selected.created_at).toLocaleString()}</span>
+                <span className="text-[var(--dmoop-text-tertiary)] hidden sm:inline">·</span>
+                <span className="text-[var(--dmoop-text-tertiary)] hidden sm:inline">{selected.model}</span>
+                <span className="text-[var(--dmoop-text-tertiary)] hidden md:inline">·</span>
+                <span className="text-[var(--dmoop-text-tertiary)] hidden md:inline">{new Date(selected.created_at).toLocaleString()}</span>
               </div>
-              <button onClick={() => setSelected(null)} className="text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] text-sm font-medium">Close</button>
+              <button onClick={() => setSelected(null)} className="text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] text-sm font-medium shrink-0">Close</button>
             </div>
-            <div className="px-5 py-4 overflow-y-auto dmoop-scroll" style={{ maxHeight: "calc(80vh - 60px)" }}>
+            <div className="px-4 sm:px-5 py-4 overflow-y-auto dmoop-scroll" style={{ maxHeight: "calc(85vh - 60px)" }}>
               <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-1.5">Prompt</p>
-              <p className="text-[14px] text-[var(--dmoop-text-primary)] mb-5 whitespace-pre-wrap leading-relaxed">{selected.user_query}</p>
+              <p className="text-[13.5px] sm:text-[14px] text-[var(--dmoop-text-primary)] mb-5 whitespace-pre-wrap leading-relaxed">{selected.user_query}</p>
               <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-1.5">Response</p>
-              <p className="text-[13.5px] text-[var(--dmoop-text-secondary)] whitespace-pre-wrap leading-[1.7]">{selected.response}</p>
+              <p className="text-[13px] sm:text-[13.5px] text-[var(--dmoop-text-secondary)] whitespace-pre-wrap leading-[1.7]">{selected.response}</p>
             </div>
           </div>
         </div>

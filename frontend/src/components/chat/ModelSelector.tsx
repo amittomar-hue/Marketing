@@ -44,7 +44,7 @@ export default function ModelSelector() {
 
       {open && (
         <div
-          className="absolute bottom-full right-0 mb-2 w-[380px] rounded-2xl overflow-hidden z-50 dmoop-scale-in"
+          className="absolute bottom-full right-0 mb-2 w-[320px] sm:w-[380px] max-w-[calc(100vw-2rem)] rounded-2xl overflow-hidden z-50 dmoop-scale-in"
           style={{
             background: "var(--dmoop-gradient-card)",
             border: "1px solid var(--dmoop-border-soft)",

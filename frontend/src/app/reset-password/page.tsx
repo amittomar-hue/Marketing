@@ -35,7 +35,7 @@ export default function ResetPasswordPage() {
           <Image src="/dmoop-logo.png" alt="DMOOP" width={180} height={56} priority className="h-12 w-auto" />
         </div>
 
-        <div className="p-8 rounded-2xl" style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-xl)" }}>
+        <div className="p-6 sm:p-8 rounded-2xl" style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-xl)" }}>
           <div className="text-center mb-7">
             <h1 className="text-[24px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-1.5">Set a new password</h1>
             <p className="text-[13.5px] text-[var(--dmoop-text-secondary)]">Pick something strong — minimum 8 characters</p>

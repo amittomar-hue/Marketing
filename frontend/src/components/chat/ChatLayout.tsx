@@ -1,21 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { useChatStore } from "@/lib/chat-store";
 import Sidebar from "./Sidebar";
 import WelcomeScreen from "./WelcomeScreen";
 import MessageThread from "./MessageThread";
 import InputBar from "./InputBar";
 import { getModel } from "@/lib/models";
-import { Share2, MoreHorizontal, Sparkles } from "lucide-react";
+import { Share2, MoreHorizontal, Sparkles, Menu } from "lucide-react";
 
 export default function ChatLayout() {
   const conv = useChatStore((s) => s.activeConversation());
   const selectedModel = useChatStore((s) => s.selectedModel);
   const current = getModel(selectedModel);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--dmoop-bg-app)]">
-      <Sidebar />
+      <Sidebar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
+
       <main className="flex-1 flex flex-col min-w-0 min-h-0 relative">
         {/* Ambient background glow */}
         <div
@@ -27,24 +30,35 @@ export default function ChatLayout() {
 
         {/* Top bar */}
         <header
-          className="h-14 flex items-center justify-between px-6 shrink-0 relative z-10"
+          className="h-14 flex items-center justify-between px-4 sm:px-6 shrink-0 relative z-10 gap-2"
           style={{
             background: "rgba(250, 248, 245, 0.85)",
             backdropFilter: "blur(12px)",
             borderBottom: "1px solid var(--dmoop-border-soft)",
           }}
         >
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-1.5">
-              <Sparkles size={13} className={current.color} strokeWidth={2.2} />
-              <span className="text-[13px] text-[var(--dmoop-text-secondary)] font-medium">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              className="md:hidden p-2 -ml-2 rounded-lg text-[var(--dmoop-text-secondary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] active:scale-95 transition-all"
+              title="Open menu"
+            >
+              <Menu size={17} />
+            </button>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Sparkles size={13} className={`${current.color} shrink-0`} strokeWidth={2.2} />
+              <span className="text-[13px] text-[var(--dmoop-text-secondary)] font-medium truncate">
                 {conv ? conv.title : current.label}
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[var(--dmoop-text-secondary)] text-[13px] font-medium transition-all duration-200 hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] hover:text-[var(--dmoop-text-primary)] active:scale-95">
+          <div className="flex items-center gap-1 shrink-0">
+            <button className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[var(--dmoop-text-secondary)] text-[13px] font-medium transition-all duration-200 hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] hover:text-[var(--dmoop-text-primary)] active:scale-95">
               <Share2 size={13} strokeWidth={2.2} /> Share
+            </button>
+            <button className="sm:hidden p-2 rounded-lg text-[var(--dmoop-text-secondary)] transition-all duration-200 hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] active:scale-95">
+              <Share2 size={14} />
             </button>
             <button className="p-2 rounded-lg text-[var(--dmoop-text-secondary)] transition-all duration-200 hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] active:scale-95">
               <MoreHorizontal size={14} />

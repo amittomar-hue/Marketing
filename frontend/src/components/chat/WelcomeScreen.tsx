@@ -93,16 +93,16 @@ export default function WelcomeScreen() {
 
   return (
     <div className="flex-1 overflow-y-auto dmoop-scroll min-h-0">
-      <div className="min-h-full flex flex-col items-center px-6 py-8">
+      <div className="min-h-full flex flex-col items-center px-4 sm:px-6 py-6 sm:py-8">
         <div className="w-full max-w-4xl dmoop-fade-in">
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-[var(--dmoop-border-soft)] shadow-[var(--dmoop-shadow-xs)] mb-4">
+          <div className="text-center mb-5 sm:mb-6">
+            <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-[var(--dmoop-border-soft)] shadow-[var(--dmoop-shadow-xs)] mb-3 sm:mb-4">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-              <span className="text-[11px] font-semibold text-[var(--dmoop-text-secondary)] tracking-wide uppercase">
+              <span className="text-[10.5px] sm:text-[11px] font-semibold text-[var(--dmoop-text-secondary)] tracking-wide uppercase">
                 Live · Self-Learning
               </span>
             </div>
-            <h1 className="text-[36px] sm:text-[40px] font-light tracking-tight text-[var(--dmoop-text-primary)] mb-2.5 leading-tight">
+            <h1 className="text-[28px] sm:text-[36px] md:text-[40px] font-light tracking-tight text-[var(--dmoop-text-primary)] mb-2 sm:mb-2.5 leading-tight">
               Good evening, <span style={{
                 background: "var(--dmoop-gradient-accent)",
                 WebkitBackgroundClip: "text",
@@ -111,17 +111,17 @@ export default function WelcomeScreen() {
                 fontWeight: 500,
               }}>Amit</span>
             </h1>
-            <p className="text-[14.5px] text-[var(--dmoop-text-secondary)] font-normal">
+            <p className="text-[13px] sm:text-[14.5px] text-[var(--dmoop-text-secondary)] font-normal px-2">
               From SEO to ABM to buyer intent — what would you like to work on?
             </p>
           </div>
 
           {/* Category tabs */}
-          <div className="flex items-center justify-center gap-1.5 mb-5 flex-wrap">
+          <div className="flex items-center justify-start sm:justify-center gap-1.5 mb-4 sm:mb-5 flex-nowrap sm:flex-wrap overflow-x-auto dmoop-scroll -mx-4 sm:mx-0 px-4 sm:px-0 pb-1">
             {CATEGORIES.map((cat) => (
               <button key={cat} onClick={() => setActiveCategory(cat)}
                 className={cn(
-                  "px-3 py-1.5 rounded-full text-[12px] font-semibold tracking-tight transition-all duration-200 active:scale-95",
+                  "shrink-0 px-3 py-1.5 rounded-full text-[12px] font-semibold tracking-tight transition-all duration-200 active:scale-95",
                   activeCategory === cat
                     ? "text-white shadow-[var(--dmoop-shadow-sm)]"
                     : "text-[var(--dmoop-text-secondary)] bg-white/60 border border-[var(--dmoop-border-soft)] hover:bg-white"
@@ -133,7 +133,7 @@ export default function WelcomeScreen() {
           </div>
 
           {/* Suggestion grid */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
             {visible.map((s, i) => (
               <button key={s.title} onClick={() => startWith(s.prompt)}
                 style={{ animationDelay: `${50 + i * 40}ms` }}

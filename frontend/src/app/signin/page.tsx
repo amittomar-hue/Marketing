@@ -87,7 +87,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
           </div>
         </div>
 
-        <div className="p-8 rounded-2xl"
+        <div className="p-6 sm:p-8 rounded-2xl"
           style={{
             background: "var(--dmoop-gradient-card)",
             border: "1px solid var(--dmoop-border-soft)",
