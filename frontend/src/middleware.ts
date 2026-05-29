@@ -65,11 +65,11 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, robots.txt, etc.
+     * Skip middleware on:
+     * - _next internals
+     * - any file with an extension (images, fonts, etc. served from /public)
+     * - favicon, robots, sitemap
      */
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|svg|gif|webp|ico|woff|woff2|ttf|otf|css|js)$).*)",
   ],
 };
