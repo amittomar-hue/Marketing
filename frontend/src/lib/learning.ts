@@ -62,7 +62,7 @@ export function formatExamplesAsContext(examples: LearningExample[]): string {
   examples.forEach((ex, i) => {
     lines.push(`Example ${i + 1} — query: "${ex.query_summary}"`);
     lines.push("Response:");
-    lines.push(ex.exemplar_response.slice(0, 1500));
+    lines.push(ex.exemplar_response.slice(0, 800));
     lines.push("");
   });
   return lines.join("\n");

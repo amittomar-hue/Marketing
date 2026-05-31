@@ -48,7 +48,7 @@ export function formatIntelAsContext(items: IntelItem[], categoryLabel: string):
     lines.push(`[I${i + 1}] ${item.title}`);
     lines.push(`Source: ${item.source ?? new URL(item.url).hostname}`);
     lines.push(`URL: ${item.url}`);
-    if (item.summary) lines.push(`Excerpt: ${item.summary.slice(0, 400)}`);
+    if (item.summary) lines.push(`Excerpt: ${item.summary.slice(0, 250)}`);
     lines.push("");
   });
   lines.push("When relevant, cite these as [I1], [I2], etc. and include the URLs in your Sources section.");

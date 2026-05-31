@@ -25,7 +25,7 @@ export async function tavilySearch(query: string): Promise<TavilyResponse> {
       query,
       search_depth: "advanced",
       include_answer: true,
-      max_results: 6,
+      max_results: 4,
     }),
   });
 

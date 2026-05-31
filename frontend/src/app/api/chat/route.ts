@@ -18,7 +18,21 @@ const GROQ_MODEL_MAP: Record<string, string> = {
   "dmoop-apex": "llama-3.3-70b-versatile",
   "dmoop-core": "llama-3.3-70b-versatile",
   "dmoop-pulse": "llama-3.1-8b-instant",
+  // Tuned routes to 8B by default — different TPM bucket from Apex/Core (no 429 conflict),
+  // and the heavy RLMO examples context does the specialization.
+  "dmoop-tuned": "llama-3.1-8b-instant",
 };
+
+const TUNED_SYSTEM_PROMPT = `You are DMOOP Tuned — the self-learning variant of DMOOP. You specialize in marketing tasks by learning from your team's own approved high-rated responses, which are injected into your context as 'High-rated past examples'.
+
+Your behavior contract:
+- Lean HEAVILY on the high-rated past examples. They represent the user's brand voice, depth, and quality bar. Match or exceed their style.
+- If past examples are present for the intent, model your response structure, tone, and depth on them.
+- Be opinionated. The past examples have a perspective — adopt and extend it.
+- If no examples exist for this intent, say so briefly and produce a baseline response that future feedback can shape.
+- You still get web search and intel context, but the past examples are your strongest signal.
+- Format responses in clean markdown with bold section headers and structured bullet lists.
+- Never refer to yourself as "Marketing LLM" or any other name. You are DMOOP Tuned.`;
 
 const SYSTEM_PROMPT = `You are DMOOP, an enterprise-grade marketing intelligence platform powered by real-time web research and a self-learning feedback loop. You serve marketing teams at mid-market and enterprise brands.
 
@@ -124,19 +138,30 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Decide model-specific behavior ────────────────────────────
+  // Map any legacy model IDs to DMOOP defaults
+  const effectiveModelIdEarly = (modelId in GROQ_MODEL_MAP || modelId === "dmoop-tuned")
+    ? modelId
+    : "dmoop-core";
+  const isTuned = effectiveModelIdEarly === "dmoop-tuned";
+
   // ── Self-learning: retrieve top-rated past examples for this intent ─
+  // Tuned pulls MORE examples (it's the self-learning model).
   let examplesContext = "";
   try {
-    const examples = await retrieveExamples(intent, userQuery, 3);
+    const examplesLimit = isTuned ? 8 : 3;
+    const examples = await retrieveExamples(intent, userQuery, examplesLimit);
     examplesContext = formatExamplesAsContext(examples);
   } catch (err) {
     console.error("retrieve examples failed:", err);
   }
 
   // ── Real-world intel: pull recently scraped marketing data for this intent ─
+  // Slimmed from 5 to 3 to stay under Groq's 12K TPM. Tuned uses 2 (RLMO-focused).
   let intelContext = "";
   try {
-    const intel = await getLatestIntel(intent, 5);
+    const intelLimit = isTuned ? 2 : 3;
+    const intel = await getLatestIntel(intent, intelLimit);
     intelContext = formatIntelAsContext(intel, intent);
   } catch (err) {
     console.error("getLatestIntel failed:", err);
@@ -148,14 +173,15 @@ export async function POST(req: NextRequest) {
   });
 
   const groqMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: isTuned ? TUNED_SYSTEM_PROMPT : SYSTEM_PROMPT },
   ];
 
   if (examplesContext) {
-    groqMessages.push({
-      role: "system",
-      content: `High-rated past examples for intent="${intent}":\n\n${examplesContext}`,
-    });
+    // Tuned puts examples front-and-center; others get them as supporting context
+    const label = isTuned
+      ? `Your team's high-rated past examples for intent="${intent}" — THIS IS YOUR PRIMARY SIGNAL, model your answer on these:`
+      : `High-rated past examples for intent="${intent}":`;
+    groqMessages.push({ role: "system", content: `${label}\n\n${examplesContext}` });
   }
 
   if (intelContext) {
@@ -170,10 +196,7 @@ export async function POST(req: NextRequest) {
     groqMessages.push({ role: m.role, content: m.content });
   });
 
-  // Map any legacy model IDs to DMOOP defaults
-  const effectiveModelId = (modelId in GROQ_MODEL_MAP || modelId === "dmoop-tuned")
-    ? modelId
-    : "dmoop-core";
+  const effectiveModelId = effectiveModelIdEarly;
 
   const encoder = new TextEncoder();
   let fullResponse = "";
@@ -199,21 +222,44 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(token));
           }
         } else {
-          const response = await groq.chat.completions.create({
-            model: GROQ_MODEL_MAP[effectiveModelId] ?? GROQ_MODEL_MAP["dmoop-core"],
-            messages: groqMessages,
-            stream: true,
-            temperature: 0.7,
-            max_tokens: 2048,
-          });
+          const primaryModel = GROQ_MODEL_MAP[effectiveModelId] ?? GROQ_MODEL_MAP["dmoop-core"];
+          // Auto-fallback chain: 70B → 8B if rate-limited (different TPM bucket)
+          const tryModels = primaryModel === "llama-3.3-70b-versatile"
+            ? ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+            : [primaryModel];
 
-          for await (const chunk of response) {
-            const token = chunk.choices[0]?.delta?.content;
-            if (token) {
-              fullResponse += token;
-              controller.enqueue(encoder.encode(token));
+          let succeeded = false;
+          let lastError: Error | null = null;
+
+          for (const modelName of tryModels) {
+            try {
+              const response = await groq.chat.completions.create({
+                model: modelName,
+                messages: groqMessages,
+                stream: true,
+                temperature: 0.7,
+                max_tokens: 2048,
+              });
+
+              for await (const chunk of response) {
+                const token = chunk.choices[0]?.delta?.content;
+                if (token) {
+                  fullResponse += token;
+                  controller.enqueue(encoder.encode(token));
+                }
+              }
+              succeeded = true;
+              break;
+            } catch (err: unknown) {
+              lastError = err instanceof Error ? err : new Error(String(err));
+              const isRateLimit = lastError.message.includes("429") || lastError.message.toLowerCase().includes("rate");
+              // Only attempt fallback for 429s; for other errors, throw immediately
+              if (!isRateLimit) throw lastError;
+              // Otherwise: continue to next model in chain
             }
           }
+
+          if (!succeeded && lastError) throw lastError;
         }
 
         // Log this interaction for learning (best-effort, non-blocking failure)
