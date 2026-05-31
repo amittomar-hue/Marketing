@@ -9,6 +9,7 @@ import {
 } from "@/lib/learning";
 import { hfStreamGenerate, isFineTunedModelConfigured } from "@/lib/huggingface";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getLatestIntel, formatIntelAsContext } from "@/lib/intel";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -125,6 +126,15 @@ export async function POST(req: NextRequest) {
     console.error("retrieve examples failed:", err);
   }
 
+  // ── Real-world intel: pull recently scraped marketing data for this intent ─
+  let intelContext = "";
+  try {
+    const intel = await getLatestIntel(intent, 5);
+    intelContext = formatIntelAsContext(intel, intent);
+  } catch (err) {
+    console.error("getLatestIntel failed:", err);
+  }
+
   const groq = new OpenAI({
     apiKey: groqKey,
     baseURL: "https://api.groq.com/openai/v1",
@@ -139,6 +149,10 @@ export async function POST(req: NextRequest) {
       role: "system",
       content: `High-rated past examples for intent="${intent}":\n\n${examplesContext}`,
     });
+  }
+
+  if (intelContext) {
+    groqMessages.push({ role: "system", content: intelContext });
   }
 
   if (webContext) {

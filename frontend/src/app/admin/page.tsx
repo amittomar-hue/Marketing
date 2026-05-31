@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, MessageSquare, ThumbsUp, Users, RefreshCw, Globe, ChevronRight, Search } from "lucide-react";
+import { ArrowLeft, MessageSquare, ThumbsUp, Users, RefreshCw, Globe, ChevronRight, Search, Radar, ExternalLink, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Interaction {
   id: string;
@@ -22,7 +23,26 @@ interface Stats {
   by_user: { user_email: string; count: number; last_activity: string }[];
 }
 
+interface IntelItem {
+  id: string;
+  topic: string;
+  category: string;
+  title: string;
+  url: string;
+  summary: string | null;
+  source: string | null;
+  scraped_at: string;
+}
+
+interface IntelRunInfo {
+  started_at: string;
+  finished_at: string | null;
+  items_added: number;
+  items_skipped: number;
+}
+
 export default function AdminPage() {
+  const [tab, setTab] = useState<"prompts" | "intel">("prompts");
   const [stats, setStats] = useState<Stats | null>(null);
   const [items, setItems] = useState<Interaction[]>([]);
   const [total, setTotal] = useState(0);
@@ -30,6 +50,12 @@ export default function AdminPage() {
   const [emailFilter, setEmailFilter] = useState("");
   const [intentFilter, setIntentFilter] = useState("");
   const [selected, setSelected] = useState<Interaction | null>(null);
+
+  // Intel state
+  const [intel, setIntel] = useState<IntelItem[]>([]);
+  const [intelCategory, setIntelCategory] = useState("");
+  const [lastRun, setLastRun] = useState<IntelRunInfo | null>(null);
+  const [scraping, setScraping] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -46,7 +72,23 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadIntel = async () => {
+    const params = new URLSearchParams({ limit: "100" });
+    if (intelCategory) params.set("category", intelCategory);
+    const res = await fetch(`/api/admin/intel?${params}`).then((r) => r.json());
+    setIntel(res.items ?? []);
+    setLastRun(res.last_run ?? null);
+  };
+
+  const triggerScrape = async () => {
+    setScraping(true);
+    await fetch("/api/cron/scrape-intel", { method: "GET" });
+    await loadIntel();
+    setScraping(false);
+  };
+
+  useEffect(() => { load(); loadIntel(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tab === "intel") loadIntel(); }, [intelCategory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen" style={{ background: "var(--dmoop-bg-app)" }}>
@@ -74,11 +116,32 @@ export default function AdminPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Headline */}
-        <div className="mb-6 sm:mb-7 dmoop-fade-in">
+        <div className="mb-5 dmoop-fade-in">
           <h1 className="text-[22px] sm:text-[28px] font-semibold tracking-tight text-[var(--dmoop-text-primary)]">Admin Dashboard</h1>
-          <p className="text-[12.5px] sm:text-[13.5px] text-[var(--dmoop-text-secondary)] mt-1">All user activity. Visible only to admins.</p>
+          <p className="text-[12.5px] sm:text-[13.5px] text-[var(--dmoop-text-secondary)] mt-1">All user activity + live marketing intel. Visible only to admins.</p>
         </div>
 
+        {/* Tabs */}
+        <div className="flex items-center gap-1 mb-6 border-b border-[var(--dmoop-border-soft)]">
+          {[
+            { key: "prompts" as const, label: "User Prompts", icon: MessageSquare },
+            { key: "intel" as const, label: "Marketing Intel", icon: Radar },
+          ].map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 -mb-px text-[13px] font-semibold border-b-2 transition-all duration-200",
+                tab === t.key
+                  ? "text-[var(--dmoop-accent)] border-[var(--dmoop-accent)]"
+                  : "text-[var(--dmoop-text-secondary)] border-transparent hover:text-[var(--dmoop-text-primary)]"
+              )}>
+              <t.icon size={13} strokeWidth={2.2} />
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "prompts" ? (
+        <>
         {/* KPI cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-7">
           <StatCard label="Total prompts" value={stats?.totals.interactions ?? "—"} icon={MessageSquare} accent="from-violet-500 to-fuchsia-500" />
@@ -181,6 +244,17 @@ export default function AdminPage() {
             ))}
           </div>
         </div>
+        </>
+        ) : (
+          <IntelPanel
+            intel={intel}
+            lastRun={lastRun}
+            intelCategory={intelCategory}
+            setIntelCategory={setIntelCategory}
+            triggerScrape={triggerScrape}
+            scraping={scraping}
+          />
+        )}
       </main>
 
       {/* Detail drawer */}
@@ -234,5 +308,118 @@ function StatCard({ label, value, icon: Icon, accent }: {
         </div>
       </div>
     </div>
+  );
+}
+
+const INTEL_CATEGORIES = [
+  { value: "", label: "All categories" },
+  { value: "seo", label: "SEO" },
+  { value: "aeo_geo", label: "AEO / GEO" },
+  { value: "abm", label: "ABM" },
+  { value: "buyer_signals", label: "Buyer signals" },
+  { value: "company_signals", label: "Company signals" },
+  { value: "orm", label: "ORM" },
+  { value: "ad_copy", label: "Ad copy" },
+  { value: "email", label: "Email" },
+  { value: "trend", label: "Trends" },
+  { value: "demand_gen", label: "Demand gen" },
+  { value: "analytics", label: "Analytics" },
+  { value: "competitor", label: "Competitor" },
+];
+
+function IntelPanel({
+  intel,
+  lastRun,
+  intelCategory,
+  setIntelCategory,
+  triggerScrape,
+  scraping,
+}: {
+  intel: IntelItem[];
+  lastRun: IntelRunInfo | null;
+  intelCategory: string;
+  setIntelCategory: (v: string) => void;
+  triggerScrape: () => void;
+  scraping: boolean;
+}) {
+  return (
+    <>
+      {/* Status strip */}
+      <div className="rounded-2xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: "var(--dmoop-gradient-accent)", boxShadow: "var(--dmoop-shadow-accent)" }}>
+            <Radar size={17} className="text-white" />
+          </div>
+          <div>
+            <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)]">Background marketing intel</p>
+            <p className="text-[11.5px] text-[var(--dmoop-text-secondary)] mt-0.5">
+              Scrapes 12 marketing topics from across the web daily via Tavily, stored for chat context.
+            </p>
+          </div>
+        </div>
+        <button onClick={triggerScrape} disabled={scraping}
+          className="h-9 px-4 rounded-lg dmoop-btn-primary text-[12.5px] font-semibold flex items-center justify-center gap-2 shrink-0">
+          {scraping ? <><RefreshCw size={13} className="animate-spin" /> Scraping…</> : <><RefreshCw size={13} /> Scrape now</>}
+        </button>
+      </div>
+
+      {/* Last run + filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2 text-[12px] text-[var(--dmoop-text-secondary)]">
+          <Clock size={12} />
+          {lastRun ? (
+            <>
+              Last run {new Date(lastRun.started_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              <span className="text-[var(--dmoop-text-tertiary)]">·</span>
+              <span className="font-semibold text-emerald-600">+{lastRun.items_added}</span>
+              <span className="text-[var(--dmoop-text-tertiary)]">added</span>
+              <span className="text-[var(--dmoop-text-tertiary)]">·</span>
+              <span>{lastRun.items_skipped} dedup&apos;d</span>
+            </>
+          ) : "No scrape runs yet"}
+        </div>
+        <select value={intelCategory} onChange={(e) => setIntelCategory(e.target.value)}
+          className="h-8 px-3 rounded-md text-[12.5px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)]">
+          {INTEL_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+        </select>
+      </div>
+
+      {/* Intel cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {intel.length === 0 && (
+          <div className="col-span-full text-center py-12 text-[13px] text-[var(--dmoop-text-tertiary)] rounded-2xl"
+            style={{ background: "var(--dmoop-gradient-card)", border: "1px dashed var(--dmoop-border-soft)" }}>
+            No intel scraped yet. Click <strong>Scrape now</strong> above to prime the data.
+          </div>
+        )}
+        {intel.map((i) => (
+          <a key={i.id} href={i.url} target="_blank" rel="noopener noreferrer"
+            className="group block p-4 rounded-2xl overflow-hidden dmoop-card">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[9.5px] px-1.5 py-0.5 rounded-md bg-[#f5f1ea] text-[var(--dmoop-text-secondary)] font-semibold uppercase tracking-wide">
+                {i.category.replace("_", " ")}
+              </span>
+              {i.source && (
+                <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">{i.source}</span>
+              )}
+              <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)] ml-auto">
+                {new Date(i.scraped_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+              </span>
+            </div>
+            <p className="text-[14px] font-semibold text-[var(--dmoop-text-primary)] mb-1.5 leading-snug line-clamp-2 group-hover:text-[var(--dmoop-accent)] transition-colors">
+              {i.title}
+            </p>
+            {i.summary && (
+              <p className="text-[12px] text-[var(--dmoop-text-secondary)] line-clamp-3 leading-relaxed">{i.summary}</p>
+            )}
+            <div className="flex items-center gap-1 mt-2.5 text-[11px] text-[var(--dmoop-text-tertiary)] group-hover:text-[var(--dmoop-accent)] transition-colors">
+              <ExternalLink size={10} /> Open source
+            </div>
+          </a>
+        ))}
+      </div>
+    </>
   );
 }
