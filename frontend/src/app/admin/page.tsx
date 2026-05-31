@@ -27,11 +27,13 @@ interface IntelItem {
   id: string;
   topic: string;
   category: string;
+  asset_type: string | null;
   title: string;
   url: string;
   summary: string | null;
   source: string | null;
   scraped_at: string;
+  converted_to_training: boolean;
 }
 
 interface IntelRunInfo {
@@ -39,6 +41,24 @@ interface IntelRunInfo {
   finished_at: string | null;
   items_added: number;
   items_skipped: number;
+}
+
+interface ConversionRunInfo {
+  started_at: string;
+  finished_at: string | null;
+  intel_processed: number;
+  pairs_created: number;
+  pairs_skipped: number;
+}
+
+interface IntelBreakdown {
+  [asset_type: string]: { total: number; converted: number; pending: number };
+}
+
+interface IntelTotals {
+  intel_total: number;
+  intel_pending_conversion: number;
+  training_pairs_total: number;
 }
 
 interface LearningHealth {
@@ -82,8 +102,13 @@ export default function AdminPage() {
   // Intel state
   const [intel, setIntel] = useState<IntelItem[]>([]);
   const [intelCategory, setIntelCategory] = useState("");
+  const [intelAssetType, setIntelAssetType] = useState("");
   const [lastRun, setLastRun] = useState<IntelRunInfo | null>(null);
+  const [lastConversion, setLastConversion] = useState<ConversionRunInfo | null>(null);
+  const [breakdown, setBreakdown] = useState<IntelBreakdown>({});
+  const [intelTotals, setIntelTotals] = useState<IntelTotals | null>(null);
   const [scraping, setScraping] = useState(false);
+  const [converting, setConverting] = useState(false);
 
   // Learning state
   const [learningHealth, setLearningHealth] = useState<LearningHealth | null>(null);
@@ -108,16 +133,33 @@ export default function AdminPage() {
   const loadIntel = async () => {
     const params = new URLSearchParams({ limit: "100" });
     if (intelCategory) params.set("category", intelCategory);
+    if (intelAssetType) params.set("asset_type", intelAssetType);
     const res = await fetch(`/api/admin/intel?${params}`).then((r) => r.json());
     setIntel(res.items ?? []);
     setLastRun(res.last_run ?? null);
+    setLastConversion(res.last_conversion ?? null);
+    setBreakdown(res.breakdown ?? {});
+    setIntelTotals(res.totals ?? null);
   };
 
   const triggerScrape = async () => {
     setScraping(true);
-    await fetch("/api/cron/scrape-intel", { method: "GET" });
+    // Fire all 4 slices in parallel so we cover the full 130+ topic set
+    await Promise.all([
+      fetch("/api/cron/scrape-intel?slice=0", { method: "GET" }),
+      fetch("/api/cron/scrape-intel?slice=1", { method: "GET" }),
+      fetch("/api/cron/scrape-intel?slice=2", { method: "GET" }),
+      fetch("/api/cron/scrape-intel?slice=3", { method: "GET" }),
+    ]);
     await loadIntel();
     setScraping(false);
+  };
+
+  const triggerConvert = async () => {
+    setConverting(true);
+    await fetch("/api/cron/convert-pairs?limit=50", { method: "GET" });
+    await loadIntel();
+    setConverting(false);
   };
 
   const loadLearning = async () => {
@@ -128,7 +170,7 @@ export default function AdminPage() {
   };
 
   useEffect(() => { load(); loadIntel(); loadLearning(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (tab === "intel") loadIntel(); }, [intelCategory]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tab === "intel") loadIntel(); }, [intelCategory, intelAssetType]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tab === "learning") loadLearning(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -291,10 +333,17 @@ export default function AdminPage() {
           <IntelPanel
             intel={intel}
             lastRun={lastRun}
+            lastConversion={lastConversion}
+            breakdown={breakdown}
+            totals={intelTotals}
             intelCategory={intelCategory}
             setIntelCategory={setIntelCategory}
+            intelAssetType={intelAssetType}
+            setIntelAssetType={setIntelAssetType}
             triggerScrape={triggerScrape}
+            triggerConvert={triggerConvert}
             scraping={scraping}
+            converting={converting}
           />
         ) : (
           <LearningPanel
@@ -522,63 +571,182 @@ function MiniStat({ label, value, icon: Icon, accent }: {
   );
 }
 
+const ASSET_TYPE_LABELS: Record<string, { label: string; emoji: string; color: string }> = {
+  article:     { label: "Articles",     emoji: "📰", color: "bg-blue-50 text-blue-700" },
+  whitepaper:  { label: "Whitepapers",  emoji: "📄", color: "bg-indigo-50 text-indigo-700" },
+  ebook:       { label: "Ebooks",       emoji: "📘", color: "bg-violet-50 text-violet-700" },
+  playbook:    { label: "Playbooks",    emoji: "📋", color: "bg-fuchsia-50 text-fuchsia-700" },
+  case_study:  { label: "Case studies", emoji: "🏆", color: "bg-emerald-50 text-emerald-700" },
+  social_post: { label: "Social posts", emoji: "💬", color: "bg-pink-50 text-pink-700" },
+  ad_campaign: { label: "Ad campaigns", emoji: "🎯", color: "bg-orange-50 text-orange-700" },
+  report:      { label: "Reports",      emoji: "📊", color: "bg-cyan-50 text-cyan-700" },
+  newsletter:  { label: "Newsletters",  emoji: "📧", color: "bg-amber-50 text-amber-700" },
+  podcast:     { label: "Podcasts",     emoji: "🎙️", color: "bg-purple-50 text-purple-700" },
+  video:       { label: "Videos",       emoji: "🎬", color: "bg-red-50 text-red-700" },
+  template:    { label: "Templates",    emoji: "🧩", color: "bg-teal-50 text-teal-700" },
+  guide:       { label: "Guides",       emoji: "📗", color: "bg-lime-50 text-lime-700" },
+};
+
+const ASSET_TYPE_FILTERS = [
+  { value: "", label: "All asset types" },
+  ...Object.entries(ASSET_TYPE_LABELS).map(([value, v]) => ({ value, label: `${v.emoji} ${v.label}` })),
+];
+
 function IntelPanel({
   intel,
   lastRun,
+  lastConversion,
+  breakdown,
+  totals,
   intelCategory,
   setIntelCategory,
+  intelAssetType,
+  setIntelAssetType,
   triggerScrape,
+  triggerConvert,
   scraping,
+  converting,
 }: {
   intel: IntelItem[];
   lastRun: IntelRunInfo | null;
+  lastConversion: ConversionRunInfo | null;
+  breakdown: IntelBreakdown;
+  totals: IntelTotals | null;
   intelCategory: string;
   setIntelCategory: (v: string) => void;
+  intelAssetType: string;
+  setIntelAssetType: (v: string) => void;
   triggerScrape: () => void;
+  triggerConvert: () => void;
   scraping: boolean;
+  converting: boolean;
 }) {
   return (
     <>
-      {/* Status strip */}
-      <div className="rounded-2xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+      {/* Automation status strip */}
+      <div className="rounded-2xl p-4 sm:p-5 mb-5"
         style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: "var(--dmoop-gradient-accent)", boxShadow: "var(--dmoop-shadow-accent)" }}>
-            <Radar size={17} className="text-white" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: "var(--dmoop-gradient-accent)", boxShadow: "var(--dmoop-shadow-accent)" }}>
+              <Radar size={17} className="text-white" />
+            </div>
+            <div>
+              <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)] flex items-center gap-2">
+                Fully-automated marketing intel pipeline
+                <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+                </span>
+              </p>
+              <p className="text-[11.5px] text-[var(--dmoop-text-secondary)] mt-0.5">
+                Tavily scrapes 130+ marketing queries across <strong>13 asset types</strong> every 6 hours.
+                Groq converts new intel → training pairs every 6 hours, feeding the Tuned model.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)]">Background marketing intel</p>
-            <p className="text-[11.5px] text-[var(--dmoop-text-secondary)] mt-0.5">
-              Scrapes 12 marketing topics from across the web daily via Tavily, stored for chat context.
-            </p>
+          <div className="flex gap-2 shrink-0">
+            <button onClick={triggerScrape} disabled={scraping}
+              className="h-9 px-3.5 rounded-lg dmoop-btn-primary text-[12.5px] font-semibold flex items-center justify-center gap-2">
+              {scraping ? <><RefreshCw size={13} className="animate-spin" /> Scraping…</> : <><Radar size={13} /> Scrape now</>}
+            </button>
+            <button onClick={triggerConvert} disabled={converting}
+              className="h-9 px-3.5 rounded-lg text-[12.5px] font-semibold flex items-center justify-center gap-2 bg-white border border-[var(--dmoop-border-soft)] hover:bg-[#faf6ef] text-[var(--dmoop-text-primary)]">
+              {converting ? <><RefreshCw size={13} className="animate-spin" /> Converting…</> : <><Brain size={13} /> Convert now</>}
+            </button>
           </div>
         </div>
-        <button onClick={triggerScrape} disabled={scraping}
-          className="h-9 px-4 rounded-lg dmoop-btn-primary text-[12.5px] font-semibold flex items-center justify-center gap-2 shrink-0">
-          {scraping ? <><RefreshCw size={13} className="animate-spin" /> Scraping…</> : <><RefreshCw size={13} /> Scrape now</>}
-        </button>
+
+        {/* Pipeline KPIs */}
+        {totals && (
+          <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-[var(--dmoop-border-soft)]">
+            <div className="text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">Intel scraped</p>
+              <p className="text-[22px] font-semibold text-[var(--dmoop-text-primary)] tracking-tight mt-0.5">{totals.intel_total.toLocaleString()}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">Pending convert</p>
+              <p className="text-[22px] font-semibold text-amber-600 tracking-tight mt-0.5">{totals.intel_pending_conversion.toLocaleString()}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">Training pairs</p>
+              <p className="text-[22px] font-semibold text-emerald-600 tracking-tight mt-0.5">{totals.training_pairs_total.toLocaleString()}</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Last run + filter */}
+      {/* Asset type breakdown */}
+      {Object.keys(breakdown).length > 0 && (
+        <div className="rounded-2xl p-4 mb-5"
+          style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-3">Coverage by asset type</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+            {Object.entries(ASSET_TYPE_LABELS).map(([k, meta]) => {
+              const stats = breakdown[k] ?? { total: 0, converted: 0, pending: 0 };
+              const pct = stats.total > 0 ? Math.round((stats.converted / stats.total) * 100) : 0;
+              const isActive = intelAssetType === k;
+              return (
+                <button key={k} onClick={() => setIntelAssetType(isActive ? "" : k)}
+                  className={cn(
+                    "text-left p-2.5 rounded-xl border transition-all duration-150",
+                    isActive
+                      ? "border-[var(--dmoop-accent)] bg-[#fef9f3]"
+                      : "border-[var(--dmoop-border-soft)] bg-white hover:bg-[#faf6ef]"
+                  )}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[13px]">{meta.emoji}</span>
+                    <span className="text-[11.5px] font-semibold text-[var(--dmoop-text-primary)] truncate">{meta.label}</span>
+                  </div>
+                  <p className="text-[16px] font-semibold text-[var(--dmoop-text-primary)] leading-none">{stats.total}</p>
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[10px]">
+                    <div className="flex-1 h-1 rounded-full bg-[#f0e7d8] overflow-hidden">
+                      <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[var(--dmoop-text-tertiary)] font-mono">{pct}%</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Run metadata + filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2 text-[12px] text-[var(--dmoop-text-secondary)]">
-          <Clock size={12} />
-          {lastRun ? (
-            <>
-              Last run {new Date(lastRun.started_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+        <div className="flex flex-col gap-1 text-[11.5px] text-[var(--dmoop-text-secondary)]">
+          {lastRun && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Clock size={11} />
+              <span>Last scrape {new Date(lastRun.started_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
               <span className="text-[var(--dmoop-text-tertiary)]">·</span>
               <span className="font-semibold text-emerald-600">+{lastRun.items_added}</span>
               <span className="text-[var(--dmoop-text-tertiary)]">added</span>
               <span className="text-[var(--dmoop-text-tertiary)]">·</span>
               <span>{lastRun.items_skipped} dedup&apos;d</span>
-            </>
-          ) : "No scrape runs yet"}
+            </div>
+          )}
+          {lastConversion && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Brain size={11} />
+              <span>Last convert {new Date(lastConversion.started_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+              <span className="text-[var(--dmoop-text-tertiary)]">·</span>
+              <span className="font-semibold text-emerald-600">+{lastConversion.pairs_created} pairs</span>
+              <span className="text-[var(--dmoop-text-tertiary)]">·</span>
+              <span>{lastConversion.intel_processed} processed</span>
+            </div>
+          )}
         </div>
-        <select value={intelCategory} onChange={(e) => setIntelCategory(e.target.value)}
-          className="h-8 px-3 rounded-md text-[12.5px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)]">
-          {INTEL_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-        </select>
+        <div className="flex gap-2 flex-wrap">
+          <select value={intelAssetType} onChange={(e) => setIntelAssetType(e.target.value)}
+            className="h-8 px-3 rounded-md text-[12.5px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)]">
+            {ASSET_TYPE_FILTERS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+          <select value={intelCategory} onChange={(e) => setIntelCategory(e.target.value)}
+            className="h-8 px-3 rounded-md text-[12.5px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)]">
+            {INTEL_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Intel cards */}
@@ -589,31 +757,42 @@ function IntelPanel({
             No intel scraped yet. Click <strong>Scrape now</strong> above to prime the data.
           </div>
         )}
-        {intel.map((i) => (
-          <a key={i.id} href={i.url} target="_blank" rel="noopener noreferrer"
-            className="group block p-4 rounded-2xl overflow-hidden dmoop-card">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[9.5px] px-1.5 py-0.5 rounded-md bg-[#f5f1ea] text-[var(--dmoop-text-secondary)] font-semibold uppercase tracking-wide">
-                {i.category.replace("_", " ")}
-              </span>
-              {i.source && (
-                <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">{i.source}</span>
+        {intel.map((i) => {
+          const meta = ASSET_TYPE_LABELS[i.asset_type ?? "article"] ?? ASSET_TYPE_LABELS.article;
+          return (
+            <a key={i.id} href={i.url} target="_blank" rel="noopener noreferrer"
+              className="group block p-4 rounded-2xl overflow-hidden dmoop-card">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className={cn("text-[9.5px] px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wide inline-flex items-center gap-1", meta.color)}>
+                  <span>{meta.emoji}</span> {meta.label}
+                </span>
+                <span className="text-[9.5px] px-1.5 py-0.5 rounded-md bg-[#f5f1ea] text-[var(--dmoop-text-secondary)] font-semibold uppercase tracking-wide">
+                  {i.category.replace("_", " ")}
+                </span>
+                {i.converted_to_training && (
+                  <span className="text-[9.5px] px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold uppercase tracking-wide">
+                    ✓ Trained
+                  </span>
+                )}
+                {i.source && (
+                  <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">{i.source}</span>
+                )}
+                <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)] ml-auto">
+                  {new Date(i.scraped_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                </span>
+              </div>
+              <p className="text-[14px] font-semibold text-[var(--dmoop-text-primary)] mb-1.5 leading-snug line-clamp-2 group-hover:text-[var(--dmoop-accent)] transition-colors">
+                {i.title}
+              </p>
+              {i.summary && (
+                <p className="text-[12px] text-[var(--dmoop-text-secondary)] line-clamp-3 leading-relaxed">{i.summary}</p>
               )}
-              <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)] ml-auto">
-                {new Date(i.scraped_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-              </span>
-            </div>
-            <p className="text-[14px] font-semibold text-[var(--dmoop-text-primary)] mb-1.5 leading-snug line-clamp-2 group-hover:text-[var(--dmoop-accent)] transition-colors">
-              {i.title}
-            </p>
-            {i.summary && (
-              <p className="text-[12px] text-[var(--dmoop-text-secondary)] line-clamp-3 leading-relaxed">{i.summary}</p>
-            )}
-            <div className="flex items-center gap-1 mt-2.5 text-[11px] text-[var(--dmoop-text-tertiary)] group-hover:text-[var(--dmoop-accent)] transition-colors">
-              <ExternalLink size={10} /> Open source
-            </div>
-          </a>
-        ))}
+              <div className="flex items-center gap-1 mt-2.5 text-[11px] text-[var(--dmoop-text-tertiary)] group-hover:text-[var(--dmoop-accent)] transition-colors">
+                <ExternalLink size={10} /> Open source
+              </div>
+            </a>
+          );
+        })}
       </div>
     </>
   );

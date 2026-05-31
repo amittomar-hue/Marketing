@@ -17,99 +17,156 @@ interface TavilyResponse {
   results: TavilyResult[];
 }
 
-// 60+ marketing-only topics. Will be refreshed multiple times per day
-// (Vercel free tier limits crons but you can manually trigger).
-const TOPICS: Array<{ category: string; query: string }> = [
-  // ── SEO (8) ─────────────────────────────────────────────
-  { category: "seo", query: "Latest Google SEO algorithm updates and ranking changes this week" },
-  { category: "seo", query: "Technical SEO audit best practices 2026 Core Web Vitals" },
-  { category: "seo", query: "Programmatic SEO case studies and tactics that work" },
-  { category: "seo", query: "Link building strategies and backlink trends this month" },
-  { category: "seo", query: "Local SEO updates Google Business Profile changes" },
-  { category: "seo", query: "Schema markup structured data 2026 best practices" },
-  { category: "seo", query: "Keyword research tactics and search intent analysis 2026" },
-  { category: "seo", query: "Content gap analysis competitor SEO strategies this week" },
+type AssetType =
+  | "article"        // blog posts / news
+  | "whitepaper"     // formal research papers, gated PDFs
+  | "ebook"          // long-form guides
+  | "playbook"       // tactical step-by-step guides
+  | "case_study"     // customer success stories with metrics
+  | "social_post"    // LinkedIn / X / Threads viral marketing posts
+  | "ad_campaign"    // ad creative breakdowns / campaign analyses
+  | "report"         // Gartner/Forrester-style industry reports
+  | "newsletter"     // recurring publications (Morning Brew, TLDR Marketing)
+  | "podcast"        // podcast episode summaries / show notes
+  | "video"          // video / webinar transcripts
+  | "template"       // downloadable templates / frameworks
+  | "guide";         // how-to guides
 
-  // ── AEO / GEO (6) ────────────────────────────────────────
-  { category: "aeo_geo", query: "AI Overviews citation strategies Google SGE tactics 2026" },
-  { category: "aeo_geo", query: "ChatGPT visibility how to get cited by AI search" },
-  { category: "aeo_geo", query: "Perplexity AI search optimization GEO tactics" },
-  { category: "aeo_geo", query: "Generative engine optimization LLMO strategies 2026" },
-  { category: "aeo_geo", query: "Entity SEO knowledge graph optimization 2026" },
-  { category: "aeo_geo", query: "AI answer engine optimization Bing Copilot SearchGPT" },
+interface Topic {
+  category: string;
+  asset_type: AssetType;
+  query: string;
+  /** How many days back to search. Newer for time-sensitive (news), older OK for evergreen (playbooks) */
+  days?: number;
+  topic?: "news" | "general";
+}
 
-  // ── ABM (5) ──────────────────────────────────────────────
-  { category: "abm", query: "Account-based marketing tier-1 enterprise playbooks 2026" },
-  { category: "abm", query: "ABM campaign orchestration multi-channel B2B" },
-  { category: "abm", query: "Personalized outreach sequences ABM case studies" },
-  { category: "abm", query: "Account-based marketing intent data 6sense Demandbase" },
-  { category: "abm", query: "ABM measurement attribution pipeline impact 2026" },
+// ─────────────────────────────────────────────────────────────────
+// MASSIVE expanded TOPICS — 130+ queries covering all asset types
+// across all marketing categories.
+// ─────────────────────────────────────────────────────────────────
+const TOPICS: Topic[] = [
+  // ━━━━━━ ARTICLES / NEWS (high-frequency, time-sensitive) ━━━━━━
+  { category: "seo",             asset_type: "article", query: "Latest Google SEO algorithm updates ranking changes this week", days: 7 },
+  { category: "seo",             asset_type: "article", query: "Technical SEO Core Web Vitals 2026 best practices", days: 14 },
+  { category: "aeo_geo",         asset_type: "article", query: "AI Overviews citation strategies Google SGE Perplexity 2026", days: 14 },
+  { category: "aeo_geo",         asset_type: "article", query: "Generative engine optimization LLMO GEO tactics ChatGPT visibility", days: 14 },
+  { category: "trend",           asset_type: "article", query: "Marketing trends this week social media B2B B2C", days: 7 },
+  { category: "trend",           asset_type: "article", query: "TikTok Instagram LinkedIn marketing trends viral content 2026", days: 7 },
+  { category: "company_signals", asset_type: "article", query: "B2B company hiring trends funding announcements marketing this week", days: 7 },
+  { category: "company_signals", asset_type: "article", query: "CMO changes marketing leadership moves this month", days: 30 },
 
-  // ── Buyer Signals (4) ────────────────────────────────────
-  { category: "buyer_signals", query: "B2B buyer intent data trends Bombora 6sense this week" },
-  { category: "buyer_signals", query: "Predictive lead scoring propensity models 2026" },
-  { category: "buyer_signals", query: "Sales intelligence buying committee signals 2026" },
-  { category: "buyer_signals", query: "Intent signal interpretation behavioral triggers B2B" },
+  // ━━━━━━ EBOOKS (long-form guides, evergreen) ━━━━━━
+  { category: "seo",             asset_type: "ebook", query: '"SEO ebook" OR "complete SEO guide" download 2026', days: 365 },
+  { category: "abm",             asset_type: "ebook", query: '"ABM ebook" account-based marketing complete guide download', days: 365 },
+  { category: "demand_gen",      asset_type: "ebook", query: '"demand generation ebook" B2B SaaS guide download', days: 365 },
+  { category: "ad_copy",         asset_type: "ebook", query: '"copywriting ebook" OR "ad copy ebook" download', days: 365 },
+  { category: "email",           asset_type: "ebook", query: '"email marketing ebook" deliverability OR lifecycle download', days: 365 },
+  { category: "analytics",       asset_type: "ebook", query: '"marketing analytics ebook" attribution measurement download', days: 365 },
+  { category: "strategy",        asset_type: "ebook", query: '"GTM strategy ebook" OR "go-to-market guide" B2B SaaS download', days: 365 },
+  { category: "buyer_signals",   asset_type: "ebook", query: '"intent data ebook" buyer signals B2B download', days: 365 },
+  { category: "orm",             asset_type: "ebook", query: '"brand reputation ebook" online reputation management guide', days: 365 },
 
-  // ── Company Signals (4) ──────────────────────────────────
-  { category: "company_signals", query: "B2B company hiring trends funding announcements this week" },
-  { category: "company_signals", query: "Marketing leadership moves CMO changes this month" },
-  { category: "company_signals", query: "Tech stack shifts MarTech changes Bombora technographic" },
-  { category: "company_signals", query: "Enterprise SaaS M&A acquisitions marketing news this week" },
+  // ━━━━━━ WHITEPAPERS (formal research, evidence-based) ━━━━━━
+  { category: "abm",             asset_type: "whitepaper", query: 'ABM whitepaper "account based marketing" research benchmarks', days: 365 },
+  { category: "demand_gen",      asset_type: "whitepaper", query: 'demand generation whitepaper B2B benchmarks 2026', days: 365 },
+  { category: "buyer_signals",   asset_type: "whitepaper", query: 'intent data whitepaper Bombora 6sense Demandbase benchmarks', days: 365 },
+  { category: "analytics",       asset_type: "whitepaper", query: 'marketing measurement whitepaper attribution Nielsen Forrester', days: 365 },
+  { category: "seo",             asset_type: "whitepaper", query: 'SEO whitepaper search ranking factors research 2026', days: 365 },
+  { category: "email",           asset_type: "whitepaper", query: 'email marketing whitepaper deliverability benchmark report 2026', days: 365 },
+  { category: "strategy",        asset_type: "whitepaper", query: 'B2B marketing whitepaper research strategy 2026', days: 365 },
+  { category: "ad_copy",         asset_type: "whitepaper", query: 'advertising effectiveness whitepaper creative testing research', days: 365 },
 
-  // ── ORM (4) ──────────────────────────────────────────────
-  { category: "orm", query: "Brand reputation crises online reputation management this week" },
-  { category: "orm", query: "Review response strategy G2 Capterra Trustpilot tactics" },
-  { category: "orm", query: "Social sentiment monitoring brand mention tracking 2026" },
-  { category: "orm", query: "Executive thought leadership LinkedIn personal branding 2026" },
+  // ━━━━━━ PLAYBOOKS (tactical step-by-step) ━━━━━━
+  { category: "abm",             asset_type: "playbook", query: '"ABM playbook" tier-1 enterprise tactics steps', days: 180 },
+  { category: "demand_gen",      asset_type: "playbook", query: '"demand gen playbook" pipeline tactics B2B 2026', days: 180 },
+  { category: "seo",             asset_type: "playbook", query: '"SEO playbook" technical content link building tactics 2026', days: 180 },
+  { category: "ad_copy",         asset_type: "playbook", query: '"ad copy playbook" testing Google Ads Meta LinkedIn winning patterns', days: 180 },
+  { category: "email",           asset_type: "playbook", query: '"email marketing playbook" sequences nurture cold outreach steps', days: 180 },
+  { category: "buyer_signals",   asset_type: "playbook", query: '"signal-based selling playbook" intent triggers tactics', days: 180 },
+  { category: "company_signals", asset_type: "playbook", query: '"signal-based marketing playbook" company triggers outreach steps', days: 180 },
+  { category: "competitor",      asset_type: "playbook", query: '"competitive battlecard playbook" displacement positioning steps', days: 180 },
+  { category: "orm",             asset_type: "playbook", query: '"brand crisis playbook" response strategy steps', days: 365 },
+  { category: "analytics",       asset_type: "playbook", query: '"marketing operations playbook" MOPs RevOps tactics 2026', days: 180 },
+  { category: "strategy",        asset_type: "playbook", query: '"GTM playbook" product launch positioning steps B2B SaaS', days: 180 },
 
-  // ── Ad Copy (5) ──────────────────────────────────────────
-  { category: "ad_copy", query: "Top performing Google Ads search ad copy patterns this week" },
-  { category: "ad_copy", query: "Meta Ads Facebook Instagram creative trends that convert" },
-  { category: "ad_copy", query: "LinkedIn Ads B2B copy that drives pipeline 2026" },
-  { category: "ad_copy", query: "TikTok ad creative trends viral hooks 2026" },
-  { category: "ad_copy", query: "Retail media ads Amazon Walmart sponsored placements 2026" },
+  // ━━━━━━ CASE STUDIES (customer success with metrics) ━━━━━━
+  { category: "abm",             asset_type: "case_study", query: '"ABM case study" B2B SaaS revenue impact metrics 2026', days: 365 },
+  { category: "demand_gen",      asset_type: "case_study", query: '"demand generation case study" pipeline pipeline impact metrics', days: 365 },
+  { category: "seo",             asset_type: "case_study", query: '"SEO case study" traffic growth ranking results', days: 365 },
+  { category: "ad_copy",         asset_type: "case_study", query: '"Google Ads case study" OR "Meta Ads case study" ROAS improvement', days: 365 },
+  { category: "email",           asset_type: "case_study", query: '"email marketing case study" open rate CTR conversion lift', days: 365 },
+  { category: "buyer_signals",   asset_type: "case_study", query: '"intent data case study" 6sense Bombora pipeline impact', days: 365 },
+  { category: "company_signals", asset_type: "case_study", query: '"signal-based outbound case study" reply rate meetings booked', days: 365 },
+  { category: "orm",             asset_type: "case_study", query: '"brand reputation case study" crisis response Trustpilot G2', days: 365 },
+  { category: "analytics",       asset_type: "case_study", query: '"marketing attribution case study" multi-touch MMM ROI', days: 365 },
+  { category: "competitor",      asset_type: "case_study", query: '"win-loss analysis case study" displacement competitive marketing', days: 365 },
+  { category: "strategy",        asset_type: "case_study", query: '"GTM case study" product launch B2B SaaS results', days: 365 },
 
-  // ── Email (5) ────────────────────────────────────────────
-  { category: "email", query: "Email marketing benchmarks open rates CTR by industry 2026" },
-  { category: "email", query: "Subject line A/B testing winning patterns this month" },
-  { category: "email", query: "Email deliverability Gmail Yahoo bulk sender requirements 2026" },
-  { category: "email", query: "B2B cold email sequences that book meetings 2026" },
-  { category: "email", query: "Lifecycle email nurture sequences SaaS onboarding 2026" },
+  // ━━━━━━ SOCIAL POSTS (LinkedIn / X viral marketing) ━━━━━━
+  { category: "ad_copy",         asset_type: "social_post", query: 'LinkedIn post viral B2B marketing ad copy hooks 2026', days: 60 },
+  { category: "demand_gen",      asset_type: "social_post", query: 'LinkedIn marketing leader posts demand gen growth 2026', days: 30 },
+  { category: "abm",             asset_type: "social_post", query: 'LinkedIn ABM tactical post marketing leadership 2026', days: 60 },
+  { category: "trend",           asset_type: "social_post", query: 'LinkedIn viral marketing post trend B2B 2026', days: 30 },
+  { category: "seo",             asset_type: "social_post", query: 'LinkedIn SEO marketing post tactical thread 2026', days: 60 },
+  { category: "strategy",        asset_type: "social_post", query: 'LinkedIn marketing strategy thread viral B2B 2026', days: 30 },
+  { category: "analytics",       asset_type: "social_post", query: 'LinkedIn marketing analytics attribution post viral 2026', days: 60 },
+  { category: "buyer_signals",   asset_type: "social_post", query: 'LinkedIn intent data buyer signals post B2B sales 2026', days: 60 },
 
-  // ── Trends (5) ───────────────────────────────────────────
-  { category: "trend", query: "Marketing trends this week social media B2B B2C" },
-  { category: "trend", query: "TikTok Instagram LinkedIn marketing trends viral content 2026" },
-  { category: "trend", query: "Creator economy influencer marketing trends this week" },
-  { category: "trend", query: "Marketing technology emerging tools AI MarTech 2026" },
-  { category: "trend", query: "Consumer behavior shifts marketing implications Q2 2026" },
+  // ━━━━━━ AD CAMPAIGNS (creative breakdowns, campaign analyses) ━━━━━━
+  { category: "ad_copy",         asset_type: "ad_campaign", query: '"best ad campaigns 2026" creative breakdown analysis', days: 180 },
+  { category: "ad_copy",         asset_type: "ad_campaign", query: 'Super Bowl 2026 ads creative analysis ROI', days: 180 },
+  { category: "ad_copy",         asset_type: "ad_campaign", query: 'B2B SaaS ad campaign teardown copy creative analysis', days: 180 },
+  { category: "ad_copy",         asset_type: "ad_campaign", query: 'TikTok ad campaign viral creative breakdown 2026', days: 90 },
+  { category: "ad_copy",         asset_type: "ad_campaign", query: 'LinkedIn ad campaign B2B sponsored content creative analysis', days: 180 },
+  { category: "ad_copy",         asset_type: "ad_campaign", query: 'retail media ad campaign Amazon Walmart sponsored ads case study', days: 180 },
+  { category: "trend",           asset_type: "ad_campaign", query: '"campaign of the year" 2026 marketing advertising', days: 365 },
 
-  // ── Demand Gen (5) ───────────────────────────────────────
-  { category: "demand_gen", query: "B2B demand generation tactics pipeline experiments this week" },
-  { category: "demand_gen", query: "Marketing attribution MMM MTA incrementality 2026" },
-  { category: "demand_gen", query: "Referral program partner marketing case studies 2026" },
-  { category: "demand_gen", query: "Webinar marketing virtual events high-converting formats 2026" },
-  { category: "demand_gen", query: "Product-led growth PLG marketing tactics SaaS 2026" },
+  // ━━━━━━ REPORTS (Gartner / Forrester / McKinsey style) ━━━━━━
+  { category: "trend",           asset_type: "report", query: 'Gartner CMO Spend Survey 2026 marketing budget research', days: 365 },
+  { category: "abm",             asset_type: "report", query: 'Forrester ABM benchmark report 2026 enterprise marketing', days: 365 },
+  { category: "demand_gen",      asset_type: "report", query: 'Pipeline benchmark report B2B SaaS marketing 2026', days: 365 },
+  { category: "analytics",       asset_type: "report", query: 'marketing attribution report MMM MTA benchmark 2026', days: 365 },
+  { category: "buyer_signals",   asset_type: "report", query: 'intent data adoption report B2B sales marketing 2026', days: 365 },
+  { category: "seo",             asset_type: "report", query: 'SEO industry report ranking factors research 2026', days: 365 },
+  { category: "email",           asset_type: "report", query: 'email marketing benchmark report open CTR deliverability 2026', days: 365 },
+  { category: "strategy",        asset_type: "report", query: 'B2B marketing maturity model report Forrester research', days: 365 },
+  { category: "orm",             asset_type: "report", query: 'consumer trust brand reputation report Edelman 2026', days: 365 },
 
-  // ── Analytics (4) ────────────────────────────────────────
-  { category: "analytics", query: "MarTech stack 2026 trends consolidation tools" },
-  { category: "analytics", query: "Marketing attribution multi-touch first-party data 2026" },
-  { category: "analytics", query: "GA4 Looker Studio reporting best practices 2026" },
-  { category: "analytics", query: "Customer data platform CDP implementation playbooks 2026" },
+  // ━━━━━━ NEWSLETTERS (Morning Brew, TLDR Marketing, MarketingProfs) ━━━━━━
+  { category: "trend",           asset_type: "newsletter", query: 'Marketing Brew newsletter top stories this week', days: 7 },
+  { category: "ad_copy",         asset_type: "newsletter", query: 'TLDR Marketing newsletter ad campaigns this week', days: 7 },
+  { category: "demand_gen",      asset_type: "newsletter", query: 'Morning Brew marketing newsletter B2B demand gen 2026', days: 14 },
+  { category: "seo",             asset_type: "newsletter", query: 'Search Engine Roundtable newsletter SEO updates this week', days: 7 },
 
-  // ── Strategy & Positioning (4) ──────────────────────────
-  { category: "strategy", query: "Category creation positioning playbooks B2B SaaS 2026" },
-  { category: "strategy", query: "Pricing strategy packaging changes SaaS 2026" },
-  { category: "strategy", query: "GTM strategy product launch best practices 2026" },
-  { category: "strategy", query: "Brand strategy positioning frameworks JTBD StoryBrand 2026" },
+  // ━━━━━━ PODCASTS (show notes / transcripts) ━━━━━━
+  { category: "demand_gen",      asset_type: "podcast", query: 'B2B demand gen podcast Pavilion CRO show notes 2026', days: 60 },
+  { category: "abm",             asset_type: "podcast", query: 'ABM podcast Demandbase 6sense show notes 2026', days: 60 },
+  { category: "seo",             asset_type: "podcast", query: 'SEO podcast Search Engine Journal show notes 2026', days: 60 },
+  { category: "ad_copy",         asset_type: "podcast", query: 'copywriting podcast direct response marketing show notes', days: 90 },
 
-  // ── Competitor & Market Intel (3) ────────────────────────
-  { category: "competitor", query: "B2B SaaS competitive teardowns positioning analysis this week" },
-  { category: "competitor", query: "Competitive intelligence tools win-loss analysis 2026" },
-  { category: "competitor", query: "Market sizing TAM SAM SOM frameworks 2026" },
+  // ━━━━━━ VIDEO / WEBINAR ━━━━━━
+  { category: "abm",             asset_type: "video", query: 'ABM webinar replay B2B marketing tactics 2026 transcript', days: 90 },
+  { category: "demand_gen",      asset_type: "video", query: 'demand gen webinar transcript B2B SaaS 2026', days: 90 },
+  { category: "buyer_signals",   asset_type: "video", query: 'intent data webinar transcript Bombora 6sense 2026', days: 90 },
+
+  // ━━━━━━ TEMPLATES & FRAMEWORKS ━━━━━━
+  { category: "ad_copy",         asset_type: "template", query: '"ad copy template" "Google Ads template" download', days: 365 },
+  { category: "email",           asset_type: "template", query: '"email template" sequence cold outreach download', days: 365 },
+  { category: "abm",             asset_type: "template", query: '"ABM template" account plan tier-1 download', days: 365 },
+  { category: "demand_gen",      asset_type: "template", query: '"demand gen template" campaign plan brief download', days: 365 },
+  { category: "strategy",        asset_type: "template", query: '"GTM template" positioning canvas StoryBrand download', days: 365 },
+  { category: "analytics",       asset_type: "template", query: '"marketing dashboard template" Looker GA4 KPI download', days: 365 },
+  { category: "competitor",      asset_type: "template", query: '"battlecard template" competitive analysis download', days: 365 },
+
+  // ━━━━━━ GUIDES (long-form how-to) ━━━━━━
+  { category: "aeo_geo",         asset_type: "guide", query: '"complete guide" AEO GEO LLMO AI search citations 2026', days: 180 },
+  { category: "buyer_signals",   asset_type: "guide", query: '"complete guide" intent data signal-based selling B2B 2026', days: 180 },
+  { category: "orm",             asset_type: "guide", query: '"complete guide" online reputation management brand monitoring', days: 365 },
+  { category: "company_signals", asset_type: "guide", query: '"guide" company signal triggers hiring funding B2B sales', days: 180 },
 ];
 
-async function tavilySearch(query: string, apiKey: string): Promise<TavilyResponse | null> {
+async function tavilySearch(query: string, apiKey: string, opts: { days: number; topic: "news" | "general" }): Promise<TavilyResponse | null> {
   try {
     const res = await fetch("https://api.tavily.com/search", {
       method: "POST",
@@ -120,8 +177,8 @@ async function tavilySearch(query: string, apiKey: string): Promise<TavilyRespon
         search_depth: "advanced",
         include_answer: false,
         max_results: 5,
-        topic: "news",
-        days: 7,
+        topic: opts.topic,
+        days: opts.days,
       }),
     });
     if (!res.ok) return null;
@@ -144,12 +201,16 @@ export async function GET(req: NextRequest) {
   const supa = getSupabase();
   if (!supa) return NextResponse.json({ error: "Supabase missing" }, { status: 503 });
 
-  // Optional: limit topics this run (default: half the topics, so we cover all twice a day)
+  // Allow slicing for parallel cron runs (slice=0/1/2/3 for quarters)
   const url = req.nextUrl;
-  const slice = url.searchParams.get("slice"); // "0" = first half, "1" = second half, null = all
+  const slice = url.searchParams.get("slice");
   let topicsForRun = TOPICS;
-  if (slice === "0") topicsForRun = TOPICS.slice(0, Math.ceil(TOPICS.length / 2));
-  if (slice === "1") topicsForRun = TOPICS.slice(Math.ceil(TOPICS.length / 2));
+  if (slice) {
+    const totalSlices = 4;
+    const sliceIdx = parseInt(slice, 10);
+    const size = Math.ceil(TOPICS.length / totalSlices);
+    topicsForRun = TOPICS.slice(sliceIdx * size, (sliceIdx + 1) * size);
+  }
 
   const { data: runRow } = await supa
     .from("intel_scrape_runs")
@@ -162,16 +223,19 @@ export async function GET(req: NextRequest) {
   let skipped = 0;
   const startedAt = Date.now();
 
-  // Concurrency 4 — respects Tavily rate limits
   const batchSize = 4;
   for (let i = 0; i < topicsForRun.length; i += batchSize) {
     const batch = topicsForRun.slice(i, i + batchSize);
     const results = await Promise.all(batch.map(async (t) => {
-      const tav = await tavilySearch(t.query, tavilyKey);
+      const tav = await tavilySearch(t.query, tavilyKey, {
+        days: t.days ?? 30,
+        topic: t.topic ?? (t.asset_type === "article" || t.asset_type === "social_post" || t.asset_type === "newsletter" ? "news" : "general"),
+      });
       if (!tav) return [];
       return tav.results.map((r) => ({
         topic: t.query,
         category: t.category,
+        asset_type: t.asset_type,
         title: r.title,
         url: r.url,
         summary: r.content?.slice(0, 1500) ?? null,

@@ -17,14 +17,16 @@ export async function GET(req: NextRequest) {
   const url = req.nextUrl;
   const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50", 10), 200);
   const category = url.searchParams.get("category");
+  const assetType = url.searchParams.get("asset_type");
 
   let q = service
     .from("marketing_intel")
-    .select("id, topic, category, title, url, summary, source, scraped_at, published_at", { count: "exact" })
+    .select("id, topic, category, asset_type, title, url, summary, source, scraped_at, published_at, converted_to_training", { count: "exact" })
     .order("scraped_at", { ascending: false })
     .limit(limit);
 
   if (category) q = q.eq("category", category);
+  if (assetType) q = q.eq("asset_type", assetType);
 
   const { data, count, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -36,9 +38,49 @@ export async function GET(req: NextRequest) {
     .order("started_at", { ascending: false })
     .limit(1);
 
+  // Asset-type breakdown across all intel (not just the filtered slice)
+  const { data: breakdownRows } = await service
+    .from("marketing_intel")
+    .select("asset_type, converted_to_training");
+
+  const breakdown: Record<string, { total: number; converted: number; pending: number }> = {};
+  for (const r of breakdownRows ?? []) {
+    const key = (r.asset_type as string) ?? "article";
+    if (!breakdown[key]) breakdown[key] = { total: 0, converted: 0, pending: 0 };
+    breakdown[key].total++;
+    if (r.converted_to_training) breakdown[key].converted++;
+    else breakdown[key].pending++;
+  }
+
+  // Recent conversion run
+  const { data: convRuns } = await service
+    .from("conversion_runs")
+    .select("started_at, finished_at, intel_processed, pairs_created, pairs_skipped")
+    .order("started_at", { ascending: false })
+    .limit(1);
+
+  // Totals
+  const { count: totalIntel } = await service
+    .from("marketing_intel")
+    .select("*", { count: "exact", head: true });
+  const { count: pendingIntel } = await service
+    .from("marketing_intel")
+    .select("*", { count: "exact", head: true })
+    .eq("converted_to_training", false);
+  const { count: totalPairs } = await service
+    .from("training_pairs")
+    .select("*", { count: "exact", head: true });
+
   return NextResponse.json({
     items: data,
     total: count ?? 0,
     last_run: runs?.[0] ?? null,
+    last_conversion: convRuns?.[0] ?? null,
+    breakdown,
+    totals: {
+      intel_total: totalIntel ?? 0,
+      intel_pending_conversion: pendingIntel ?? 0,
+      training_pairs_total: totalPairs ?? 0,
+    },
   });
 }
