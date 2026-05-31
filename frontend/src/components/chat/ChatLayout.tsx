@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import WelcomeScreen from "./WelcomeScreen";
 import MessageThread from "./MessageThread";
 import InputBar from "./InputBar";
+import OnboardingTour from "./OnboardingTour";
 import { getModel } from "@/lib/models";
 import { Share2, MoreHorizontal, Sparkles, Menu } from "lucide-react";
 
@@ -17,6 +18,7 @@ export default function ChatLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--dmoop-bg-app)]">
+      <OnboardingTour />
       <Sidebar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
 
       <main className="flex-1 flex flex-col min-w-0 min-h-0 relative">
