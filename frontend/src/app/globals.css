@@ -293,3 +293,47 @@ html {
 .dmoop-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(78, 52, 32, 0.3);
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Syntax highlighting (warm-toned, matches DMOOP code blocks)
+   ────────────────────────────────────────────────────────────── */
+.hljs               { color: #e8d9c5; background: transparent; }
+.hljs-comment,
+.hljs-quote         { color: #7a6a5a; font-style: italic; }
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-section,
+.hljs-link          { color: #f59e7b; }
+.hljs-function .hljs-keyword { color: #f59e7b; }
+.hljs-subst         { color: #e8d9c5; }
+.hljs-string,
+.hljs-title,
+.hljs-name,
+.hljs-attribute,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-built_in,
+.hljs-addition,
+.hljs-variable,
+.hljs-template-tag,
+.hljs-template-variable { color: #a5d49a; }
+.hljs-number,
+.hljs-regexp,
+.hljs-meta          { color: #ffb37a; }
+.hljs-class,
+.hljs-type,
+.hljs-tag           { color: #80c1ff; }
+.hljs-attr,
+.hljs-params,
+.hljs-property      { color: #fcd380; }
+.hljs-doctag        { color: #c9b7a4; }
+.hljs-deletion      { color: #ff8a8a; }
+.hljs-emphasis      { font-style: italic; }
+.hljs-strong        { font-weight: bold; }
+.hljs-built_in,
+.hljs-class .hljs-title { color: #80c1ff; }
+
+/* Override default first/last margins inside markdown blocks */
+.dmoop-md > :first-child { margin-top: 0; }
+.dmoop-md > :last-child  { margin-bottom: 0; }

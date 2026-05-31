@@ -6,27 +6,7 @@ import { getModel } from "@/lib/models";
 import { submitFeedback } from "@/lib/stream-chat";
 import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Sparkles, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-function formatContent(content: string) {
-  const lines = content.split("\n");
-  return lines.map((line, i) => {
-    const parts = line.split(/(\*\*[^*]+\*\*)/g);
-    return (
-      <span key={i}>
-        {parts.map((part, j) =>
-          part.startsWith("**") && part.endsWith("**") ? (
-            <strong key={j} className="font-semibold text-[var(--dmoop-text-primary)]">
-              {part.slice(2, -2)}
-            </strong>
-          ) : (
-            <span key={j}>{part}</span>
-          )
-        )}
-        {i < lines.length - 1 && <br />}
-      </span>
-    );
-  });
-}
+import Markdown from "./Markdown";
 
 export default function Message({ message }: { message: MessageType }) {
   const updateMessage = useChatStore((s) => s.updateMessage);
@@ -105,8 +85,8 @@ export default function Message({ message }: { message: MessageType }) {
           )}
         </div>
 
-        <div className="text-[15px] text-[var(--dmoop-text-primary)] leading-[1.7] whitespace-pre-wrap">
-          {formatContent(message.content)}
+        <div className="text-[15px] text-[var(--dmoop-text-primary)]">
+          <Markdown content={message.content} />
           {message.isStreaming && message.content && (
             <span className="inline-block w-[2px] h-4 bg-[var(--dmoop-accent)] ml-0.5 animate-pulse align-middle rounded-sm" />
           )}
