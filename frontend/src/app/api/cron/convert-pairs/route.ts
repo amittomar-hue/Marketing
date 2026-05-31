@@ -40,14 +40,17 @@ ${summary}
 
 Generate 3 training Q&A pairs.`;
 
+  // Use 8B-instant for conversion — 5x larger free-tier quota than 70B
+  // (500K TPD vs 100K TPD) which is the actual bottleneck for backlog clearing.
+  // Quality is slightly lower than 70B but adequate for instruction-tuning pairs.
   const response = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+    model: "llama-3.1-8b-instant",
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: userPrompt },
     ],
-    temperature: 0.7,
-    max_tokens: 2500,
+    temperature: 0.65,
+    max_tokens: 2000,
   });
 
   const text = response.choices[0]?.message?.content ?? "";

@@ -20,8 +20,12 @@
       "schedule": "0 18 * * *"
     },
     {
-      "path": "/api/cron/convert-pairs?limit=30",
-      "schedule": "0 10 * * *"
+      "path": "/api/cron/convert-pairs?limit=50",
+      "schedule": "30 6 * * *"
+    },
+    {
+      "path": "/api/cron/convert-pairs?limit=50",
+      "schedule": "30 18 * * *"
     }
   ]
 }
