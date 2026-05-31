@@ -18,7 +18,7 @@ export default function Message({ message }: { message: MessageType }) {
     return (
       <div className="flex justify-end dmoop-fade-in">
         <div
-          className="max-w-[80%] rounded-[20px] px-5 py-3 text-[15px] text-[var(--dmoop-text-primary)] whitespace-pre-wrap leading-relaxed"
+          className="max-w-[90%] sm:max-w-[80%] rounded-[20px] px-4 sm:px-5 py-2.5 sm:py-3 text-[14px] sm:text-[15px] text-[var(--dmoop-text-primary)] whitespace-pre-wrap leading-relaxed break-words"
           style={{
             background: "linear-gradient(135deg, #f3eee6 0%, #ebe5da 100%)",
             border: "1px solid rgba(165, 138, 110, 0.15)",
@@ -51,7 +51,7 @@ export default function Message({ message }: { message: MessageType }) {
   };
 
   return (
-    <div className="flex gap-3 dmoop-fade-in">
+    <div className="flex gap-2.5 sm:gap-3 dmoop-fade-in">
       <div
         className="relative w-9 h-9 shrink-0 rounded-xl flex items-center justify-center mt-0.5 bg-white p-1.5 overflow-hidden"
         style={{
@@ -89,7 +89,7 @@ export default function Message({ message }: { message: MessageType }) {
           )}
         </div>
 
-        <div className="text-[15px] text-[var(--dmoop-text-primary)]">
+        <div className="text-[14px] sm:text-[15px] text-[var(--dmoop-text-primary)] break-words">
           <Markdown content={message.content} />
           {message.isStreaming && message.content && (
             <span className="inline-block w-[2px] h-4 bg-[var(--dmoop-accent)] ml-0.5 animate-pulse align-middle rounded-sm" />

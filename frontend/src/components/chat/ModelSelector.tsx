@@ -47,8 +47,17 @@ export default function ModelSelector() {
       </button>
 
       {open && (
+        <>
+          {/* Mobile backdrop */}
+          <div className="sm:hidden fixed inset-0 bg-black/30 z-40 dmoop-fade-in" onClick={() => setOpen(false)} />
         <div
-          className="absolute bottom-full right-0 mb-2 w-[320px] sm:w-[380px] max-w-[calc(100vw-2rem)] rounded-2xl overflow-hidden z-50 dmoop-scale-in"
+          className={cn(
+            "rounded-2xl overflow-hidden z-50 dmoop-scale-in",
+            // Mobile: bottom sheet, positioned fixed above input bar
+            "fixed left-3 right-3 bottom-[110px] max-h-[70vh] overflow-y-auto dmoop-scroll",
+            // Desktop: popover above the trigger, right-aligned
+            "sm:absolute sm:inset-auto sm:bottom-full sm:right-0 sm:mb-2 sm:w-[380px] sm:max-h-none sm:overflow-visible"
+          )}
           style={{
             background: "var(--dmoop-gradient-card)",
             border: "1px solid var(--dmoop-border-soft)",
@@ -139,6 +148,7 @@ export default function ModelSelector() {
             </p>
           </div>
         </div>
+        </>
       )}
     </div>
   );

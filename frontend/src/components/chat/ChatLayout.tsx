@@ -204,7 +204,7 @@ export default function ChatLayout() {
 
               {shareOpen && conv && (
                 <div
-                  className="absolute right-0 top-full mt-1.5 w-[230px] rounded-xl overflow-hidden z-30 dmoop-scale-in"
+                  className="absolute right-0 top-full mt-1.5 w-[230px] max-w-[calc(100vw-1.5rem)] rounded-xl overflow-hidden z-30 dmoop-scale-in"
                   style={{
                     background: "var(--dmoop-gradient-card)",
                     border: "1px solid var(--dmoop-border-soft)",
@@ -242,7 +242,7 @@ export default function ChatLayout() {
 
               {moreOpen && (
                 <div
-                  className="absolute right-0 top-full mt-1.5 w-[220px] rounded-xl overflow-hidden z-30 dmoop-scale-in"
+                  className="absolute right-0 top-full mt-1.5 w-[220px] max-w-[calc(100vw-1.5rem)] rounded-xl overflow-hidden z-30 dmoop-scale-in"
                   style={{
                     background: "var(--dmoop-gradient-card)",
                     border: "1px solid var(--dmoop-border-soft)",

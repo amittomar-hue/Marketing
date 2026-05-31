@@ -16,7 +16,7 @@ export default function MessageThread() {
 
   return (
     <div className="flex-1 overflow-y-auto dmoop-scroll relative z-10">
-      <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-7">
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8 flex flex-col gap-5 sm:gap-7">
         {conv.messages.map((m) => (
           <div key={m.id} className="group">
             <Message message={m} />

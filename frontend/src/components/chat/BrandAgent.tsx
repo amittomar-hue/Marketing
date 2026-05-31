@@ -206,8 +206,15 @@ export default function BrandAgent({ onInsert }: { onInsert: (prompt: string) =>
       </button>
 
       {open && (
+        <>
+          {/* Mobile backdrop */}
+          <div className="sm:hidden fixed inset-0 bg-black/30 z-40 dmoop-fade-in" onClick={() => setOpen(false)} />
         <div
-          className="absolute bottom-full left-0 sm:left-0 -right-2 sm:right-auto mb-2 sm:w-[340px] max-w-[calc(100vw-1.5rem)] rounded-2xl overflow-hidden z-50 dmoop-scale-in"
+          className={cn(
+            "rounded-2xl overflow-hidden z-50 dmoop-scale-in",
+            "fixed left-3 right-3 bottom-[110px] max-h-[70vh] overflow-y-auto dmoop-scroll",
+            "sm:absolute sm:inset-auto sm:bottom-full sm:left-0 sm:mb-2 sm:w-[340px] sm:max-h-none sm:overflow-visible"
+          )}
           style={{
             background: "var(--dmoop-gradient-card)",
             border: "1px solid var(--dmoop-border-soft)",
@@ -300,6 +307,7 @@ export default function BrandAgent({ onInsert }: { onInsert: (prompt: string) =>
             </div>
           )}
         </div>
+        </>
       )}
     </div>
   );
