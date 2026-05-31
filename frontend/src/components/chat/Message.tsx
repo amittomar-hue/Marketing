@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Message as MessageType, useChatStore } from "@/lib/chat-store";
 import { getModel } from "@/lib/models";
-import { submitFeedback } from "@/lib/stream-chat";
+import { submitFeedback, streamChat } from "@/lib/stream-chat";
 import Image from "next/image";
 import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,10 @@ import Markdown from "./Markdown";
 export default function Message({ message }: { message: MessageType }) {
   const updateMessage = useChatStore((s) => s.updateMessage);
   const activeId = useChatStore((s) => s.activeId);
+  const selectedModel = useChatStore((s) => s.selectedModel);
+  const webSearchForced = useChatStore((s) => s.webSearchForced);
   const [copied, setCopied] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   if (message.role === "user") {
     return (
@@ -37,6 +40,50 @@ export default function Message({ message }: { message: MessageType }) {
     await navigator.clipboard.writeText(message.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const regenerate = async () => {
+    if (!activeId || regenerating || message.isStreaming) return;
+    const state = useChatStore.getState();
+    const conv = state.conversations.find((c) => c.id === activeId);
+    if (!conv) return;
+
+    // Build the history UP TO (but not including) this assistant message
+    const idx = conv.messages.findIndex((m) => m.id === message.id);
+    if (idx < 1) return; // need at least one prior message (the user prompt)
+    const history = conv.messages.slice(0, idx);
+
+    setRegenerating(true);
+    // Reset the current assistant message
+    updateMessage(activeId, message.id, {
+      content: "",
+      isStreaming: true,
+      interactionId: undefined,
+      userRating: null,
+      model: selectedModel,
+    });
+
+    try {
+      const { text, interactionId } = await streamChat({
+        messages: history,
+        model: selectedModel,
+        webSearchMode: webSearchForced,
+        onToken: (acc) => updateMessage(activeId, message.id, { content: acc }),
+      });
+      updateMessage(activeId, message.id, {
+        content: text,
+        isStreaming: false,
+        interactionId: interactionId ?? undefined,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      updateMessage(activeId, message.id, {
+        content: `⚠️ ${msg}`,
+        isStreaming: false,
+      });
+    } finally {
+      setRegenerating(false);
+    }
   };
 
   const rate = async (rating: 1 | -1) => {
@@ -119,8 +166,12 @@ export default function Message({ message }: { message: MessageType }) {
             >
               <ThumbsDown size={13} />
             </ActionButton>
-            <ActionButton title="Regenerate">
-              <RotateCcw size={13} />
+            <ActionButton
+              onClick={regenerate}
+              title="Regenerate response"
+              disabled={regenerating || message.isStreaming}
+            >
+              <RotateCcw size={13} className={regenerating ? "animate-spin" : ""} />
             </ActionButton>
             {message.interactionId && (
               <span className="ml-2 text-[10px] text-[var(--dmoop-text-tertiary)] font-mono tracking-tight">
