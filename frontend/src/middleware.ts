@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Routes that REQUIRE auth. Everything else is public.
-const PROTECTED_PREFIXES = ["/chat", "/admin"];
+const PROTECTED_PREFIXES = ["/chat", "/admin", "/brand"];
 
 // Auth-only pages: signed-in users get redirected away from these
 const AUTH_PAGES = ["/signin", "/signup", "/forgot-password", "/reset-password"];

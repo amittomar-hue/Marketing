@@ -12,6 +12,7 @@ import {
 import { hfStreamGenerate, isFineTunedModelConfigured } from "@/lib/huggingface";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getLatestIntel, formatIntelAsContext } from "@/lib/intel";
+import { retrieveBrandChunks, formatBrandContext } from "@/lib/brand";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -179,6 +180,20 @@ export async function POST(req: NextRequest) {
     console.error("retrieveNegativePatterns failed:", err);
   }
 
+  // ── Brand documents: pull the user's uploaded brand context ─
+  let brandContext = "";
+  let brandChunkCount = 0;
+  if (userId) {
+    try {
+      const brandLimit = isTuned ? 6 : 4;
+      const brandChunks = await retrieveBrandChunks(userId, userQuery, brandLimit);
+      brandContext = formatBrandContext(brandChunks);
+      brandChunkCount = brandChunks.length;
+    } catch (err) {
+      console.error("retrieveBrandChunks failed:", err);
+    }
+  }
+
   const groq = new OpenAI({
     apiKey: groqKey,
     baseURL: "https://api.groq.com/openai/v1",
@@ -187,6 +202,11 @@ export async function POST(req: NextRequest) {
   const groqMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: "system", content: isTuned ? TUNED_SYSTEM_PROMPT : SYSTEM_PROMPT },
   ];
+
+  // Brand context goes FIRST (after system prompt) — it's the user's authoritative source
+  if (brandContext) {
+    groqMessages.push({ role: "system", content: brandContext });
+  }
 
   if (examplesContext) {
     // Tuned puts examples front-and-center; others get them as supporting context
