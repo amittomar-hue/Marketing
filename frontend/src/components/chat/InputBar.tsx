@@ -307,26 +307,6 @@ export default function InputBar() {
               )}
             </button>
 
-            {/* Voice */}
-            {voiceSupported && (
-              <button
-                type="button"
-                onClick={toggleVoice}
-                className={cn(
-                  "relative p-2 rounded-lg transition-all duration-150 active:scale-95",
-                  listening
-                    ? "text-white bg-red-500 hover:bg-red-600"
-                    : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
-                )}
-                title={listening ? "Stop voice input" : "Voice input"}
-              >
-                {listening && (
-                  <span className="absolute inset-0 rounded-lg bg-red-500/40 animate-ping" />
-                )}
-                {listening ? <MicOff size={14} strokeWidth={2} className="relative" /> : <Mic size={14} strokeWidth={2} />}
-              </button>
-            )}
-
             {/* Search toggle */}
             <button
               type="button"
@@ -400,6 +380,27 @@ export default function InputBar() {
 
           <div className="flex items-center gap-2 shrink-0">
             <ModelSelector />
+
+            {/* Voice — sits just before the submit button on the right */}
+            {voiceSupported && (
+              <button
+                type="button"
+                onClick={toggleVoice}
+                className={cn(
+                  "relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-95",
+                  listening
+                    ? "text-white bg-red-500 hover:bg-red-600 shadow-[0_2px_8px_rgba(239,68,68,0.35)]"
+                    : "text-[var(--dmoop-text-secondary)] bg-[#f5f1ea]/60 hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
+                )}
+                title={listening ? "Stop voice input" : "Voice input"}
+              >
+                {listening && (
+                  <span className="absolute inset-0 rounded-xl bg-red-500/40 animate-ping" />
+                )}
+                {listening ? <MicOff size={15} strokeWidth={2.2} className="relative" /> : <Mic size={15} strokeWidth={2.2} />}
+              </button>
+            )}
+
             <button
               onClick={send}
               disabled={!hasValue}
