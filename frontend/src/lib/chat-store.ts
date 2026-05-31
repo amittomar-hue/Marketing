@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { ModelId, DEFAULT_MODEL } from "./models";
 
 export interface Message {
@@ -8,10 +9,11 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   model?: ModelId;
-  createdAt: Date;
+  createdAt: Date | string;
   isStreaming?: boolean;
-  interactionId?: string;     // server-side ID for feedback
-  userRating?: 1 | -1 | null; // local UI state for thumbs-up/down
+  interactionId?: string;
+  userRating?: 1 | -1 | null;
+  attachmentName?: string;
 }
 
 export interface Conversation {
@@ -19,87 +21,130 @@ export interface Conversation {
   title: string;
   model: ModelId;
   messages: Message[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 interface ChatState {
   conversations: Conversation[];
   activeId: string | null;
   selectedModel: ModelId;
+  webSearchForced: "auto" | "on" | "off";
+  pendingAttachment: { name: string; content: string } | null;
   setModel: (model: ModelId) => void;
+  setWebSearchMode: (mode: "auto" | "on" | "off") => void;
+  setPendingAttachment: (att: { name: string; content: string } | null) => void;
   newConversation: () => string;
+  deleteConversation: (id: string) => void;
+  renameConversation: (id: string, title: string) => void;
   setActive: (id: string) => void;
   addMessage: (conversationId: string, message: Omit<Message, "id" | "createdAt">) => string;
   updateMessage: (conversationId: string, messageId: string, patch: Partial<Message>) => void;
   activeConversation: () => Conversation | null;
+  clearAll: () => void;
 }
 
 function uid() {
   return Math.random().toString(36).slice(2, 11);
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
-  conversations: [],
-  activeId: null,
-  selectedModel: DEFAULT_MODEL,
+export const useChatStore = create<ChatState>()(
+  persist(
+    (set, get) => ({
+      conversations: [],
+      activeId: null,
+      selectedModel: DEFAULT_MODEL,
+      webSearchForced: "auto",
+      pendingAttachment: null,
 
-  setModel: (model) => set({ selectedModel: model }),
+      setModel: (model) => set({ selectedModel: model }),
+      setWebSearchMode: (mode) => set({ webSearchForced: mode }),
+      setPendingAttachment: (att) => set({ pendingAttachment: att }),
 
-  newConversation: () => {
-    const id = uid();
-    const conv: Conversation = {
-      id,
-      title: "New conversation",
-      model: get().selectedModel,
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    set((s) => ({ conversations: [conv, ...s.conversations], activeId: id }));
-    return id;
-  },
+      newConversation: () => {
+        const id = uid();
+        const conv: Conversation = {
+          id,
+          title: "New conversation",
+          model: get().selectedModel,
+          messages: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        set((s) => ({ conversations: [conv, ...s.conversations], activeId: id }));
+        return id;
+      },
 
-  setActive: (id) => set({ activeId: id }),
+      deleteConversation: (id) => {
+        set((s) => ({
+          conversations: s.conversations.filter((c) => c.id !== id),
+          activeId: s.activeId === id ? null : s.activeId,
+        }));
+      },
 
-  addMessage: (conversationId, msg) => {
-    const id = uid();
-    const message: Message = { ...msg, id, createdAt: new Date() };
-    set((s) => ({
-      conversations: s.conversations.map((c) =>
-        c.id === conversationId
-          ? {
-              ...c,
-              messages: [...c.messages, message],
-              title:
-                c.messages.length === 0 && msg.role === "user"
-                  ? msg.content.slice(0, 48) + (msg.content.length > 48 ? "…" : "")
-                  : c.title,
-              updatedAt: new Date(),
-            }
-          : c
-      ),
-    }));
-    return id;
-  },
+      renameConversation: (id, title) => {
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === id ? { ...c, title } : c
+          ),
+        }));
+      },
 
-  updateMessage: (conversationId, messageId, patch) => {
-    set((s) => ({
-      conversations: s.conversations.map((c) =>
-        c.id === conversationId
-          ? {
-              ...c,
-              messages: c.messages.map((m) =>
-                m.id === messageId ? { ...m, ...patch } : m
-              ),
-            }
-          : c
-      ),
-    }));
-  },
+      setActive: (id) => set({ activeId: id }),
 
-  activeConversation: () => {
-    const { conversations, activeId } = get();
-    return conversations.find((c) => c.id === activeId) ?? null;
-  },
-}));
+      addMessage: (conversationId, msg) => {
+        const id = uid();
+        const message: Message = { ...msg, id, createdAt: new Date() };
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === conversationId
+              ? {
+                  ...c,
+                  messages: [...c.messages, message],
+                  title:
+                    c.messages.length === 0 && msg.role === "user"
+                      ? msg.content.slice(0, 48) + (msg.content.length > 48 ? "…" : "")
+                      : c.title,
+                  updatedAt: new Date(),
+                }
+              : c
+          ),
+        }));
+        return id;
+      },
+
+      updateMessage: (conversationId, messageId, patch) => {
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === conversationId
+              ? {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === messageId ? { ...m, ...patch } : m
+                  ),
+                }
+              : c
+          ),
+        }));
+      },
+
+      activeConversation: () => {
+        const { conversations, activeId } = get();
+        return conversations.find((c) => c.id === activeId) ?? null;
+      },
+
+      clearAll: () => set({ conversations: [], activeId: null }),
+    }),
+    {
+      name: "dmoop-chat-store",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        conversations: state.conversations,
+        activeId: state.activeId,
+        selectedModel: state.selectedModel,
+        webSearchForced: state.webSearchForced,
+      }),
+      version: 1,
+    }
+  )
+);

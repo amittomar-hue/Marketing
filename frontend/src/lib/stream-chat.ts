@@ -4,6 +4,7 @@ import { ModelId } from "./models";
 interface StreamArgs {
   messages: Message[];
   model: ModelId;
+  webSearchMode?: "auto" | "on" | "off";
   onToken: (acc: string) => void;
 }
 
@@ -17,10 +18,12 @@ const INTERACTION_ID_RE = /<!--\s*interaction_id:([a-f0-9-]+)\s*-->/;
 export async function streamChat({
   messages,
   model,
+  webSearchMode = "auto",
   onToken,
 }: StreamArgs): Promise<StreamResult> {
   const payload = {
     model,
+    web_search_mode: webSearchMode,
     messages: messages
       .filter((m) => m.content.trim().length > 0)
       .map((m) => ({ role: m.role, content: m.content })),

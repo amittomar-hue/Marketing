@@ -4,13 +4,32 @@ import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useChatStore } from "@/lib/chat-store";
 import { streamChat } from "@/lib/stream-chat";
 import ModelSelector from "./ModelSelector";
-import { Paperclip, ArrowUp, Globe, Hammer } from "lucide-react";
+import { Paperclip, ArrowUp, Globe, Hammer, X, Check, FileText } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const TOOL_PRESETS = [
+  { label: "SEO audit", prompt: "Audit my landing page for SEO and give me a prioritized list of 10 specific fixes with expected impact." },
+  { label: "Write ad copy", prompt: "Write 3 Google Ads variants for [PRODUCT] targeting [AUDIENCE]." },
+  { label: "Email sequence", prompt: "Draft a 5-email product launch sequence for [PRODUCT]." },
+  { label: "Competitor teardown", prompt: "Analyze [COMPETITOR] and suggest 3 counter-positioning angles." },
+  { label: "Buyer signal analysis", prompt: "Score these leads by buying intent and recommend next actions: [LEADS]" },
+  { label: "Brand voice score", prompt: "Score this copy against my brand voice (confident, data-driven): [COPY]" },
+  { label: "GTM plan", prompt: "Build a 90-day GTM plan for launching into [MARKET]." },
+  { label: "ABM playbook", prompt: "Design an ABM playbook for tier-1 accounts in [INDUSTRY]." },
+];
 
 export default function InputBar() {
   const [value, setValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
-  const { activeId, newConversation, addMessage, updateMessage, selectedModel } = useChatStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const toolsRef = useRef<HTMLDivElement>(null);
+  const {
+    activeId, newConversation, addMessage, updateMessage, selectedModel,
+    webSearchForced, setWebSearchMode,
+    pendingAttachment, setPendingAttachment,
+  } = useChatStore();
 
   useEffect(() => {
     if (taRef.current) {
@@ -19,15 +38,49 @@ export default function InputBar() {
     }
   }, [value]);
 
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) setToolsOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert("File too large. Max 1MB.");
+      return;
+    }
+    const text = await file.text();
+    setPendingAttachment({
+      name: file.name,
+      content: text.slice(0, 50000),
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const send = async () => {
     const text = value.trim();
-    if (!text) return;
+    if (!text && !pendingAttachment) return;
 
     let convId = activeId;
     if (!convId) convId = newConversation();
 
-    addMessage(convId, { role: "user", content: text });
+    // Compose the user message — include attachment as a prefix if present
+    const userContent = pendingAttachment
+      ? `[Attached: ${pendingAttachment.name}]\n${pendingAttachment.content}\n\n---\n\n${text}`
+      : text;
+
+    addMessage(convId, {
+      role: "user",
+      content: userContent,
+      attachmentName: pendingAttachment?.name,
+    });
     setValue("");
+    const attachmentForThisMessage = pendingAttachment;
+    setPendingAttachment(null);
 
     const asstId = addMessage(convId, {
       role: "assistant",
@@ -42,6 +95,7 @@ export default function InputBar() {
       const { text: final, interactionId } = await streamChat({
         messages: history,
         model: selectedModel,
+        webSearchMode: webSearchForced,
         onToken: (acc) => updateMessage(convId!, asstId, { content: acc }),
       });
       updateMessage(convId, asstId, {
@@ -56,6 +110,7 @@ export default function InputBar() {
         isStreaming: false,
       });
     }
+    void attachmentForThisMessage;
   };
 
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -65,18 +120,47 @@ export default function InputBar() {
     }
   };
 
-  const hasValue = value.trim().length > 0;
+  const hasValue = value.trim().length > 0 || pendingAttachment !== null;
+
+  const cycleWebSearch = () => {
+    setWebSearchMode(
+      webSearchForced === "auto" ? "on" :
+      webSearchForced === "on" ? "off" : "auto"
+    );
+  };
+
+  const insertToolPrompt = (prompt: string) => {
+    setValue((v) => (v ? v + "\n\n" + prompt : prompt));
+    setToolsOpen(false);
+    setTimeout(() => taRef.current?.focus(), 50);
+  };
 
   return (
     <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 pb-3 pt-1">
+      {/* Pending attachment chip */}
+      {pendingAttachment && (
+        <div className="mb-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[var(--dmoop-border-soft)] shadow-[var(--dmoop-shadow-xs)] text-[12.5px]">
+          <FileText size={12} className="text-[var(--dmoop-accent)] shrink-0" />
+          <span className="font-medium text-[var(--dmoop-text-primary)] truncate flex-1">
+            {pendingAttachment.name}
+          </span>
+          <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">
+            {(pendingAttachment.content.length / 1024).toFixed(1)}KB
+          </span>
+          <button onClick={() => setPendingAttachment(null)}
+            className="p-0.5 rounded-md hover:bg-[#f0ede8] transition-colors">
+            <X size={12} className="text-[var(--dmoop-text-secondary)]" />
+          </button>
+        </div>
+      )}
+
       <div
         className={`relative rounded-[20px] sm:rounded-[24px] transition-all duration-300 ease-out dmoop-input-elev ${
           isFocused ? "scale-[1.005]" : ""
         }`}
       >
-        {/* Subtle top sheen */}
         <div
-          className="absolute inset-x-0 top-0 h-px rounded-t-[28px] pointer-events-none"
+          className="absolute inset-x-0 top-0 h-px rounded-t-[20px] sm:rounded-t-[24px] pointer-events-none"
           style={{
             background: "linear-gradient(90deg, transparent 10%, rgba(193,74,42,0.25) 50%, transparent 90%)",
           }}
@@ -94,13 +178,100 @@ export default function InputBar() {
           className="w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] text-[var(--dmoop-text-primary)] placeholder:text-[var(--dmoop-text-tertiary)] focus:outline-none leading-relaxed"
         />
 
-        <div className="flex items-center justify-between px-3 pb-3 pt-1.5">
-          <div className="flex items-center gap-1">
-            <ToolButton icon={Paperclip} label="Attach" />
-            <ToolButton icon={Globe} label="Search" hasText />
-            <ToolButton icon={Hammer} label="Tools" hasText />
+        <div className="flex items-center justify-between px-3 pb-3 pt-1.5 gap-2">
+          <div className="flex items-center gap-1 flex-wrap">
+            {/* Attach */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.md,.csv,.json,.log,text/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "p-2 rounded-lg text-[var(--dmoop-text-secondary)] transition-all duration-150 hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)] active:scale-95",
+                pendingAttachment && "text-[var(--dmoop-accent)] bg-[#fbf3ee]"
+              )}
+              title="Attach text/markdown/CSV (max 1MB)"
+            >
+              <Paperclip size={14} strokeWidth={2} />
+            </button>
+
+            {/* Search toggle */}
+            <button
+              type="button"
+              onClick={cycleWebSearch}
+              className={cn(
+                "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95",
+                webSearchForced === "on"
+                  ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
+                  : webSearchForced === "off"
+                  ? "bg-gray-50 text-gray-500 ring-1 ring-gray-200"
+                  : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
+              )}
+              title={
+                webSearchForced === "auto" ? "Search: Auto (smart)" :
+                webSearchForced === "on" ? "Search: Always on" :
+                "Search: Off (no web)"
+              }
+            >
+              <Globe size={13} strokeWidth={2} />
+              <span className="font-medium hidden sm:inline">
+                Search{webSearchForced === "on" ? " · On" : webSearchForced === "off" ? " · Off" : ""}
+              </span>
+            </button>
+
+            {/* Tools picker */}
+            <div ref={toolsRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setToolsOpen((o) => !o)}
+                className={cn(
+                  "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95",
+                  toolsOpen
+                    ? "bg-[#f5f1ea] text-[var(--dmoop-text-primary)]"
+                    : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
+                )}
+                title="Quick capability picker"
+              >
+                <Hammer size={13} strokeWidth={2} />
+                <span className="font-medium hidden sm:inline">Tools</span>
+              </button>
+
+              {toolsOpen && (
+                <div
+                  className="absolute bottom-full left-0 mb-2 w-[260px] rounded-xl overflow-hidden z-50 dmoop-scale-in"
+                  style={{
+                    background: "var(--dmoop-gradient-card)",
+                    border: "1px solid var(--dmoop-border-soft)",
+                    boxShadow: "var(--dmoop-shadow-xl)",
+                  }}
+                >
+                  <div className="px-3 pt-3 pb-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">
+                      Quick prompts
+                    </p>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto dmoop-scroll">
+                    {TOOL_PRESETS.map((p) => (
+                      <button
+                        key={p.label}
+                        onClick={() => insertToolPrompt(p.prompt)}
+                        className="w-full text-left px-3 py-2 hover:bg-[#f5f1ea] transition-colors text-[12.5px] text-[var(--dmoop-text-primary)] font-medium"
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2.5">
+
+          <div className="flex items-center gap-2 shrink-0">
             <ModelSelector />
             <button
               onClick={send}
@@ -124,26 +295,5 @@ export default function InputBar() {
         DMOOP generates AI-assisted content. Verify against your brand guidelines before publishing.
       </p>
     </div>
-  );
-}
-
-function ToolButton({
-  icon: Icon,
-  label,
-  hasText = false,
-}: {
-  icon: React.ComponentType<{ size: number; strokeWidth?: number }>;
-  label: string;
-  hasText?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      className={`flex items-center gap-1.5 ${hasText ? "px-2 sm:px-2.5" : "px-2"} py-1.5 rounded-lg text-[13px] text-[var(--dmoop-text-secondary)] transition-all duration-150 hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)] active:scale-95`}
-      title={label}
-    >
-      <Icon size={14} strokeWidth={2} />
-      {hasText && <span className="font-medium hidden sm:inline">{label}</span>}
-    </button>
   );
 }

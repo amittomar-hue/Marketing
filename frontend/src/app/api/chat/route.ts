@@ -77,8 +77,9 @@ function looksLikeWebQuery(text: string): boolean {
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const messages: ClientMessage[] = body.messages ?? [];
-  const modelId: string = body.model ?? "marketing-sonnet-4";
+  const modelId: string = body.model ?? "dmoop-core";
   const sessionId: string | undefined = body.session_id;
+  const webSearchMode: "auto" | "on" | "off" = body.web_search_mode ?? "auto";
 
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) {
@@ -105,7 +106,13 @@ export async function POST(req: NextRequest) {
   // ── Web search context ─────────────────────────────────────
   let webContext = "";
   let webUsed = false;
-  if (process.env.TAVILY_API_KEY && looksLikeWebQuery(userQuery)) {
+  const shouldSearch =
+    webSearchMode === "off"
+      ? false
+      : webSearchMode === "on"
+      ? !!process.env.TAVILY_API_KEY && userQuery.length >= 3
+      : !!process.env.TAVILY_API_KEY && looksLikeWebQuery(userQuery);
+  if (shouldSearch) {
     try {
       const tavily = await tavilySearch(userQuery);
       webContext = formatTavilyForContext(tavily);
