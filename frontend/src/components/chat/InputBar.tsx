@@ -46,19 +46,34 @@ export default function InputBar() {
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
+  const [parsingFile, setParsingFile] = useState(false);
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1024 * 1024) {
-      alert("File too large. Max 1MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File too large. Max 10MB.");
       return;
     }
-    const text = await file.text();
-    setPendingAttachment({
-      name: file.name,
-      content: text.slice(0, 50000),
-    });
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setParsingFile(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/parse-document", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error ?? "Failed to parse document");
+        return;
+      }
+      setPendingAttachment({
+        name: file.name,
+        content: data.text ?? "",
+      });
+    } catch (err) {
+      alert("Upload failed: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setParsingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const send = async () => {
@@ -184,20 +199,26 @@ export default function InputBar() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt,.md,.csv,.json,.log,text/*"
+              accept=".pdf,.docx,.xlsx,.xls,.pptx,.txt,.md,.csv,.tsv,.json,.log,.html,.htm,.xml,.yml,.yaml,.rtf"
               onChange={handleFileSelect}
               className="hidden"
             />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
+              disabled={parsingFile}
               className={cn(
                 "p-2 rounded-lg text-[var(--dmoop-text-secondary)] transition-all duration-150 hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)] active:scale-95",
-                pendingAttachment && "text-[var(--dmoop-accent)] bg-[#fbf3ee]"
+                pendingAttachment && "text-[var(--dmoop-accent)] bg-[#fbf3ee]",
+                parsingFile && "opacity-60 cursor-wait"
               )}
-              title="Attach text/markdown/CSV (max 1MB)"
+              title="Attach PDF, Word, Excel, PowerPoint, or text (max 10MB)"
             >
-              <Paperclip size={14} strokeWidth={2} />
+              {parsingFile ? (
+                <span className="block w-3.5 h-3.5 border-2 border-[var(--dmoop-accent)] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Paperclip size={14} strokeWidth={2} />
+              )}
             </button>
 
             {/* Search toggle */}
