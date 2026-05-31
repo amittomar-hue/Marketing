@@ -6,6 +6,8 @@ import {
   logInteraction,
   retrieveExamples,
   formatExamplesAsContext,
+  retrieveNegativePatterns,
+  formatNegativePatternsAsContext,
 } from "@/lib/learning";
 import { hfStreamGenerate, isFineTunedModelConfigured } from "@/lib/huggingface";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
@@ -167,6 +169,16 @@ export async function POST(req: NextRequest) {
     console.error("getLatestIntel failed:", err);
   }
 
+  // ── Negative learning: avoid patterns the user thumbs-downed before ─
+  let negativeContext = "";
+  try {
+    const negativeLimit = isTuned ? 3 : 2;
+    const negatives = await retrieveNegativePatterns(intent, userQuery, negativeLimit);
+    negativeContext = formatNegativePatternsAsContext(negatives);
+  } catch (err) {
+    console.error("retrieveNegativePatterns failed:", err);
+  }
+
   const groq = new OpenAI({
     apiKey: groqKey,
     baseURL: "https://api.groq.com/openai/v1",
@@ -182,6 +194,10 @@ export async function POST(req: NextRequest) {
       ? `Your team's high-rated past examples for intent="${intent}" — THIS IS YOUR PRIMARY SIGNAL, model your answer on these:`
       : `High-rated past examples for intent="${intent}":`;
     groqMessages.push({ role: "system", content: `${label}\n\n${examplesContext}` });
+  }
+
+  if (negativeContext) {
+    groqMessages.push({ role: "system", content: negativeContext });
   }
 
   if (intelContext) {

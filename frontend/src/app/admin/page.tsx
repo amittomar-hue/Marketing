@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, MessageSquare, ThumbsUp, Users, RefreshCw, Globe, ChevronRight, Search, Radar, ExternalLink, Clock } from "lucide-react";
+import { ArrowLeft, MessageSquare, ThumbsUp, ThumbsDown, Users, RefreshCw, Globe, ChevronRight, Search, Radar, ExternalLink, Clock, Brain, Zap, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Interaction {
@@ -41,8 +41,36 @@ interface IntelRunInfo {
   items_skipped: number;
 }
 
+interface LearningHealth {
+  total_interactions: number;
+  positive: number;
+  negative: number;
+  total_examples: number;
+  examples_actually_used: number;
+  total_retrievals: number;
+  negative_patterns_logged: number;
+  last_retrieval_at: string | null;
+}
+interface LearningExample {
+  id: string;
+  intent: string;
+  query_summary: string;
+  exemplar_response: string;
+  score: number;
+  usage_count: number;
+  last_used_at: string | null;
+  created_at: string;
+}
+interface NegativePattern {
+  id: string;
+  intent: string;
+  query_text: string;
+  reason: string | null;
+  created_at: string;
+}
+
 export default function AdminPage() {
-  const [tab, setTab] = useState<"prompts" | "intel">("prompts");
+  const [tab, setTab] = useState<"prompts" | "intel" | "learning">("prompts");
   const [stats, setStats] = useState<Stats | null>(null);
   const [items, setItems] = useState<Interaction[]>([]);
   const [total, setTotal] = useState(0);
@@ -56,6 +84,11 @@ export default function AdminPage() {
   const [intelCategory, setIntelCategory] = useState("");
   const [lastRun, setLastRun] = useState<IntelRunInfo | null>(null);
   const [scraping, setScraping] = useState(false);
+
+  // Learning state
+  const [learningHealth, setLearningHealth] = useState<LearningHealth | null>(null);
+  const [learningExamples, setLearningExamples] = useState<LearningExample[]>([]);
+  const [negativePatterns, setNegativePatterns] = useState<NegativePattern[]>([]);
 
   const load = async () => {
     setLoading(true);
@@ -87,8 +120,16 @@ export default function AdminPage() {
     setScraping(false);
   };
 
-  useEffect(() => { load(); loadIntel(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadLearning = async () => {
+    const res = await fetch("/api/admin/learning").then((r) => r.json());
+    setLearningHealth(res.health);
+    setLearningExamples(res.examples ?? []);
+    setNegativePatterns(res.negatives ?? []);
+  };
+
+  useEffect(() => { load(); loadIntel(); loadLearning(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tab === "intel") loadIntel(); }, [intelCategory]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tab === "learning") loadLearning(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen" style={{ background: "var(--dmoop-bg-app)" }}>
@@ -126,6 +167,7 @@ export default function AdminPage() {
           {[
             { key: "prompts" as const, label: "User Prompts", icon: MessageSquare },
             { key: "intel" as const, label: "Marketing Intel", icon: Radar },
+            { key: "learning" as const, label: "Self-Learning", icon: Brain },
           ].map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={cn(
@@ -245,7 +287,7 @@ export default function AdminPage() {
           </div>
         </div>
         </>
-        ) : (
+        ) : tab === "intel" ? (
           <IntelPanel
             intel={intel}
             lastRun={lastRun}
@@ -253,6 +295,13 @@ export default function AdminPage() {
             setIntelCategory={setIntelCategory}
             triggerScrape={triggerScrape}
             scraping={scraping}
+          />
+        ) : (
+          <LearningPanel
+            health={learningHealth}
+            examples={learningExamples}
+            negatives={negativePatterns}
+            onRefresh={loadLearning}
           />
         )}
       </main>
@@ -326,6 +375,152 @@ const INTEL_CATEGORIES = [
   { value: "analytics", label: "Analytics" },
   { value: "competitor", label: "Competitor" },
 ];
+
+function LearningPanel({
+  health, examples, negatives, onRefresh,
+}: {
+  health: LearningHealth | null;
+  examples: LearningExample[];
+  negatives: NegativePattern[];
+  onRefresh: () => void;
+}) {
+  const positiveRate = health
+    ? ((health.positive / Math.max(1, health.positive + health.negative)) * 100).toFixed(0)
+    : "—";
+  const retrievalRate = health
+    ? ((health.examples_actually_used / Math.max(1, health.total_examples)) * 100).toFixed(0)
+    : "—";
+
+  return (
+    <>
+      {/* Header strip */}
+      <div className="rounded-2xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: "var(--dmoop-gradient-accent)", boxShadow: "var(--dmoop-shadow-accent)" }}>
+            <Brain size={17} className="text-white" />
+          </div>
+          <div>
+            <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)]">Self-Learning Loop</p>
+            <p className="text-[11.5px] text-[var(--dmoop-text-secondary)] mt-0.5">
+              Thumbs-up promotes responses to retrieval examples. Thumbs-down logs patterns to avoid.
+              Retrieval ranks by query similarity + score + recency.
+            </p>
+          </div>
+        </div>
+        <button onClick={onRefresh}
+          className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-[var(--dmoop-text-secondary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] hover:text-[var(--dmoop-text-primary)] flex items-center gap-2 shrink-0">
+          <RefreshCw size={13} /> Refresh
+        </button>
+      </div>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <MiniStat label="Interactions" value={health?.total_interactions ?? "—"} icon={Activity} accent="violet" />
+        <MiniStat label="👍 Approval rate" value={`${positiveRate}%`} icon={ThumbsUp} accent="emerald" />
+        <MiniStat label="Examples in use" value={`${retrievalRate}%`} icon={Zap} accent="amber" />
+        <MiniStat label="Patterns to avoid" value={health?.negative_patterns_logged ?? "—"} icon={ThumbsDown} accent="rose" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Positive examples */}
+        <div className="rounded-2xl overflow-hidden" style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+          <div className="px-4 py-3 border-b border-[var(--dmoop-border-soft)] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ThumbsUp size={13} className="text-emerald-600" />
+              <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)]">High-rated examples · {examples.length}</p>
+            </div>
+            <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">Used in future similar queries</span>
+          </div>
+          <div className="max-h-[500px] overflow-y-auto dmoop-scroll">
+            {examples.length === 0 && (
+              <p className="text-center text-[12.5px] text-[var(--dmoop-text-tertiary)] py-10">
+                No high-rated examples yet. Thumbs-up responses you like.
+              </p>
+            )}
+            {examples.map((ex) => (
+              <div key={ex.id} className="px-4 py-3 border-b border-[var(--dmoop-border-soft)] last:border-0">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[9.5px] px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold uppercase tracking-wide">
+                    {ex.intent.replace("_", " ")}
+                  </span>
+                  <span className="text-[10.5px] font-mono text-[var(--dmoop-text-tertiary)]">
+                    score {ex.score} · used {ex.usage_count}×
+                  </span>
+                  <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)] ml-auto">
+                    {new Date(ex.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                  </span>
+                </div>
+                <p className="text-[12.5px] text-[var(--dmoop-text-primary)] line-clamp-2">{ex.query_summary}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Negative patterns */}
+        <div className="rounded-2xl overflow-hidden" style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+          <div className="px-4 py-3 border-b border-[var(--dmoop-border-soft)] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ThumbsDown size={13} className="text-rose-500" />
+              <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)]">Patterns to avoid · {negatives.length}</p>
+            </div>
+            <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">Future responses steer clear</span>
+          </div>
+          <div className="max-h-[500px] overflow-y-auto dmoop-scroll">
+            {negatives.length === 0 && (
+              <p className="text-center text-[12.5px] text-[var(--dmoop-text-tertiary)] py-10">
+                No flagged patterns yet. Thumbs-down responses that miss the mark.
+              </p>
+            )}
+            {negatives.map((n) => (
+              <div key={n.id} className="px-4 py-3 border-b border-[var(--dmoop-border-soft)] last:border-0">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[9.5px] px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 font-semibold uppercase tracking-wide">
+                    {n.intent.replace("_", " ")}
+                  </span>
+                  <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)] ml-auto">
+                    {new Date(n.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                  </span>
+                </div>
+                <p className="text-[12.5px] text-[var(--dmoop-text-primary)] line-clamp-2">{n.query_text}</p>
+                {n.reason && (
+                  <p className="text-[11px] text-[var(--dmoop-text-tertiary)] mt-1 italic">— {n.reason}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function MiniStat({ label, value, icon: Icon, accent }: {
+  label: string;
+  value: number | string;
+  icon: React.ComponentType<{ size: number; className?: string; strokeWidth?: number }>;
+  accent: "violet" | "emerald" | "amber" | "rose";
+}) {
+  const colors: Record<typeof accent, { bg: string; text: string }> = {
+    violet:  { bg: "from-violet-500/15 to-fuchsia-500/15",  text: "text-violet-700" },
+    emerald: { bg: "from-emerald-500/15 to-teal-500/15",    text: "text-emerald-700" },
+    amber:   { bg: "from-amber-500/15 to-orange-500/15",    text: "text-amber-700" },
+    rose:    { bg: "from-rose-500/15 to-red-500/15",        text: "text-rose-700" },
+  };
+  return (
+    <div className="relative p-4 rounded-2xl overflow-hidden dmoop-card">
+      <div className={`absolute -top-8 -right-8 w-24 h-24 rounded-full bg-gradient-to-br ${colors[accent].bg} blur-2xl pointer-events-none`} />
+      <div className="relative flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-1">{label}</p>
+          <p className="text-[22px] font-semibold text-[var(--dmoop-text-primary)] tracking-tight">{value}</p>
+        </div>
+        <Icon size={14} className={colors[accent].text} strokeWidth={2.2} />
+      </div>
+    </div>
+  );
+}
 
 function IntelPanel({
   intel,
