@@ -207,7 +207,7 @@ export default function BrandAgent({ onInsert }: { onInsert: (prompt: string) =>
 
       {open && (
         <div
-          className="absolute bottom-full left-0 mb-2 w-[340px] max-w-[calc(100vw-2rem)] rounded-2xl overflow-hidden z-50 dmoop-scale-in"
+          className="absolute bottom-full left-0 sm:left-0 -right-2 sm:right-auto mb-2 sm:w-[340px] max-w-[calc(100vw-1.5rem)] rounded-2xl overflow-hidden z-50 dmoop-scale-in"
           style={{
             background: "var(--dmoop-gradient-card)",
             border: "1px solid var(--dmoop-border-soft)",

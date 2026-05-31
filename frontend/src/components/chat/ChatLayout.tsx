@@ -164,7 +164,7 @@ export default function ChatLayout() {
                     if (e.key === "Enter") commitRename();
                     if (e.key === "Escape") setRenaming(false);
                   }}
-                  className="text-[13px] font-medium bg-white border border-[var(--dmoop-accent)] rounded-md px-2 py-0.5 focus:outline-none w-60"
+                  className="text-[13px] font-medium bg-white border border-[var(--dmoop-accent)] rounded-md px-2 py-0.5 focus:outline-none w-full max-w-[260px] sm:w-60"
                 />
               ) : (
                 <span className="text-[13px] text-[var(--dmoop-text-secondary)] font-medium truncate">

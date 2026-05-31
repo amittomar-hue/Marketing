@@ -138,11 +138,11 @@ export default function OnboardingTour() {
   const isLast = step === STEPS.length - 1;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 dmoop-fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-3 sm:px-4 py-3 sm:py-6 dmoop-fade-in">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={close} />
 
       <div
-        className="relative w-full max-w-lg rounded-2xl overflow-hidden dmoop-scale-in"
+        className="relative w-full max-w-lg max-h-[92vh] rounded-2xl flex flex-col overflow-hidden dmoop-scale-in"
         style={{
           background: "var(--dmoop-gradient-card)",
           boxShadow: "var(--dmoop-shadow-xl)",
@@ -161,7 +161,7 @@ export default function OnboardingTour() {
           <X size={15} />
         </button>
 
-        <div className="relative p-7 pb-5">
+        <div className="relative p-5 sm:p-7 pb-5 overflow-y-auto dmoop-scroll flex-1 min-h-0">
           {/* Logo + step counter */}
           <div className="flex items-center justify-between mb-5">
             <Image src="/dmoop-logo.png" alt="DMOOP" width={90} height={28} className="h-6 w-auto" />
@@ -171,9 +171,9 @@ export default function OnboardingTour() {
           </div>
 
           {/* Icon + title */}
-          <div className="flex items-start gap-3 mb-4">
+          <div className="flex items-start gap-3 mb-3 sm:mb-4">
             <div
-              className={`relative shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br ${current.accent} flex items-center justify-center overflow-hidden`}
+              className={`relative shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${current.accent} flex items-center justify-center overflow-hidden`}
               style={{ boxShadow: "var(--dmoop-shadow-md)" }}
             >
               {step === 0 ? (
@@ -184,11 +184,11 @@ export default function OnboardingTour() {
                 <current.icon size={20} className="text-white" strokeWidth={2.2} />
               )}
             </div>
-            <div className="pt-0.5">
-              <h2 className="text-[20px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] leading-tight">
+            <div className="pt-0.5 min-w-0 flex-1">
+              <h2 className="text-[18px] sm:text-[20px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] leading-tight">
                 {current.title}
               </h2>
-              <p className="text-[12.5px] text-[var(--dmoop-text-secondary)] mt-0.5">
+              <p className="text-[12px] sm:text-[12.5px] text-[var(--dmoop-text-secondary)] mt-0.5">
                 {current.subtitle}
               </p>
             </div>
@@ -201,7 +201,7 @@ export default function OnboardingTour() {
         </div>
 
         {/* Footer */}
-        <div className="relative px-7 py-4 border-t border-[var(--dmoop-border-soft)] bg-[#fbf8f4] flex items-center justify-between gap-3">
+        <div className="relative px-5 sm:px-7 py-3.5 sm:py-4 border-t border-[var(--dmoop-border-soft)] bg-[#fbf8f4] flex items-center justify-between gap-3 shrink-0">
           {/* Progress dots */}
           <div className="flex items-center gap-1.5">
             {STEPS.map((_, i) => (

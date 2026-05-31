@@ -151,20 +151,20 @@ export default function BrandPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <input
               value={draftName}
               onChange={(e) => setDraftName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && saveAgentName()}
               placeholder='e.g. "Acme Brand Voice"'
               maxLength={40}
-              className="flex-1 h-10 px-3 rounded-lg text-[13px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)] focus:ring-4 focus:ring-[var(--dmoop-accent)]/10"
+              className="flex-1 min-w-0 h-10 px-3 rounded-lg text-[13px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)] focus:ring-4 focus:ring-[var(--dmoop-accent)]/10"
             />
             <button
               onClick={saveAgentName}
               disabled={!draftName.trim() || draftName === agentName}
               className={cn(
-                "h-10 px-4 rounded-lg text-[12.5px] font-semibold transition-all flex items-center gap-1.5",
+                "h-10 px-4 rounded-lg text-[12.5px] font-semibold transition-all flex items-center justify-center gap-1.5 shrink-0",
                 !draftName.trim() || draftName === agentName
                   ? "bg-[#f5f1ea] text-[var(--dmoop-text-tertiary)] cursor-not-allowed"
                   : "dmoop-btn-primary"

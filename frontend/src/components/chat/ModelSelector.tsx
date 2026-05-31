@@ -26,20 +26,21 @@ export default function ModelSelector() {
       <button
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] transition-all duration-200",
+          "flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-[13px] transition-all duration-200 shrink-0",
           open
             ? "bg-[#f5f1ea] text-[var(--dmoop-text-primary)]"
             : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
         )}
+        title={current.name}
       >
-        <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-white border border-[var(--dmoop-border-soft)] p-0.5">
+        <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-white border border-[var(--dmoop-border-soft)] p-0.5 shrink-0">
           <Image src="/dmoop-logo.png" alt="DMOOP" width={32} height={10} className="w-full h-auto object-contain" />
         </span>
-        <span className="font-semibold tracking-tight">{current.name}</span>
+        <span className="font-semibold tracking-tight hidden min-[420px]:inline">{current.name}</span>
         <ChevronDown
           size={12}
           className={cn(
-            "opacity-50 transition-transform duration-200",
+            "opacity-50 transition-transform duration-200 shrink-0",
             open && "rotate-180"
           )}
         />

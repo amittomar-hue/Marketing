@@ -347,8 +347,8 @@ export default function InputBar() {
           className="w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] text-[var(--dmoop-text-primary)] placeholder:text-[var(--dmoop-text-tertiary)] focus:outline-none leading-relaxed"
         />
 
-        <div className="flex items-center justify-between px-3 pb-3 pt-1.5 gap-2">
-          <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-center justify-between px-2 sm:px-3 pb-3 pt-1.5 gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-0.5 sm:gap-1 min-w-0 flex-1">
             {/* Attach */}
             <input
               ref={fileInputRef}
@@ -362,7 +362,7 @@ export default function InputBar() {
               onClick={() => fileInputRef.current?.click()}
               disabled={parsingFile}
               className={cn(
-                "p-2 rounded-lg text-[var(--dmoop-text-secondary)] transition-all duration-150 hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)] active:scale-95",
+                "p-1.5 sm:p-2 rounded-lg text-[var(--dmoop-text-secondary)] transition-all duration-150 hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)] active:scale-95 shrink-0",
                 pendingAttachment && "text-[var(--dmoop-accent)] bg-[#fbf3ee]",
                 parsingFile && "opacity-60 cursor-wait"
               )}
@@ -424,7 +424,7 @@ export default function InputBar() {
 
               {toolsOpen && (
                 <div
-                  className="absolute bottom-full left-0 mb-2 w-[260px] rounded-xl overflow-hidden z-50 dmoop-scale-in"
+                  className="absolute bottom-full left-0 mb-2 w-[280px] max-w-[calc(100vw-1.5rem)] rounded-xl overflow-hidden z-50 dmoop-scale-in"
                   style={{
                     background: "var(--dmoop-gradient-card)",
                     border: "1px solid var(--dmoop-border-soft)",

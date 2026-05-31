@@ -88,34 +88,34 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col" style={{ background: "var(--dmoop-bg-app)" }}>
       {/* ── Navbar ──────────────────────────────────────── */}
       <nav className="sticky top-0 z-30 border-b border-[var(--dmoop-border-soft)] backdrop-blur-xl bg-white/70">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/dmoop-logo.png" alt="DMOOP" width={130} height={36} priority className="h-8 w-auto" />
-            <span className="hidden sm:inline text-[10px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase px-1.5 py-0.5 rounded-md" style={{ background: "rgba(193,74,42,0.08)" }}>
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
+          <Link href="/" className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <Image src="/dmoop-logo.png" alt="DMOOP" width={130} height={36} priority className="h-7 sm:h-8 w-auto" />
+            <span className="hidden md:inline text-[10px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase px-1.5 py-0.5 rounded-md" style={{ background: "rgba(193,74,42,0.08)" }}>
               DMOOP
             </span>
           </Link>
-          <div className="flex items-center gap-1 sm:gap-3">
-            <Link href="#features" className="hidden sm:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
+          <div className="flex items-center gap-1 sm:gap-3 shrink-0">
+            <Link href="#features" className="hidden md:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
               Features
             </Link>
-            <Link href="#how" className="hidden sm:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
+            <Link href="#how" className="hidden md:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
               How it works
             </Link>
-            <Link href="#models" className="hidden sm:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
+            <Link href="#models" className="hidden md:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
               Models
             </Link>
             {signedIn ? (
-              <Link href="/chat" className="h-9 px-4 rounded-lg dmoop-btn-primary text-[13px] font-semibold flex items-center gap-1.5">
-                Open DMOOP <ArrowRight size={13} />
+              <Link href="/chat" className="h-8 sm:h-9 px-3 sm:px-4 rounded-lg dmoop-btn-primary text-[12.5px] sm:text-[13px] font-semibold flex items-center gap-1.5 shrink-0">
+                Open <span className="hidden sm:inline">DMOOP</span><ArrowRight size={13} />
               </Link>
             ) : (
               <>
-                <Link href="/signin" className="px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-primary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] rounded-lg transition-all">
+                <Link href="/signin" className="px-2 sm:px-3 py-1.5 sm:py-2 text-[12.5px] sm:text-[13px] font-medium text-[var(--dmoop-text-primary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] rounded-lg transition-all shrink-0">
                   Sign in
                 </Link>
-                <Link href="/signup" className="h-9 px-4 rounded-lg dmoop-btn-primary text-[13px] font-semibold flex items-center gap-1.5">
-                  Get started <ArrowRight size={13} />
+                <Link href="/signup" className="h-8 sm:h-9 px-3 sm:px-4 rounded-lg dmoop-btn-primary text-[12.5px] sm:text-[13px] font-semibold flex items-center gap-1 sm:gap-1.5 shrink-0">
+                  <span className="hidden sm:inline">Get started</span><span className="sm:hidden">Start</span><ArrowRight size={13} />
                 </Link>
               </>
             )}
@@ -135,15 +135,15 @@ export default function LandingPage() {
           style={{ background: "radial-gradient(ellipse at center, rgba(139,92,246,0.12) 0%, transparent 70%)" }}
         />
 
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-12 sm:pb-20 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-[var(--dmoop-border-soft)] shadow-[var(--dmoop-shadow-xs)] mb-6 dmoop-fade-in">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-24 pb-10 sm:pb-20 text-center">
+          <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-[var(--dmoop-border-soft)] shadow-[var(--dmoop-shadow-xs)] mb-5 sm:mb-6 dmoop-fade-in">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-            <span className="text-[11px] font-semibold text-[var(--dmoop-text-secondary)] tracking-wide uppercase">
-              Live · Self-Learning · Real-Time Intelligence
+            <span className="text-[10px] sm:text-[11px] font-semibold text-[var(--dmoop-text-secondary)] tracking-wide uppercase">
+              <span className="hidden sm:inline">Live · Self-Learning · </span>Real-Time Intelligence
             </span>
           </div>
 
-          <h1 className="text-[36px] sm:text-[54px] md:text-[64px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] leading-[1.05] mb-5 dmoop-fade-in">
+          <h1 className="text-[30px] sm:text-[54px] md:text-[64px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] leading-[1.1] sm:leading-[1.05] mb-4 sm:mb-5 dmoop-fade-in">
             Marketing intelligence,
             <br />
             <span style={{
@@ -156,67 +156,69 @@ export default function LandingPage() {
             </span>
           </h1>
 
-          <p className="text-[16px] sm:text-[18px] text-[var(--dmoop-text-secondary)] max-w-2xl mx-auto leading-relaxed mb-8 dmoop-fade-in">
+          <p className="text-[14px] sm:text-[18px] text-[var(--dmoop-text-secondary)] max-w-2xl mx-auto leading-relaxed mb-6 sm:mb-8 dmoop-fade-in px-2 sm:px-0">
             DMOOP is the enterprise-grade AI for the full marketing surface — SEO, ABM, buyer signals, ad copy, GTM strategy. Self-learning from your team&apos;s feedback. Grounded in live web data, every day.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 dmoop-fade-in">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 dmoop-fade-in">
             <Link
               href={primaryHref}
-              className="h-12 px-7 rounded-xl dmoop-btn-primary text-[14px] font-semibold flex items-center gap-2"
+              className="w-full sm:w-auto h-11 sm:h-12 px-6 sm:px-7 rounded-xl dmoop-btn-primary text-[13.5px] sm:text-[14px] font-semibold flex items-center justify-center gap-2"
             >
               {primaryLabel} <ArrowRight size={15} />
             </Link>
             <Link
               href="#features"
-              className="h-12 px-7 rounded-xl bg-white border border-[var(--dmoop-border-soft)] text-[14px] font-semibold text-[var(--dmoop-text-primary)] hover:shadow-[var(--dmoop-shadow-md)] transition-all flex items-center gap-2"
+              className="w-full sm:w-auto h-11 sm:h-12 px-6 sm:px-7 rounded-xl bg-white border border-[var(--dmoop-border-soft)] text-[13.5px] sm:text-[14px] font-semibold text-[var(--dmoop-text-primary)] hover:shadow-[var(--dmoop-shadow-md)] transition-all flex items-center justify-center gap-2"
             >
               See what it does
             </Link>
           </div>
 
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12px] text-[var(--dmoop-text-tertiary)] dmoop-fade-in">
+          <div className="mt-7 sm:mt-10 flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-6 gap-y-2 text-[11px] sm:text-[12px] text-[var(--dmoop-text-tertiary)] dmoop-fade-in">
             <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> No credit card</span>
             <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> 60 topics scraped daily</span>
             <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> 4 specialized models</span>
-            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> Self-learning loop</span>
+            <span className="hidden sm:flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> Self-learning loop</span>
           </div>
         </div>
 
         {/* Product preview frame */}
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pb-12 sm:pb-24">
           <div
-            className="rounded-2xl overflow-hidden mx-auto"
+            className="rounded-xl sm:rounded-2xl overflow-hidden mx-auto"
             style={{
               background: "var(--dmoop-gradient-card)",
               border: "1px solid var(--dmoop-border-soft)",
               boxShadow: "var(--dmoop-shadow-xl)",
             }}
           >
-            <div className="px-4 py-2.5 border-b border-[var(--dmoop-border-soft)] flex items-center gap-1.5 bg-[#f9f5ee]">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#e8a293]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[#e8c993]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[#a0c898]" />
-              <span className="ml-3 text-[11px] font-medium text-[var(--dmoop-text-tertiary)]">DMOOP — Enterprise Marketing Intelligence</span>
+            <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-[var(--dmoop-border-soft)] flex items-center gap-1.5 bg-[#f9f5ee]">
+              <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-[#e8a293]" />
+              <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-[#e8c993]" />
+              <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-[#a0c898]" />
+              <span className="ml-2 sm:ml-3 text-[10px] sm:text-[11px] font-medium text-[var(--dmoop-text-tertiary)] truncate">
+                DMOOP <span className="hidden sm:inline">— Enterprise Marketing Intelligence</span>
+              </span>
             </div>
-            <div className="p-6 sm:p-10 bg-gradient-to-br from-[#fdfcfa] to-[#f7f3eb]">
-              <div className="flex items-start gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-white border border-[var(--dmoop-border-soft)] p-1.5 shrink-0 flex items-center justify-center shadow-[var(--dmoop-shadow-sm)]">
+            <div className="p-4 sm:p-10 bg-gradient-to-br from-[#fdfcfa] to-[#f7f3eb]">
+              <div className="flex items-start gap-2.5 sm:gap-3 mb-4 sm:mb-5">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white border border-[var(--dmoop-border-soft)] p-1.5 shrink-0 flex items-center justify-center shadow-[var(--dmoop-shadow-sm)]">
                   <Image src="/dmoop-logo.png" alt="DMOOP" width={60} height={20} className="w-full h-auto object-contain" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-[12px] font-semibold text-[var(--dmoop-text-primary)]">DMOOP <span className="text-[var(--dmoop-accent)] ml-1">Core</span></p>
-                  <p className="text-[13px] sm:text-[14px] text-[var(--dmoop-text-primary)] leading-relaxed mt-1.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11.5px] sm:text-[12px] font-semibold text-[var(--dmoop-text-primary)]">DMOOP <span className="text-[var(--dmoop-accent)] ml-1">Core</span></p>
+                  <p className="text-[12.5px] sm:text-[14px] text-[var(--dmoop-text-primary)] leading-relaxed mt-1.5">
                     Based on the last 7 days of intel, three trends are reshaping B2B demand gen:
                   </p>
-                  <ul className="mt-2 text-[12.5px] sm:text-[13.5px] text-[var(--dmoop-text-primary)] space-y-1 ml-4 list-disc marker:text-[var(--dmoop-text-tertiary)]">
+                  <ul className="mt-2 text-[12px] sm:text-[13.5px] text-[var(--dmoop-text-primary)] space-y-1.5 ml-4 list-disc marker:text-[var(--dmoop-text-tertiary)]">
                     <li><strong className="font-semibold">AI Overviews</strong> are now responsible for 47% of zero-click queries — restructure pillar pages for citation eligibility <em className="text-[var(--dmoop-text-tertiary)] not-italic">[1]</em></li>
                     <li><strong className="font-semibold">Signal-led ABM</strong> beats persona-only ABM by 2.3× on meeting rate <em className="text-[var(--dmoop-text-tertiary)] not-italic">[2]</em></li>
                     <li><strong className="font-semibold">Cold outbound</strong> reply rates are at 5-year highs when paired with company-signal triggers <em className="text-[var(--dmoop-text-tertiary)] not-italic">[3]</em></li>
                   </ul>
                 </div>
               </div>
-              <div className="text-[11.5px] text-[var(--dmoop-text-tertiary)] pl-13 ml-13 pt-2 border-t border-[var(--dmoop-border-soft)]">
+              <div className="text-[10.5px] sm:text-[11.5px] text-[var(--dmoop-text-tertiary)] pt-2 border-t border-[var(--dmoop-border-soft)] truncate">
                 Sources: searchengineland.com · gartner.com · hubspot.com
               </div>
             </div>
@@ -225,13 +227,13 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ────────────────────────────────────── */}
-      <section id="features" className="relative py-16 sm:py-24 border-t border-[var(--dmoop-border-soft)]">
+      <section id="features" className="relative py-12 sm:py-24 border-t border-[var(--dmoop-border-soft)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <p className="text-[11px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase mb-3">
+          <div className="text-center mb-8 sm:mb-12">
+            <p className="text-[10.5px] sm:text-[11px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase mb-2.5 sm:mb-3">
               Capabilities
             </p>
-            <h2 className="text-[28px] sm:text-[40px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-3 leading-tight">
+            <h2 className="text-[24px] sm:text-[40px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-2.5 sm:mb-3 leading-tight px-2">
               The full marketing surface, in one chat.
             </h2>
             <p className="text-[15px] text-[var(--dmoop-text-secondary)] max-w-2xl mx-auto">
@@ -263,18 +265,18 @@ export default function LandingPage() {
       </section>
 
       {/* ── How it works ────────────────────────────────── */}
-      <section id="how" className="relative py-16 sm:py-24 border-t border-[var(--dmoop-border-soft)] bg-gradient-to-b from-transparent to-[#fbf6ec]/40">
+      <section id="how" className="relative py-12 sm:py-24 border-t border-[var(--dmoop-border-soft)] bg-gradient-to-b from-transparent to-[#fbf6ec]/40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <p className="text-[11px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase mb-3">
+          <div className="text-center mb-8 sm:mb-12">
+            <p className="text-[10.5px] sm:text-[11px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase mb-2.5 sm:mb-3">
               How it works
             </p>
-            <h2 className="text-[28px] sm:text-[40px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-3 leading-tight">
+            <h2 className="text-[24px] sm:text-[40px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-2.5 sm:mb-3 leading-tight px-2">
               Three steps from question to insight.
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5">
             {HOW_IT_WORKS.map((s, i) => (
               <div
                 key={s.n}
@@ -308,21 +310,21 @@ export default function LandingPage() {
       </section>
 
       {/* ── Models ──────────────────────────────────────── */}
-      <section id="models" className="relative py-16 sm:py-24 border-t border-[var(--dmoop-border-soft)]">
+      <section id="models" className="relative py-12 sm:py-24 border-t border-[var(--dmoop-border-soft)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <p className="text-[11px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase mb-3">
+          <div className="text-center mb-8 sm:mb-12">
+            <p className="text-[10.5px] sm:text-[11px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase mb-2.5 sm:mb-3">
               Models
             </p>
-            <h2 className="text-[28px] sm:text-[40px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-3 leading-tight">
+            <h2 className="text-[24px] sm:text-[40px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-2.5 sm:mb-3 leading-tight px-2">
               Four models. One DMOOP.
             </h2>
-            <p className="text-[15px] text-[var(--dmoop-text-secondary)] max-w-xl mx-auto">
+            <p className="text-[13px] sm:text-[15px] text-[var(--dmoop-text-secondary)] max-w-xl mx-auto px-2">
               Pick the right brain for the task. Switch anytime mid-conversation.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {MODELS.map((m, i) => (
               <div
                 key={m.name}
@@ -350,9 +352,9 @@ export default function LandingPage() {
       </section>
 
       {/* ── Final CTA ───────────────────────────────────── */}
-      <section className="relative py-16 sm:py-24 border-t border-[var(--dmoop-border-soft)]">
+      <section className="relative py-12 sm:py-24 border-t border-[var(--dmoop-border-soft)]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <div className="relative p-8 sm:p-12 rounded-3xl overflow-hidden"
+          <div className="relative p-6 sm:p-12 rounded-2xl sm:rounded-3xl overflow-hidden"
             style={{
               background: "var(--dmoop-gradient-card)",
               border: "1px solid var(--dmoop-border-soft)",
@@ -362,16 +364,16 @@ export default function LandingPage() {
             <div className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full bg-gradient-to-br from-violet-500/20 to-pink-500/20 blur-3xl pointer-events-none" />
 
             <div className="relative">
-              <Zap size={32} className="mx-auto text-[var(--dmoop-accent)] mb-4" strokeWidth={2.2} />
-              <h2 className="text-[26px] sm:text-[36px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-3 leading-tight">
+              <Zap size={28} className="mx-auto text-[var(--dmoop-accent)] mb-3 sm:mb-4 sm:size-8" strokeWidth={2.2} />
+              <h2 className="text-[22px] sm:text-[36px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-2.5 sm:mb-3 leading-tight">
                 Try DMOOP free.
               </h2>
-              <p className="text-[14px] sm:text-[15px] text-[var(--dmoop-text-secondary)] mb-6 max-w-md mx-auto">
+              <p className="text-[13px] sm:text-[15px] text-[var(--dmoop-text-secondary)] mb-5 sm:mb-6 max-w-md mx-auto px-2">
                 No credit card. No setup. Sign up and ask your first marketing question in under 60 seconds.
               </p>
               <Link
                 href={primaryHref}
-                className="h-12 px-7 rounded-xl dmoop-btn-primary text-[14px] font-semibold inline-flex items-center gap-2"
+                className="h-11 sm:h-12 px-6 sm:px-7 rounded-xl dmoop-btn-primary text-[13.5px] sm:text-[14px] font-semibold inline-flex items-center gap-2"
               >
                 {primaryLabel} <ArrowRight size={15} />
               </Link>
