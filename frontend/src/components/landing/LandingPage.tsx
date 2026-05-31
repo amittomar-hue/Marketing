@@ -92,7 +92,7 @@ export default function LandingPage() {
           <Link href="/" className="flex items-center gap-2.5">
             <Image src="/dmoop-logo.png" alt="DMOOP" width={130} height={36} priority className="h-8 w-auto" />
             <span className="hidden sm:inline text-[10px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase px-1.5 py-0.5 rounded-md" style={{ background: "rgba(193,74,42,0.08)" }}>
-              Enterprise
+              DMOOP
             </span>
           </Link>
           <div className="flex items-center gap-1 sm:gap-3">
