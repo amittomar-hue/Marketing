@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { useChatStore } from "@/lib/chat-store";
 import { MODELS, getModel } from "@/lib/models";
-import { Check, ChevronDown, Sparkles, Zap } from "lucide-react";
+import { Check, ChevronDown, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function ModelSelector() {
@@ -31,7 +32,9 @@ export default function ModelSelector() {
             : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
         )}
       >
-        <Sparkles size={13} className={current.color} strokeWidth={2.2} />
+        <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-white border border-[var(--dmoop-border-soft)] p-0.5">
+          <Image src="/dmoop-logo.png" alt="DMOOP" width={32} height={10} className="w-full h-auto object-contain" />
+        </span>
         <span className="font-semibold tracking-tight">{current.name}</span>
         <ChevronDown
           size={12}
@@ -80,12 +83,12 @@ export default function ModelSelector() {
                   )}
                   <div
                     className={cn(
-                      "w-8 h-8 shrink-0 rounded-lg bg-gradient-to-br flex items-center justify-center transition-transform duration-200 group-hover:scale-110",
+                      "w-8 h-8 shrink-0 rounded-lg bg-gradient-to-br flex items-center justify-center p-1 transition-transform duration-200 group-hover:scale-110 bg-white",
                       m.glow
                     )}
-                    style={{ boxShadow: "var(--dmoop-shadow-xs)" }}
+                    style={{ boxShadow: "var(--dmoop-shadow-xs)", border: "1px solid var(--dmoop-border-soft)" }}
                   >
-                    <Sparkles size={14} className={m.color} strokeWidth={2.2} />
+                    <Image src="/dmoop-logo.png" alt="DMOOP" width={48} height={16} className="w-full h-auto object-contain" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">

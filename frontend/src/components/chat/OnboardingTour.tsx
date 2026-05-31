@@ -173,10 +173,16 @@ export default function OnboardingTour() {
           {/* Icon + title */}
           <div className="flex items-start gap-3 mb-4">
             <div
-              className={`shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br ${current.accent} flex items-center justify-center`}
+              className={`relative shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br ${current.accent} flex items-center justify-center overflow-hidden`}
               style={{ boxShadow: "var(--dmoop-shadow-md)" }}
             >
-              <current.icon size={20} className="text-white" strokeWidth={2.2} />
+              {step === 0 ? (
+                <span className="absolute inset-1.5 rounded-xl bg-white flex items-center justify-center p-1">
+                  <Image src="/dmoop-logo.png" alt="DMOOP" width={72} height={20} className="w-full h-auto object-contain" />
+                </span>
+              ) : (
+                <current.icon size={20} className="text-white" strokeWidth={2.2} />
+              )}
             </div>
             <div className="pt-0.5">
               <h2 className="text-[20px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] leading-tight">

@@ -301,7 +301,7 @@ function StatCard({ label, value, icon: Icon, accent }: {
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-1.5">{label}</p>
-          <p className="text-[30px] font-light text-[var(--dmoop-text-primary)] tracking-tight">{value}</p>
+          <p className="text-[30px] font-medium text-[var(--dmoop-text-primary)] tracking-tight">{value}</p>
         </div>
         <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${accent} flex items-center justify-center`} style={{ boxShadow: "var(--dmoop-shadow-xs)" }}>
           <Icon size={16} className="text-white" strokeWidth={2.2} />

@@ -102,13 +102,13 @@ export default function WelcomeScreen() {
                 Live · Self-Learning
               </span>
             </div>
-            <h1 className="text-[28px] sm:text-[36px] md:text-[40px] font-light tracking-tight text-[var(--dmoop-text-primary)] mb-2 sm:mb-2.5 leading-tight">
+            <h1 className="text-[28px] sm:text-[36px] md:text-[40px] font-medium tracking-tight text-[var(--dmoop-text-primary)] mb-2 sm:mb-2.5 leading-tight">
               Good evening, <span style={{
                 background: "var(--dmoop-gradient-accent)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 WebkitTextFillColor: "transparent",
-                fontWeight: 500,
+                fontWeight: 700,
               }}>Amit</span>
             </h1>
             <p className="text-[13px] sm:text-[14.5px] text-[var(--dmoop-text-secondary)] font-normal px-2">

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Message as MessageType, useChatStore } from "@/lib/chat-store";
 import { getModel } from "@/lib/models";
 import { submitFeedback } from "@/lib/stream-chat";
-import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Sparkles, Check } from "lucide-react";
+import Image from "next/image";
+import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Markdown from "./Markdown";
 
@@ -52,16 +53,19 @@ export default function Message({ message }: { message: MessageType }) {
   return (
     <div className="flex gap-3 dmoop-fade-in">
       <div
-        className="relative w-9 h-9 shrink-0 rounded-xl flex items-center justify-center mt-0.5"
+        className="relative w-9 h-9 shrink-0 rounded-xl flex items-center justify-center mt-0.5 bg-white p-1.5 overflow-hidden"
         style={{
-          background: "var(--dmoop-gradient-accent)",
-          boxShadow: "var(--dmoop-shadow-accent)",
+          border: "1px solid var(--dmoop-border-soft)",
+          boxShadow: "var(--dmoop-shadow-sm)",
         }}
       >
-        <Sparkles size={14} className="text-white drop-shadow-sm" />
-        <span
-          className="absolute inset-0 rounded-xl opacity-40 pointer-events-none"
-          style={{ background: "var(--dmoop-gradient-sheen)" }}
+        <Image
+          src="/dmoop-logo.png"
+          alt="DMOOP"
+          width={64}
+          height={20}
+          priority
+          className="w-full h-auto object-contain"
         />
       </div>
 
