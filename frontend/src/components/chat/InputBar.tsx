@@ -7,7 +7,7 @@ import Link from "next/link";
 import ModelSelector from "./ModelSelector";
 import BrandAgent from "./BrandAgent";
 import { useBrandAgentName } from "@/lib/brand-agent-name";
-import { Paperclip, ArrowUp, Globe, Hammer, X, FileText, Mic, MicOff, BookOpen, ChevronRight } from "lucide-react";
+import { Paperclip, ArrowUp, Globe, Hammer, X, FileText, Mic, BookOpen, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Web Speech API types (minimal shim — TypeScript doesn't ship them globally)
@@ -491,7 +491,10 @@ export default function InputBar() {
                 {listening && (
                   <span className="absolute inset-0 rounded-xl bg-red-500/40 animate-ping" />
                 )}
-                {listening ? <MicOff size={15} strokeWidth={2.2} className="relative" /> : <Mic size={15} strokeWidth={2.2} />}
+                <Mic size={15} strokeWidth={2.2} className="relative" />
+                {listening && (
+                  <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                )}
               </button>
             )}
 
