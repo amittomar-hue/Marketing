@@ -4,8 +4,29 @@ import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useChatStore } from "@/lib/chat-store";
 import { streamChat } from "@/lib/stream-chat";
 import ModelSelector from "./ModelSelector";
-import { Paperclip, ArrowUp, Globe, Hammer, X, Check, FileText } from "lucide-react";
+import { Paperclip, ArrowUp, Globe, Hammer, X, FileText, Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Web Speech API types (minimal shim — TypeScript doesn't ship them globally)
+interface SpeechRecognitionResultLike {
+  isFinal: boolean;
+  0: { transcript: string };
+}
+interface SpeechRecognitionEventLike {
+  resultIndex: number;
+  results: { length: number; [i: number]: SpeechRecognitionResultLike };
+}
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((e: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((e: { error: string }) => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
 const TOOL_PRESETS = [
   { label: "SEO audit", prompt: "Audit my landing page for SEO and give me a prioritized list of 10 specific fixes with expected impact." },
@@ -47,6 +68,64 @@ export default function InputBar() {
   }, []);
 
   const [parsingFile, setParsingFile] = useState(false);
+
+  // ── Voice input via Web Speech API ─────────────────────────────
+  const [listening, setListening] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const baseValueRef = useRef<string>("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const w = window as unknown as {
+      SpeechRecognition?: SpeechRecognitionCtor;
+      webkitSpeechRecognition?: SpeechRecognitionCtor;
+    };
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SR) return;
+    setVoiceSupported(true);
+    const recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    recognition.onresult = (event) => {
+      let interim = "";
+      let finalAddition = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i];
+        const transcript = res[0].transcript;
+        if (res.isFinal) finalAddition += transcript;
+        else interim += transcript;
+      }
+      if (finalAddition) {
+        baseValueRef.current = (baseValueRef.current ? baseValueRef.current + " " : "") + finalAddition.trim();
+      }
+      const combined = (baseValueRef.current + (interim ? " " + interim : "")).trim();
+      setValue(combined);
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    recognitionRef.current = recognition;
+    return () => recognition.stop();
+  }, []);
+
+  const toggleVoice = () => {
+    if (!recognitionRef.current) return;
+    if (listening) {
+      recognitionRef.current.stop();
+      setListening(false);
+    } else {
+      baseValueRef.current = value.trim();
+      try {
+        recognitionRef.current.start();
+        setListening(true);
+        setTimeout(() => taRef.current?.focus(), 50);
+      } catch {
+        setListening(false);
+      }
+    }
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -79,6 +158,13 @@ export default function InputBar() {
   const send = async () => {
     const text = value.trim();
     if (!text && !pendingAttachment) return;
+
+    // Stop any in-progress voice recognition
+    if (listening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setListening(false);
+    }
+    baseValueRef.current = "";
 
     let convId = activeId;
     if (!convId) convId = newConversation();
@@ -220,6 +306,26 @@ export default function InputBar() {
                 <Paperclip size={14} strokeWidth={2} />
               )}
             </button>
+
+            {/* Voice */}
+            {voiceSupported && (
+              <button
+                type="button"
+                onClick={toggleVoice}
+                className={cn(
+                  "relative p-2 rounded-lg transition-all duration-150 active:scale-95",
+                  listening
+                    ? "text-white bg-red-500 hover:bg-red-600"
+                    : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
+                )}
+                title={listening ? "Stop voice input" : "Voice input"}
+              >
+                {listening && (
+                  <span className="absolute inset-0 rounded-lg bg-red-500/40 animate-ping" />
+                )}
+                {listening ? <MicOff size={14} strokeWidth={2} className="relative" /> : <Mic size={14} strokeWidth={2} />}
+              </button>
+            )}
 
             {/* Search toggle */}
             <button

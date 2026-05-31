@@ -30,7 +30,7 @@ export default function SignUpPage() {
 
     // If email confirmation disabled, session is created immediately
     if (data.session) {
-      router.push("/");
+      router.push("/chat");
       router.refresh();
     } else {
       setSuccess(true);

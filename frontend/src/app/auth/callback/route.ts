@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.clone();
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") ?? "/";
+  const next = url.searchParams.get("next") ?? "/chat";
 
   if (code) {
     const res = NextResponse.redirect(new URL(next, url.origin));

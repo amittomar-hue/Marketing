@@ -54,7 +54,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const signOut = async () => {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
-    router.push("/signin");
+    router.push("/");
     router.refresh();
   };
 

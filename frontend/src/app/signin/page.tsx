@@ -18,7 +18,7 @@ export default function SignInPage() {
 function SignInForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const redirectTo = params.get("redirect") ?? "/";
+  const redirectTo = params.get("redirect") ?? "/chat";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
