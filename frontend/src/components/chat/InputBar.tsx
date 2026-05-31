@@ -77,7 +77,13 @@ export default function InputBar() {
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  // Holds the committed, finalized portion of the dictated text
   const baseValueRef = useRef<string>("");
+  // Tracks USER INTENT to keep listening (vs the actual API state)
+  const wantListeningRef = useRef<boolean>(false);
+  // Track recent restart attempts so we don't loop infinitely on real errors
+  const restartAttemptsRef = useRef<number>(0);
+  const lastSuccessfulSpeechRef = useRef<number>(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -88,10 +94,12 @@ export default function InputBar() {
     const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!SR) return;
     setVoiceSupported(true);
+
     const recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
+
     recognition.onresult = (event) => {
       let interim = "";
       let finalAddition = "";
@@ -102,29 +110,83 @@ export default function InputBar() {
         else interim += transcript;
       }
       if (finalAddition) {
-        baseValueRef.current = (baseValueRef.current ? baseValueRef.current + " " : "") + finalAddition.trim();
+        const trimmed = finalAddition.trim();
+        baseValueRef.current = baseValueRef.current
+          ? `${baseValueRef.current} ${trimmed}`
+          : trimmed;
+        lastSuccessfulSpeechRef.current = Date.now();
+        restartAttemptsRef.current = 0; // reset on any real speech
       }
-      const combined = (baseValueRef.current + (interim ? " " + interim : "")).trim();
+      const combined = interim
+        ? `${baseValueRef.current} ${interim.trim()}`.trim()
+        : baseValueRef.current;
       setValue(combined);
     };
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
+
+    // Auto-restart on end (browser stops after pauses; we want continuous)
+    recognition.onend = () => {
+      if (!wantListeningRef.current) {
+        setListening(false);
+        return;
+      }
+      // If we ended super fast with no speech captured, back off — avoid loop on errors
+      const elapsed = Date.now() - (lastSuccessfulSpeechRef.current || 0);
+      if (restartAttemptsRef.current >= 6 && elapsed > 30_000) {
+        // 6 consecutive restarts with no successful speech → give up
+        wantListeningRef.current = false;
+        setListening(false);
+        return;
+      }
+      restartAttemptsRef.current += 1;
+      try {
+        recognition.start();
+      } catch {
+        // Already started or otherwise — schedule a slight delay restart
+        setTimeout(() => {
+          if (!wantListeningRef.current) return;
+          try { recognition.start(); } catch {}
+        }, 250);
+      }
+    };
+
+    recognition.onerror = (e) => {
+      // "no-speech" and "aborted" are normal during pauses — let onend handle restart
+      if (e.error === "no-speech" || e.error === "aborted") return;
+      // "not-allowed" / "audio-capture" / "service-not-allowed" → mic blocked
+      if (e.error === "not-allowed" || e.error === "audio-capture" || e.error === "service-not-allowed") {
+        wantListeningRef.current = false;
+        setListening(false);
+        alert(`Microphone error: ${e.error}. Allow microphone access in your browser settings.`);
+        return;
+      }
+      // Other errors — log but let onend's auto-restart try again
+      console.warn("speech recognition error:", e.error);
+    };
+
     recognitionRef.current = recognition;
-    return () => recognition.stop();
+    return () => {
+      wantListeningRef.current = false;
+      try { recognition.stop(); } catch {}
+    };
   }, []);
 
   const toggleVoice = () => {
     if (!recognitionRef.current) return;
     if (listening) {
-      recognitionRef.current.stop();
+      wantListeningRef.current = false;
+      try { recognitionRef.current.stop(); } catch {}
       setListening(false);
     } else {
       baseValueRef.current = value.trim();
+      restartAttemptsRef.current = 0;
+      lastSuccessfulSpeechRef.current = Date.now();
+      wantListeningRef.current = true;
       try {
         recognitionRef.current.start();
         setListening(true);
         setTimeout(() => taRef.current?.focus(), 50);
       } catch {
+        wantListeningRef.current = false;
         setListening(false);
       }
     }
@@ -165,10 +227,12 @@ export default function InputBar() {
 
     // Stop any in-progress voice recognition
     if (listening && recognitionRef.current) {
-      recognitionRef.current.stop();
+      wantListeningRef.current = false;
+      try { recognitionRef.current.stop(); } catch {}
       setListening(false);
     }
     baseValueRef.current = "";
+    restartAttemptsRef.current = 0;
 
     let convId = activeId;
     if (!convId) convId = newConversation();
