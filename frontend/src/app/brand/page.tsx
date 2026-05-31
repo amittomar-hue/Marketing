@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Upload, FileText, Trash2, Loader2, BookOpen, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Trash2, Loader2, BookOpen, AlertCircle, CheckCircle2, Wand2, Check } from "lucide-react";
 import { DOC_TYPES } from "@/lib/brand";
+import { useBrandAgentName } from "@/lib/brand-agent-name";
 import { cn } from "@/lib/utils";
 
 interface BrandDoc {
@@ -30,6 +31,17 @@ export default function BrandPage() {
   const [docType, setDocType] = useState<string>("brand_guidelines");
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [agentName, setAgentName] = useBrandAgentName();
+  const [draftName, setDraftName] = useState<string>("");
+  const [savedTick, setSavedTick] = useState(false);
+
+  useEffect(() => { setDraftName(agentName); }, [agentName]);
+
+  const saveAgentName = () => {
+    setAgentName(draftName);
+    setSavedTick(true);
+    setTimeout(() => setSavedTick(false), 1500);
+  };
 
   const load = async () => {
     const data = await fetch("/api/brand/documents").then((r) => r.json());
@@ -122,6 +134,44 @@ export default function BrandPage() {
             <p className="text-[13px] sm:text-[14px] text-[var(--dmoop-text-secondary)] mt-1">
               Upload your brand guidelines, style guides, product info, past campaigns, or personas. DMOOP will use them as authoritative context in every response.
             </p>
+          </div>
+        </div>
+
+        {/* Brand Agent name card */}
+        <div className="rounded-2xl p-5 sm:p-6 mb-4"
+          style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-9 h-9 rounded-xl bg-[#fbf3ee] flex items-center justify-center shrink-0">
+              <Wand2 size={14} className="text-[var(--dmoop-accent)]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)]">Name your Brand Agent</p>
+              <p className="text-[12px] text-[var(--dmoop-text-secondary)] mt-0.5">
+                This name appears in the chat toolbar and Tools menu so your team knows which brand voice they&apos;re writing in.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && saveAgentName()}
+              placeholder='e.g. "Acme Brand Voice"'
+              maxLength={40}
+              className="flex-1 h-10 px-3 rounded-lg text-[13px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)] focus:ring-4 focus:ring-[var(--dmoop-accent)]/10"
+            />
+            <button
+              onClick={saveAgentName}
+              disabled={!draftName.trim() || draftName === agentName}
+              className={cn(
+                "h-10 px-4 rounded-lg text-[12.5px] font-semibold transition-all flex items-center gap-1.5",
+                !draftName.trim() || draftName === agentName
+                  ? "bg-[#f5f1ea] text-[var(--dmoop-text-tertiary)] cursor-not-allowed"
+                  : "dmoop-btn-primary"
+              )}
+            >
+              {savedTick ? <><Check size={13} /> Saved</> : "Save"}
+            </button>
           </div>
         </div>
 

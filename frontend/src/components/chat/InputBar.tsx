@@ -3,8 +3,11 @@
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useChatStore } from "@/lib/chat-store";
 import { streamChat } from "@/lib/stream-chat";
+import Link from "next/link";
 import ModelSelector from "./ModelSelector";
-import { Paperclip, ArrowUp, Globe, Hammer, X, FileText, Mic, MicOff } from "lucide-react";
+import BrandAgent from "./BrandAgent";
+import { useBrandAgentName } from "@/lib/brand-agent-name";
+import { Paperclip, ArrowUp, Globe, Hammer, X, FileText, Mic, MicOff, BookOpen, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Web Speech API types (minimal shim — TypeScript doesn't ship them globally)
@@ -51,6 +54,7 @@ export default function InputBar() {
     webSearchForced, setWebSearchMode,
     pendingAttachment, setPendingAttachment,
   } = useChatStore();
+  const [agentName] = useBrandAgentName();
 
   useEffect(() => {
     if (taRef.current) {
@@ -331,6 +335,12 @@ export default function InputBar() {
               </span>
             </button>
 
+            {/* Brand Agent — assets grounded in user's uploaded docs */}
+            <BrandAgent onInsert={(prompt) => {
+              setValue((v) => (v ? v + "\n\n" + prompt : prompt));
+              setTimeout(() => taRef.current?.focus(), 50);
+            }} />
+
             {/* Tools picker */}
             <div ref={toolsRef} className="relative">
               <button
@@ -357,7 +367,27 @@ export default function InputBar() {
                     boxShadow: "var(--dmoop-shadow-xl)",
                   }}
                 >
-                  <div className="px-3 pt-3 pb-1.5">
+                  {/* Brand agent quick-link at the top of Tools */}
+                  <Link
+                    href="/brand"
+                    onClick={() => setToolsOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-[#fbf3ee] transition-colors border-b border-[var(--dmoop-border-soft)]"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-[#fbf3ee] flex items-center justify-center shrink-0">
+                      <BookOpen size={13} className="text-[var(--dmoop-accent)]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12.5px] font-semibold text-[var(--dmoop-text-primary)] truncate">
+                        {agentName}
+                      </p>
+                      <p className="text-[10.5px] text-[var(--dmoop-text-secondary)] truncate">
+                        Generate assets from your brand library
+                      </p>
+                    </div>
+                    <ChevronRight size={12} className="text-[var(--dmoop-text-tertiary)] shrink-0" />
+                  </Link>
+
+                  <div className="px-3 pt-2.5 pb-1.5">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">
                       Quick prompts
                     </p>

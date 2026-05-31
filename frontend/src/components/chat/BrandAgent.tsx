@@ -1,0 +1,306 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useChatStore } from "@/lib/chat-store";
+import { useBrandAgentName } from "@/lib/brand-agent-name";
+import {
+  BookOpen, ChevronDown, Upload, AlertCircle,
+  Megaphone, Mail, Share2, Newspaper, LayoutTemplate,
+  Mic2, FileText, Building2, Star, Wand2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface BrandDoc {
+  id: string;
+  filename: string;
+  doc_type: string;
+}
+
+interface BrandAsset {
+  icon: React.ComponentType<{ size: number; className?: string; strokeWidth?: number }>;
+  color: string;
+  bg: string;
+  label: string;
+  desc: string;
+  buildPrompt: () => string;
+}
+
+const ASSETS: BrandAsset[] = [
+  {
+    icon: Megaphone, color: "text-violet-700", bg: "bg-violet-50",
+    label: "Brand-tuned ad copy",
+    desc: "3 variants for Google Ads, Meta, or LinkedIn",
+    buildPrompt: () =>
+`Using my uploaded brand documents as the authoritative source for tone, products, ICP, and positioning, write 3 ad copy variants.
+
+Channel: [Google Ads / Meta / LinkedIn — pick one]
+Offer / product: [WHICH PRODUCT]
+Target audience: [WHO]
+Campaign objective: [LEAD GEN / TRAFFIC / SIGNUPS]
+
+For each variant give: headline, body, CTA, predicted CTR, brand voice score (0-100) with rationale citing specific phrases from my brand docs.`,
+  },
+  {
+    icon: Mail, color: "text-emerald-700", bg: "bg-emerald-50",
+    label: "Brand voice email",
+    desc: "Welcome / nurture / sales email written in your voice",
+    buildPrompt: () =>
+`Write an email in our exact brand voice (use the brand docs I uploaded as the source of truth — match phrasing, tone, signature style).
+
+Email type: [WELCOME / NURTURE / SALES / RE-ENGAGEMENT]
+Audience: [WHO]
+Goal: [SPECIFIC GOAL]
+Length: [SHORT 100 words / MEDIUM 250 / LONG 400]
+
+Output: subject line, preview text, body, CTA. Highlight any phrases borrowed directly from our brand docs.`,
+  },
+  {
+    icon: Share2, color: "text-blue-700", bg: "bg-blue-50",
+    label: "Brand social post",
+    desc: "LinkedIn, X, Instagram — on-brand and platform-native",
+    buildPrompt: () =>
+`Write a social post grounded in my brand documents — match the tone, phrasing, and product framing exactly.
+
+Platform: [LinkedIn / X / Instagram / Threads]
+Topic: [WHAT]
+Format: [TEXT POST / CAROUSEL / VIDEO SCRIPT]
+Goal: [AWARENESS / ENGAGEMENT / DEMO REQUESTS]
+
+Include: hook, body, CTA, suggested hashtags, optimal post time. Note which brand-voice phrases I should keep verbatim.`,
+  },
+  {
+    icon: LayoutTemplate, color: "text-amber-700", bg: "bg-amber-50",
+    label: "Landing page copy",
+    desc: "Hero + sub + benefits + CTA — all on-brand",
+    buildPrompt: () =>
+`Generate complete landing page copy grounded in my uploaded brand documents — use my actual product names, value props, ICP language.
+
+Page purpose: [WHAT]
+Primary CTA: [WHAT ACTION]
+
+Sections: hero headline, sub-headline, 3 benefit blocks (with proof), social proof line, FAQ (3 questions), final CTA. Match the tone exactly from my brand docs. Note any brand terms I should avoid based on my style guide.`,
+  },
+  {
+    icon: Newspaper, color: "text-slate-700", bg: "bg-slate-100",
+    label: "Press release / announcement",
+    desc: "Newsroom-ready release using your company facts",
+    buildPrompt: () =>
+`Write a press release using the company facts, leadership quotes style, and positioning from my brand documents.
+
+Announcement: [WHAT — funding / product launch / hire / partnership]
+Date: [WHEN]
+Key spokesperson: [WHO]
+
+Structure: dateline, headline, sub-headline, lede paragraph, body (3-4 paragraphs), spokesperson quote, boilerplate (use my About section verbatim), press contact placeholder. AP style.`,
+  },
+  {
+    icon: Mic2, color: "text-pink-700", bg: "bg-pink-50",
+    label: "Brand voice scorer",
+    desc: "Paste any copy, get an on-brand score 0-100",
+    buildPrompt: () =>
+`Score this copy against my brand voice using my uploaded brand documents as the rubric.
+
+Copy to score:
+"""
+[PASTE COPY HERE]
+"""
+
+Output: overall score (0-100), which brand attributes it matches (cite specific lines from my brand docs), which it violates, flagged prohibited terms, and a rewrite that scores 95+.`,
+  },
+  {
+    icon: FileText, color: "text-cyan-700", bg: "bg-cyan-50",
+    label: "Sales one-pager",
+    desc: "Internal enablement doc with brand-tuned talk tracks",
+    buildPrompt: () =>
+`Build a sales one-pager for the rep team. Use product facts, ICP, and competitive positioning from my brand documents.
+
+Product/offer: [WHICH]
+Target persona: [WHO]
+Top objections to handle: [LIST or 'derive from brand docs']
+
+Sections: one-line pitch, problem we solve, our solution, ICP fit signals, 3 talk tracks for the persona, top 5 objections with answers, competitive differentiators, qualifying questions, pricing summary.`,
+  },
+  {
+    icon: Building2, color: "text-indigo-700", bg: "bg-indigo-50",
+    label: "Boilerplate / About us",
+    desc: "Refreshed company description for press, RFPs, footers",
+    buildPrompt: () =>
+`Refresh our standard boilerplate / company description using my uploaded brand documents.
+
+Use case: [PRESS RELEASE / RFP RESPONSE / EMAIL FOOTER / WEBSITE FOOTER]
+Length: [SHORT 30 words / STANDARD 60 words / LONG 100 words]
+Required to mention: [FOUNDING YEAR / KEY CUSTOMERS / FUNDING / AWARDS — pick]
+
+Match the exact tone and phrasing style from my brand docs. Show 2 variants for A/B.`,
+  },
+  {
+    icon: Star, color: "text-rose-700", bg: "bg-rose-50",
+    label: "Customer story / case study",
+    desc: "Structured case study using your positioning",
+    buildPrompt: () =>
+`Outline a customer case study using my brand voice and positioning from the uploaded brand docs.
+
+Customer: [NAME / INDUSTRY]
+Result achieved: [METRIC]
+Use case: [WHAT THEY DID WITH OUR PRODUCT]
+
+Structure: hero metric, customer background, challenge, why they chose us (in our positioning language), implementation, results (3 metrics minimum), customer quote in their voice, call-to-action. ~600 words.`,
+  },
+];
+
+export default function BrandAgent({ onInsert }: { onInsert: (prompt: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [docs, setDocs] = useState<BrandDoc[] | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const setWebSearchMode = useChatStore((s) => s.setWebSearchMode);
+  const [agentName] = useBrandAgentName();
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  useEffect(() => {
+    if (!open || docs) return;
+    fetch("/api/brand/documents")
+      .then((r) => r.json())
+      .then((d) => setDocs(d.documents ?? []))
+      .catch(() => setDocs([]));
+  }, [open, docs]);
+
+  const hasDocs = (docs?.length ?? 0) > 0;
+
+  const pick = (asset: BrandAsset) => {
+    onInsert(asset.buildPrompt());
+    setWebSearchMode("off"); // brand assets are about your docs, not the web
+    setOpen(false);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95 max-w-[180px]",
+          open
+            ? "bg-[#f5f1ea] text-[var(--dmoop-text-primary)]"
+            : hasDocs
+            ? "text-[var(--dmoop-accent)] hover:bg-[#fbf3ee]"
+            : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
+        )}
+        title={`${agentName} — generate assets in your brand voice`}
+      >
+        <BookOpen size={13} strokeWidth={2} />
+        <span className="font-medium hidden sm:inline truncate">{agentName}</span>
+        {hasDocs && (
+          <span className="hidden sm:inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-md bg-[var(--dmoop-accent)] text-white text-[9.5px] font-bold shrink-0">
+            {docs?.length}
+          </span>
+        )}
+        <ChevronDown size={11} className={cn("opacity-50 transition-transform duration-200 shrink-0", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute bottom-full left-0 mb-2 w-[340px] max-w-[calc(100vw-2rem)] rounded-2xl overflow-hidden z-50 dmoop-scale-in"
+          style={{
+            background: "var(--dmoop-gradient-card)",
+            border: "1px solid var(--dmoop-border-soft)",
+            boxShadow: "var(--dmoop-shadow-xl)",
+          }}
+        >
+          {/* Header */}
+          <div className="px-4 pt-3.5 pb-3 border-b border-[var(--dmoop-border-soft)]">
+            <div className="flex items-center gap-2 mb-1">
+              <Wand2 size={12} className="text-[var(--dmoop-accent)] shrink-0" />
+              <p className="text-[11.5px] font-bold tracking-tight text-[var(--dmoop-text-primary)] truncate">
+                {agentName}
+              </p>
+              {hasDocs && (
+                <span className="ml-auto text-[10.5px] font-semibold text-emerald-700 px-1.5 py-0.5 rounded-md bg-emerald-50 shrink-0">
+                  {docs!.length} doc{docs!.length === 1 ? "" : "s"}
+                </span>
+              )}
+            </div>
+            <p className="text-[11.5px] text-[var(--dmoop-text-secondary)] leading-relaxed">
+              Generate assets grounded in your uploaded brand documents.
+            </p>
+          </div>
+
+          {/* Empty state */}
+          {docs !== null && !hasDocs && (
+            <div className="p-4">
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                <AlertCircle size={14} className="shrink-0 mt-0.5 text-amber-600" />
+                <div>
+                  <p className="text-[12.5px] font-semibold text-amber-900">No brand documents yet</p>
+                  <p className="text-[11.5px] text-amber-800 mt-0.5">
+                    Brand Agent works best with your brand guidelines, style guide, or product info uploaded.
+                  </p>
+                  <Link
+                    href="/brand"
+                    onClick={() => setOpen(false)}
+                    className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--dmoop-accent)] hover:text-[var(--dmoop-accent-rich)]"
+                  >
+                    <Upload size={11} /> Upload your first document
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Loading */}
+          {docs === null && (
+            <div className="px-4 py-6 text-center text-[12px] text-[var(--dmoop-text-tertiary)]">
+              Loading your brand library…
+            </div>
+          )}
+
+          {/* Asset list */}
+          {hasDocs && (
+            <div className="max-h-[400px] overflow-y-auto dmoop-scroll py-1.5">
+              {ASSETS.map((a, i) => (
+                <button
+                  key={a.label}
+                  onClick={() => pick(a)}
+                  style={{ animationDelay: `${i * 30}ms` }}
+                  className="w-full px-3.5 py-2.5 hover:bg-[#faf6ef] transition-colors flex items-start gap-2.5 text-left dmoop-stagger-in"
+                >
+                  <div className={cn("w-8 h-8 shrink-0 rounded-lg flex items-center justify-center", a.bg)}
+                    style={{ boxShadow: "var(--dmoop-shadow-xs)" }}>
+                    <a.icon size={14} className={a.color} strokeWidth={2.2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12.5px] font-semibold text-[var(--dmoop-text-primary)] tracking-tight leading-snug">
+                      {a.label}
+                    </p>
+                    <p className="text-[11px] text-[var(--dmoop-text-secondary)] leading-relaxed mt-0.5">{a.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Footer */}
+          {hasDocs && (
+            <div className="px-4 py-2.5 border-t border-[var(--dmoop-border-soft)] bg-[#fbf8f4]">
+              <Link
+                href="/brand"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-between gap-2 text-[11.5px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-accent)] transition-colors"
+              >
+                <span>Manage brand library</span>
+                <Upload size={11} />
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
