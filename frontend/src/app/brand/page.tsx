@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowLeft, Upload, FileText, Trash2, Loader2, BookOpen, AlertCircle, CheckCircle2, Wand2, Check } from "lucide-react";
 import { DOC_TYPES } from "@/lib/brand";
 import { useBrandAgentName } from "@/lib/brand-agent-name";
+import { parseDocumentClient } from "@/lib/parse-document-client";
 import { cn } from "@/lib/utils";
 
 interface BrandDoc {
@@ -57,15 +58,13 @@ export default function BrandPage() {
     setUploading(true);
 
     try {
-      // Step 1: Parse
+      // Step 1: Parse client-side (bypasses Vercel's 4.5MB request body cap → no 413)
       setProgress(`Parsing ${file.name}…`);
-      const fd = new FormData();
-      fd.append("file", file);
-      const parseRes = await fetch("/api/parse-document", { method: "POST", body: fd });
-      const parsed = await parseRes.json();
-      if (!parseRes.ok) throw new Error(parsed.error ?? "Parsing failed");
+      const parsed = await parseDocumentClient(file);
+      if (!parsed.ok) throw new Error(parsed.error);
 
-      // Step 2: Store
+      // Step 2: Send extracted text to /api/brand/upload (always well under 4.5MB
+      // because the parser caps text at 80K chars)
       setProgress(`Indexing into brand library…`);
       const uploadRes = await fetch("/api/brand/upload", {
         method: "POST",

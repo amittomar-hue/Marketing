@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useChatStore } from "@/lib/chat-store";
 import { streamChat } from "@/lib/stream-chat";
 import { detectFormat } from "@/lib/export";
+import { parseDocumentClient } from "@/lib/parse-document-client";
 import Link from "next/link";
 import ModelSelector from "./ModelSelector";
 import BrandAgent from "./BrandAgent";
@@ -196,26 +197,25 @@ export default function InputBar() {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      alert("File too large. Max 10MB.");
+    if (file.size > 50 * 1024 * 1024) {
+      alert("File too large. Max 50MB.");
       return;
     }
     setParsingFile(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/parse-document", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error ?? "Failed to parse document");
+      // Parse client-side: bypasses Vercel's 4.5MB request body limit (413)
+      // and keeps the binary on the user's machine — only extracted text travels.
+      const result = await parseDocumentClient(file);
+      if (!result.ok) {
+        alert(result.error);
         return;
       }
       setPendingAttachment({
         name: file.name,
-        content: data.text ?? "",
+        content: result.text,
       });
     } catch (err) {
-      alert("Upload failed: " + (err instanceof Error ? err.message : String(err)));
+      alert("Parse failed: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setParsingFile(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
