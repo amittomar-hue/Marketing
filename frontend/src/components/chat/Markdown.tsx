@@ -43,7 +43,28 @@ function CodeBlock({ className, children }: { className?: string; children?: Rea
   );
 }
 
+// Re-render the "Come back at:" line in the viewer's local timezone if the
+// chat route emitted a `[//]: # (comeback_at:<ISO>)` marker. Server has no
+// way to know the user's timezone, so it sends UTC + a marker; we localize.
+function localizeComebackTime(content: string): string {
+  const m = content.match(/\[\/\/\]:\s*#\s*\(comeback_at:([0-9TZ:.\-]+)\)/);
+  if (!m) return content;
+  const d = new Date(m[1]);
+  if (Number.isNaN(d.getTime())) return content;
+  const local = d.toLocaleString(undefined, {
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+  // Replace the UTC-formatted line; tolerate variations.
+  return content
+    .replace(/\*\*Come back at:\*\*\s+[^\n]+/i, `**Come back at:** ${local}`)
+    .replace(/\[\/\/\]:\s*#\s*\(comeback_at:[^)]+\)\s*/, "");
+}
+
 function Markdown({ content }: MarkdownProps) {
+  const rendered = localizeComebackTime(content);
   return (
     <div className="dmoop-md">
       <ReactMarkdown
@@ -167,7 +188,7 @@ function Markdown({ content }: MarkdownProps) {
           ),
         }}
       >
-        {content}
+        {rendered}
       </ReactMarkdown>
     </div>
   );

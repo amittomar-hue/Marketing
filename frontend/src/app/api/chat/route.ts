@@ -114,6 +114,101 @@ interface ClientMessage {
   content: string;
 }
 
+/**
+ * Extract retry-after seconds from a Groq / OpenAI-SDK error.
+ *
+ * Sources, in priority order:
+ *   1. `error.headers['retry-after']` — set by the OpenAI SDK from the response.
+ *   2. Body text patterns:
+ *        "Please try again in 23.5s"          (per-minute window)
+ *        "Please try again in 1h2m37s"        (per-day window)
+ *        "Please try again in 12m45.123s"     (variant)
+ */
+function parseRetryAfterSeconds(err: Error): number | null {
+  const e = err as Error & { headers?: Record<string, string | undefined> };
+  const headerVal = e.headers?.["retry-after"];
+  if (headerVal) {
+    const asNum = Number(headerVal);
+    if (Number.isFinite(asNum) && asNum > 0) return asNum;
+  }
+
+  const msg = err.message;
+
+  // "Please try again in 1h2m37.5s" → 3757.5
+  const compound = msg.match(/try again in\s+(?:(\d+)h)?(?:(\d+)m)?(\d+(?:\.\d+)?)s/i);
+  if (compound) {
+    const h = parseFloat(compound[1] ?? "0");
+    const m = parseFloat(compound[2] ?? "0");
+    const s = parseFloat(compound[3] ?? "0");
+    const total = h * 3600 + m * 60 + s;
+    if (total > 0) return total;
+  }
+
+  // Bare "in 47s"
+  const seconds = msg.match(/try again in\s+(\d+(?:\.\d+)?)\s*s/i);
+  if (seconds) return parseFloat(seconds[1]);
+
+  return null;
+}
+
+/**
+ * Pretty-print a relative duration: "47 seconds" / "4 minutes 12 seconds" /
+ * "2 hours 18 minutes".
+ */
+function formatDuration(seconds: number): string {
+  const s = Math.max(1, Math.ceil(seconds));
+  if (s < 60) return `${s} second${s === 1 ? "" : "s"}`;
+  const m = Math.floor(s / 60);
+  const remS = s - m * 60;
+  if (m < 60) {
+    return remS > 0 && m < 10 ? `${m}m ${remS}s` : `${m} minute${m === 1 ? "" : "s"}`;
+  }
+  const h = Math.floor(m / 60);
+  const remM = m - h * 60;
+  return remM > 0 ? `${h}h ${remM}m` : `${h} hour${h === 1 ? "" : "s"}`;
+}
+
+/**
+ * Build the user-facing "free quota exhausted, come back later" message.
+ * Emits an ISO `comeback_at` HTML comment that the client can format in the
+ * user's local timezone if it wants — the human-readable text is also included
+ * inline so older clients still render something useful.
+ */
+function buildQuotaExhaustedMessage(err: Error, isTuned: boolean): string {
+  const modelLabel = isTuned ? "DMOOP Tuned" : "DMOOP";
+  const retrySec = parseRetryAfterSeconds(err);
+
+  // No retry-after info at all → safe default of 60s.
+  // Heuristic: any retry-after > 30 minutes is treated as the daily quota.
+  const effective = retrySec ?? 60;
+  const comeback = new Date(Date.now() + effective * 1000);
+  const comebackIso = comeback.toISOString();
+  const comebackUtc = comeback.toUTCString().replace(/^[A-Za-z]+, /, "").replace(" GMT", " UTC");
+  const isDaily = effective > 30 * 60;
+
+  const headline = isDaily
+    ? `🪫 **${modelLabel} — free daily quota exhausted**`
+    : `⏳ **${modelLabel} — free token window exhausted**`;
+
+  const lines: string[] = [
+    headline,
+    "",
+    isDaily
+      ? `Your free-tier daily allowance has run out for today.`
+      : `You've used up the per-minute free token budget on this model.`,
+    "",
+    `**Come back in:** ${formatDuration(effective)}`,
+    `**Come back at:** ${comebackUtc}`,
+    "",
+    `In the meantime, you can switch to **Apex** or **Core** from the model selector — they use a separate quota and are available right now.`,
+    // Hidden marker so the client can re-render the absolute time in the
+    // viewer's local timezone if it wants (Markdown comment is invisible).
+    `[//]: # (comeback_at:${comebackIso})`,
+  ];
+
+  return lines.join("\n");
+}
+
 function looksLikeWebQuery(text: string): boolean {
   if (text.length < 5) return false;
   return true;
@@ -408,19 +503,17 @@ export async function POST(req: NextRequest) {
           }
 
           if (!succeeded && lastError) {
-            // Parse Groq's "Limit X, Requested Y" pattern for a clearer user message
-            const m = lastError.message.match(/Limit\s+(\d+).*?Requested\s+(\d+)/i);
-            const friendly = m
-              ? `Tuned model is over its rate-limit window (used ${m[2]} of ${m[1]} tokens/minute). Try again in ~60 seconds, or switch to Apex/Core for now.`
-              : `Tuned model is temporarily over its rate limit. Try again in ~60 seconds, or switch to Apex/Core for now.`;
+            const friendly = buildQuotaExhaustedMessage(lastError, isTuned);
             const isQuotaError =
               lastError.message.includes("413") ||
               lastError.message.toLowerCase().includes("too large") ||
               lastError.message.includes("429") ||
               lastError.message.toLowerCase().includes("rate limit") ||
-              lastError.message.toLowerCase().includes("tokens per minute");
+              lastError.message.toLowerCase().includes("tokens per minute") ||
+              lastError.message.toLowerCase().includes("tokens per day") ||
+              lastError.message.toLowerCase().includes("quota");
             if (isQuotaError) {
-              controller.enqueue(encoder.encode(`⚠️ ${friendly}`));
+              controller.enqueue(encoder.encode(friendly));
               succeeded = true; // graceful degrade — show message to user instead of error
             } else {
               throw lastError;
