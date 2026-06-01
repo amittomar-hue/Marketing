@@ -14,6 +14,10 @@ export interface Message {
   interactionId?: string;
   userRating?: 1 | -1 | null;
   attachmentName?: string;
+  /** If the user asked for a specific file format (pdf/docx/xlsx/pptx/csv/json/md/txt/html), it's stored here so the assistant message can show a Download button. */
+  requestedFormat?: string;
+  /** The verbatim text used to derive the filename when downloading. */
+  formatPromptHint?: string;
 }
 
 export interface Conversation {

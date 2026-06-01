@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Message as MessageType, useChatStore } from "@/lib/chat-store";
 import { getModel } from "@/lib/models";
 import { submitFeedback, streamChat } from "@/lib/stream-chat";
+import { downloadAs, FORMAT_LABELS, type ExportFormat } from "@/lib/export";
 import Image from "next/image";
-import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Check } from "lucide-react";
+import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Check, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Markdown from "./Markdown";
 
@@ -16,6 +17,8 @@ export default function Message({ message }: { message: MessageType }) {
   const webSearchForced = useChatStore((s) => s.webSearchForced);
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
 
   if (message.role === "user") {
     return (
@@ -86,6 +89,24 @@ export default function Message({ message }: { message: MessageType }) {
     }
   };
 
+  const download = async () => {
+    if (!message.requestedFormat || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadAs(
+        message.requestedFormat as ExportFormat,
+        message.content,
+        message.formatPromptHint ?? message.content.slice(0, 40)
+      );
+      setDownloaded(true);
+      setTimeout(() => setDownloaded(false), 1800);
+    } catch (err) {
+      console.error("download failed:", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const rate = async (rating: 1 | -1) => {
     if (!message.interactionId || !activeId) return;
     if (message.userRating === rating) return;
@@ -142,6 +163,41 @@ export default function Message({ message }: { message: MessageType }) {
             <span className="inline-block w-[2px] h-4 bg-[var(--dmoop-accent)] ml-0.5 animate-pulse align-middle rounded-sm" />
           )}
         </div>
+
+        {/* Prominent Download CTA: visible when the user explicitly asked for a file format */}
+        {!message.isStreaming && message.content && message.requestedFormat && (
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            <button
+              onClick={download}
+              disabled={downloading}
+              className={cn(
+                "inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12.5px] font-semibold transition-all duration-200 active:scale-[0.97]",
+                downloaded
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "dmoop-btn-primary"
+              )}
+              title={`Download as ${FORMAT_LABELS[message.requestedFormat as ExportFormat] ?? message.requestedFormat}`}
+            >
+              {downloaded ? (
+                <>
+                  <Check size={13} /> Downloaded
+                </>
+              ) : downloading ? (
+                <>
+                  <Download size={13} className="animate-pulse" /> Preparing…
+                </>
+              ) : (
+                <>
+                  <Download size={13} />
+                  Download as {FORMAT_LABELS[message.requestedFormat as ExportFormat] ?? message.requestedFormat.toUpperCase()}
+                </>
+              )}
+            </button>
+            <span className="text-[11px] text-[var(--dmoop-text-tertiary)]">
+              Generated locally · nothing leaves your browser
+            </span>
+          </div>
+        )}
 
         {!message.isStreaming && message.content && (
           <div className="flex items-center gap-0.5 mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

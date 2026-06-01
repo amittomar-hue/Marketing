@@ -14,6 +14,19 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getLatestIntel, formatIntelAsContext } from "@/lib/intel";
 import { retrieveBrandChunks, formatBrandContext } from "@/lib/brand";
 
+type ExportFormat = "pdf" | "docx" | "xlsx" | "pptx" | "csv" | "json" | "md" | "txt" | "html";
+const FORMAT_INSTRUCTIONS: Record<ExportFormat, string> = {
+  pdf:  "The user wants this output downloadable as a PDF. Structure the response with clear markdown headings (#/##), short paragraphs, and bullet lists — content that prints cleanly.",
+  docx: "The user wants this output downloadable as a Word document. Structure with clear markdown headings (#/##), short paragraphs, and bullets — readable as a Word doc.",
+  xlsx: "The user wants this output as an Excel spreadsheet. Return the answer PRIMARILY as a markdown table with a header row. Keep prose minimal — the table is the deliverable.",
+  csv:  "The user wants this output as a CSV file. Return the answer PRIMARILY as a markdown table with a header row. Keep prose minimal — the table is the deliverable.",
+  pptx: "The user wants this output as a PowerPoint deck. Structure as 4-8 slides. Use ## for each slide title, then bullets for the slide body. Keep each slide focused on one idea.",
+  json: "The user wants this output as JSON. Return a single well-structured JSON object or array as the primary deliverable.",
+  md:   "The user wants this as a Markdown file. Use rich markdown: headings, bullets, tables, bold, links.",
+  txt:  "The user wants this as plain text. Avoid markdown syntax — write clean prose with blank lines between paragraphs.",
+  html: "The user wants this as an HTML file. Structure with clear headings and paragraphs.",
+};
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
@@ -97,6 +110,10 @@ export async function POST(req: NextRequest) {
   const modelId: string = body.model ?? "dmoop-core";
   const sessionId: string | undefined = body.session_id;
   const webSearchMode: "auto" | "on" | "off" = body.web_search_mode ?? "auto";
+  const requestedFormat: ExportFormat | undefined =
+    body.requested_format && body.requested_format in FORMAT_INSTRUCTIONS
+      ? (body.requested_format as ExportFormat)
+      : undefined;
 
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) {
@@ -202,6 +219,11 @@ export async function POST(req: NextRequest) {
   const groqMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: "system", content: isTuned ? TUNED_SYSTEM_PROMPT : SYSTEM_PROMPT },
   ];
+
+  // Output format instruction — sits right after the persona so it shapes the entire response
+  if (requestedFormat) {
+    groqMessages.push({ role: "system", content: FORMAT_INSTRUCTIONS[requestedFormat] });
+  }
 
   // Brand context goes FIRST (after system prompt) — it's the user's authoritative source
   if (brandContext) {

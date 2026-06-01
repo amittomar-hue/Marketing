@@ -5,6 +5,9 @@ interface StreamArgs {
   messages: Message[];
   model: ModelId;
   webSearchMode?: "auto" | "on" | "off";
+  /** If set, sent to the API so the system prompt is augmented to produce
+   * output that converts cleanly to the requested format (e.g. table-first for xlsx/csv). */
+  requestedFormat?: string;
   onToken: (acc: string) => void;
 }
 
@@ -19,11 +22,13 @@ export async function streamChat({
   messages,
   model,
   webSearchMode = "auto",
+  requestedFormat,
   onToken,
 }: StreamArgs): Promise<StreamResult> {
   const payload = {
     model,
     web_search_mode: webSearchMode,
+    requested_format: requestedFormat,
     messages: messages
       .filter((m) => m.content.trim().length > 0)
       .map((m) => ({ role: m.role, content: m.content })),

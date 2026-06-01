@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useChatStore } from "@/lib/chat-store";
 import { streamChat } from "@/lib/stream-chat";
+import { detectFormat } from "@/lib/export";
 import Link from "next/link";
 import ModelSelector from "./ModelSelector";
 import BrandAgent from "./BrandAgent";
@@ -242,6 +243,9 @@ export default function InputBar() {
       ? `[Attached: ${pendingAttachment.name}]\n${pendingAttachment.content}\n\n---\n\n${text}`
       : text;
 
+    // Detect requested output format (pdf/docx/xlsx/pptx/csv/json/md/txt/html)
+    const requestedFormat = detectFormat(text) ?? undefined;
+
     addMessage(convId, {
       role: "user",
       content: userContent,
@@ -256,6 +260,8 @@ export default function InputBar() {
       content: "",
       model: selectedModel,
       isStreaming: true,
+      requestedFormat,
+      formatPromptHint: requestedFormat ? text : undefined,
     });
 
     try {
@@ -265,6 +271,7 @@ export default function InputBar() {
         messages: history,
         model: selectedModel,
         webSearchMode: webSearchForced,
+        requestedFormat,
         onToken: (acc) => updateMessage(convId!, asstId, { content: acc }),
       });
       updateMessage(convId, asstId, {
