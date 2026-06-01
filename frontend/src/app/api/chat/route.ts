@@ -35,48 +35,35 @@ const GROQ_MODEL_MAP: Record<string, string> = {
   "dmoop-apex": "llama-3.3-70b-versatile",
   "dmoop-core": "llama-3.3-70b-versatile",
   "dmoop-pulse": "llama-3.1-8b-instant",
-  // Tuned routes to 8B by default — different TPM bucket from Apex/Core (no 429 conflict),
-  // and the heavy RLMO examples context does the specialization.
-  "dmoop-tuned": "llama-3.1-8b-instant",
+  // Tuned: llama-4-scout-17b has the highest free-tier TPM (30K vs 6K on 8B-instant),
+  // which is what we actually need given training-pair + brand context payload.
+  // Fallback chain below tries scout → kimi-k2 (10K TPM) → 8B-instant.
+  "dmoop-tuned": "meta-llama/llama-4-scout-17b-16e-instruct",
 };
 
-const TUNED_SYSTEM_PROMPT = `You are DMOOP Tuned — DMOOP's custom marketing model. You are NOT a generic LLM with retrieval bolted on. You are a model whose actual knowledge lives in a continuously-updated training corpus built from the live marketing web:
+// Per-model fallback chains. Ordered by TPM headroom so we degrade gracefully
+// under rate-limit / over-budget conditions instead of erroring out.
+const FALLBACK_CHAIN: Record<string, string[]> = {
+  "llama-3.3-70b-versatile": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+  "llama-3.1-8b-instant": ["llama-3.1-8b-instant"],
+  "meta-llama/llama-4-scout-17b-16e-instruct": [
+    "meta-llama/llama-4-scout-17b-16e-instruct", // 30K TPM
+    "moonshotai/kimi-k2-instruct",               // 10K TPM
+    "llama-3.1-8b-instant",                      // 6K TPM — last resort
+  ],
+};
 
-Pipeline that feeds you (running every 6 hours, automatically):
-  1. SCRAPE  — Tavily pulls 130+ queries across 13 marketing asset types
-               (articles, ebooks, whitepapers, playbooks, case studies, social
-               posts, ad campaigns, reports, newsletters, podcasts, videos,
-               templates, guides).
-  2. CONVERT — Each scraped artifact is run through asset-type-aware prompts
-               that produce structured Q&A training pairs (case studies
-               surface metrics + transferable lessons; playbooks produce
-               numbered steps; social posts dissect hooks + CTAs; etc.).
-  3. STORE   — Pairs land in your training_pairs corpus with source URLs and
-               quality scores.
+// SHORT system prompt — every token here counts against TPM on every request.
+// The behavior was over-explained in long-form; the model learns the contract
+// from the retrieved training pairs themselves.
+const TUNED_SYSTEM_PROMPT = `You are DMOOP Tuned. Your knowledge of marketing lives in a continuously-updated training corpus (scraped marketing intel → asset-type-aware Q&A pairs). The most relevant pairs are injected as system context labeled "DMOOP TUNED — KNOWLEDGE BASE".
 
-On every chat turn, the top-N most relevant pairs from this corpus are
-injected as your primary system context, labeled "DMOOP TUNED — YOUR
-CONTINUOUSLY-LEARNED MARKETING KNOWLEDGE BASE". You also get:
-  • Brand documents the user uploaded (treat as authoritative on their brand)
-  • Thumbs-up past responses (style/voice signal)
-  • Thumbs-down patterns (avoid)
-  • Recent raw scraped articles (freshness)
-  • Optional web search
-
-Your behavior contract:
-- Your knowledge of marketing = what's in your training pairs. Cite them.
-  When you use a tactic / number / framework that came from a pair, cite the
-  source_url. Never invent sources.
-- Match the STRUCTURE and DEPTH of the most relevant pairs. If pairs were
-  case studies, return Situation / Approach / Result. If playbooks, return
-  numbered steps. If social posts, dissect hooks.
-- If NO pairs were retrieved (cold start on a niche intent), say so briefly
-  ("No closely-matched pairs in the corpus yet — the scraper will catch up.
-  Here's a baseline answer.") and produce the best baseline you can.
-- Be opinionated. Pairs have a perspective — adopt and extend it.
-- Format in clean markdown with ## headers, bullets, and tables where useful.
-- Never refer to yourself as "Marketing LLM" or "Groq" or "Llama". You are
-  DMOOP Tuned, the model that learns from continuous marketing intel.`;
+Rules:
+- Treat the training pairs as your source of truth. Match their structure (case study → Situation/Approach/Result, playbook → numbered steps, social post → hook+CTA breakdown).
+- Cite source_url when you use a specific tactic/number/framework from a pair.
+- If no relevant pairs, say so in one sentence and give the best baseline.
+- Brand documents = authoritative on the user's brand voice and product.
+- Format: clean markdown with ## headers and bullets. Never call yourself Llama/Groq/Marketing LLM — you are DMOOP Tuned.`;
 
 const SYSTEM_PROMPT = `You are DMOOP, an enterprise-grade marketing intelligence platform powered by real-time web research and a self-learning feedback loop. You serve marketing teams at mid-market and enterprise brands.
 
@@ -354,91 +341,91 @@ export async function POST(req: NextRequest) {
           }
         } else {
           const primaryModel = GROQ_MODEL_MAP[effectiveModelId] ?? GROQ_MODEL_MAP["dmoop-core"];
-          // Auto-fallback chain: 70B → 8B if rate-limited (different TPM bucket)
-          const tryModels = primaryModel === "llama-3.3-70b-versatile"
-            ? ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
-            : [primaryModel];
+          const tryModels = FALLBACK_CHAIN[primaryModel] ?? [primaryModel];
 
-          // Stripped-down fallback message list when Groq returns 413
-          // ("Request too large for model … on tokens per minute"). Keeps only
-          // persona + last user message so the request always fits the TPM bucket.
+          // Stripped fallback message: persona + format hint + last user message only.
+          // Always fits even the smallest TPM bucket (6K) with room for output.
           const lastUserMsg = [...groqMessages].reverse().find((m) => m.role === "user");
           const slimMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-            groqMessages[0], // system / persona
+            groqMessages[0], // persona
             ...(requestedFormat ? [{ role: "system" as const, content: FORMAT_INSTRUCTIONS[requestedFormat] }] : []),
             ...(lastUserMsg ? [lastUserMsg] : []),
           ];
 
+          // Tuned: 1024 output cap. Lower max_tokens = bigger input budget under TPM.
+          const maxTokensForModel = isTuned ? 1024 : 2048;
+
           let succeeded = false;
           let lastError: Error | null = null;
-          let messagesToUse: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = groqMessages;
-          let triedSlim = false;
 
           for (const modelName of tryModels) {
-            try {
-              const response = await groq.chat.completions.create({
-                model: modelName,
-                messages: messagesToUse,
-                stream: true,
-                temperature: 0.7,
-                max_tokens: 2048,
-              });
+            // Try full → slim on each model in the chain
+            for (const attempt of ["full", "slim"] as const) {
+              const messagesToUse = attempt === "slim" ? slimMessages : groqMessages;
+              try {
+                const response = await groq.chat.completions.create({
+                  model: modelName,
+                  messages: messagesToUse,
+                  stream: true,
+                  temperature: 0.7,
+                  max_tokens: attempt === "slim" ? Math.min(maxTokensForModel, 768) : maxTokensForModel,
+                });
 
-              for await (const chunk of response) {
-                const token = chunk.choices[0]?.delta?.content;
-                if (token) {
-                  fullResponse += token;
-                  controller.enqueue(encoder.encode(token));
-                }
-              }
-              succeeded = true;
-              break;
-            } catch (err: unknown) {
-              lastError = err instanceof Error ? err : new Error(String(err));
-              const msg = lastError.message;
-              const lower = msg.toLowerCase();
-              const isRateLimit = msg.includes("429") || lower.includes("rate");
-              const isTooLarge =
-                msg.includes("413") ||
-                lower.includes("too large") ||
-                lower.includes("context_length_exceeded") ||
-                lower.includes("maximum context");
-
-              // First-time 413 on this model: rebuild with slim context and try again
-              // (without consuming a chain slot, so the 70B→8B fallback still works).
-              if (isTooLarge && !triedSlim) {
-                triedSlim = true;
-                messagesToUse = slimMessages;
-                try {
-                  const slimResponse = await groq.chat.completions.create({
-                    model: modelName,
-                    messages: messagesToUse,
-                    stream: true,
-                    temperature: 0.7,
-                    max_tokens: 1536,
-                  });
-                  for await (const chunk of slimResponse) {
-                    const token = chunk.choices[0]?.delta?.content;
-                    if (token) {
-                      fullResponse += token;
-                      controller.enqueue(encoder.encode(token));
-                    }
+                for await (const chunk of response) {
+                  const token = chunk.choices[0]?.delta?.content;
+                  if (token) {
+                    fullResponse += token;
+                    controller.enqueue(encoder.encode(token));
                   }
-                  succeeded = true;
-                  break;
-                } catch (err2: unknown) {
-                  lastError = err2 instanceof Error ? err2 : new Error(String(err2));
-                  // fall through to model-chain fallback below
                 }
-              }
+                succeeded = true;
+                break;
+              } catch (err: unknown) {
+                lastError = err instanceof Error ? err : new Error(String(err));
+                const msg = lastError.message;
+                const lower = msg.toLowerCase();
+                const isRateLimit = msg.includes("429") || lower.includes("rate limit");
+                const isTooLarge =
+                  msg.includes("413") ||
+                  lower.includes("too large") ||
+                  lower.includes("context_length_exceeded") ||
+                  lower.includes("maximum context") ||
+                  lower.includes("tokens per minute");
 
-              // Rate-limit / over-budget: continue to next model in chain
-              if (isRateLimit || isTooLarge) continue;
+                if (isTooLarge && attempt === "full") {
+                  // Try slim on the same model before moving to the next one
+                  continue;
+                }
+                if (isTooLarge || isRateLimit) {
+                  // Slim already failed OR pure rate-limit — move to next model in chain
+                  break;
+                }
+                // Some other error (auth, 500, bad request) — surface immediately
+                throw lastError;
+              }
+            }
+            if (succeeded) break;
+          }
+
+          if (!succeeded && lastError) {
+            // Parse Groq's "Limit X, Requested Y" pattern for a clearer user message
+            const m = lastError.message.match(/Limit\s+(\d+).*?Requested\s+(\d+)/i);
+            const friendly = m
+              ? `Tuned model is over its rate-limit window (used ${m[2]} of ${m[1]} tokens/minute). Try again in ~60 seconds, or switch to Apex/Core for now.`
+              : `Tuned model is temporarily over its rate limit. Try again in ~60 seconds, or switch to Apex/Core for now.`;
+            const isQuotaError =
+              lastError.message.includes("413") ||
+              lastError.message.toLowerCase().includes("too large") ||
+              lastError.message.includes("429") ||
+              lastError.message.toLowerCase().includes("rate limit") ||
+              lastError.message.toLowerCase().includes("tokens per minute");
+            if (isQuotaError) {
+              controller.enqueue(encoder.encode(`⚠️ ${friendly}`));
+              succeeded = true; // graceful degrade — show message to user instead of error
+            } else {
               throw lastError;
             }
           }
-
-          if (!succeeded && lastError) throw lastError;
         }
 
         // Log this interaction for learning (best-effort, non-blocking failure)

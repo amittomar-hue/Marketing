@@ -50,46 +50,16 @@ export async function retrieveTrainingPairs(
 export function formatTrainingPairsAsContext(pairs: TrainingPair[]): string {
   if (pairs.length === 0) return "";
 
-  const lines = [
-    "═══════════════════════════════════════════════════════════════",
-    "DMOOP TUNED — YOUR CONTINUOUSLY-LEARNED MARKETING KNOWLEDGE BASE",
-    "═══════════════════════════════════════════════════════════════",
-    "",
-    "Below are the most relevant Q&A pairs from your training corpus —",
-    "curated from the live marketing web (130+ scraped queries across 13",
-    "asset types every 6 hours, then asset-type-aware-converted into",
-    "training pairs). These are your PRIMARY signal.",
-    "",
-    "How to use them:",
-    "1. Match the STRUCTURE, DEPTH, and VOICE of the closest pair(s).",
-    "2. PULL specific tactics, numbers, frameworks, and named tools from them.",
-    "3. CITE the source URL when you use a tactic/stat from a pair.",
-    "4. If multiple pairs cover the same angle, SYNTHESIZE — don't repeat.",
-    "5. Do NOT copy verbatim. Adapt to the user's exact question.",
-    "",
-  ];
+  // Tight format — every char here lands in the request and counts against TPM.
+  // Header is ~150 chars instead of 700. Each pair payload is capped at 500.
+  const lines = ["DMOOP TUNED — KNOWLEDGE BASE (top pairs from your scraped corpus):", ""];
 
   pairs.forEach((p, i) => {
-    const sim = (p.similarity * 100).toFixed(0);
-    const score = (p.composite_score * 100).toFixed(0);
-    lines.push(`────── Training pair #${i + 1} ──────`);
-    lines.push(
-      `intent: ${p.intent}  ·  asset_type: ${p.asset_type}  ·  similarity: ${sim}%  ·  composite: ${score}`
-    );
-    if (p.source_title) lines.push(`source: "${p.source_title}"`);
-    if (p.source_url) lines.push(`source_url: ${p.source_url}`);
-    lines.push("");
-    lines.push(`Q: ${p.instruction}`);
-    lines.push("");
-    lines.push("A:");
-    // Cap each answer at 700 chars so 5 pairs ≈ 3.5K chars total (fits Groq TPM)
-    lines.push(p.output.slice(0, 700));
+    lines.push(`[#${i + 1}] ${p.intent}/${p.asset_type} — Q: ${p.instruction.slice(0, 140)}`);
+    if (p.source_url) lines.push(`src: ${p.source_url}`);
+    lines.push(p.output.slice(0, 500));
     lines.push("");
   });
-
-  lines.push("═══════════════════════════════════════════════════════════════");
-  lines.push("End of knowledge base. Now answer the user's question.");
-  lines.push("═══════════════════════════════════════════════════════════════");
 
   return lines.join("\n");
 }
