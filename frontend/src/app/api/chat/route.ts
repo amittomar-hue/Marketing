@@ -474,6 +474,104 @@ export async function POST(req: NextRequest) {
     groqMessages.push({ role: m.role, content: m.content });
   });
 
+  // ─────────────────────────────────────────────────────────────
+  // Preemptive token budgeting: never send Groq a request that exceeds
+  // the per-model TPM ceiling. Estimate input tokens, and if over budget,
+  // trim context sources in reverse-priority order BEFORE making the call.
+  // This eliminates 413s instead of catching them.
+  // ─────────────────────────────────────────────────────────────
+  const MODEL_TPM: Record<string, number> = {
+    "meta-llama/llama-4-scout-17b-16e-instruct": 30000,
+    "moonshotai/kimi-k2-instruct": 10000,
+    "llama-3.3-70b-versatile": 12000,
+    "llama-3.1-8b-instant": 6000,
+  };
+  // Conservative char-to-token estimate. Real ratio for English is ~3.8;
+  // we use 3.0 to leave headroom and stay safely under.
+  const estimateTokens = (s: string) => Math.ceil(s.length / 3.0);
+  const estimateMessagesTokens = (
+    msgs: OpenAI.Chat.Completions.ChatCompletionMessageParam[]
+  ) =>
+    msgs.reduce((sum, m) => {
+      const content = typeof m.content === "string" ? m.content : "";
+      return sum + estimateTokens(content) + 4; // +4 for role overhead
+    }, 0);
+
+  // Trim a single message's content in place. Preserves persona/last-user.
+  const trimSystemMessage = (
+    msg: OpenAI.Chat.Completions.ChatCompletionMessageParam,
+    targetChars: number
+  ) => {
+    if (typeof msg.content !== "string") return;
+    if (msg.content.length <= targetChars) return;
+    msg.content = msg.content.slice(0, targetChars) + "\n…[trimmed for token budget]";
+  };
+
+  // Trim groqMessages down until it fits within budgetTokens.
+  // Priority (least → most important, dropped first):
+  // 1. Conversation history (oldest first, sliced)
+  // 2. Web search context
+  // 3. Negative patterns
+  // 4. Intel context
+  // 5. Examples
+  // 6. Brand context
+  // 7. Training pairs
+  // 8. Site scrape (only if absolutely needed)
+  // NEVER trim: persona, date, format hint, last user message
+  const fitToBudget = (
+    msgs: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+    budgetTokens: number
+  ) => {
+    let usage = estimateMessagesTokens(msgs);
+    if (usage <= budgetTokens) return msgs;
+
+    // Identify trimmable system messages by content signature
+    const signatures: Array<{ test: (s: string) => boolean; cap: number }> = [
+      { test: (s) => s.startsWith("Web search results") || s.includes("Live web research"), cap: 800 },
+      { test: (s) => s.includes("AVOID THESE PATTERNS"), cap: 400 },
+      { test: (s) => s.startsWith("Recent scraped intel"), cap: 800 },
+      { test: (s) => s.includes("Style/voice reference") || s.includes("high-rated past examples") || s.includes("Here are examples of past"), cap: 1200 },
+      { test: (s) => s.startsWith("USER'S BRAND DOCUMENTS"), cap: 2000 },
+      { test: (s) => s.includes("DMOOP TUNED — KNOWLEDGE BASE"), cap: 2500 },
+      { test: (s) => s.includes("LIVE WEBSITE SCRAPE"), cap: 8000 },
+    ];
+
+    // Walk signatures, trim corresponding messages
+    for (const { test, cap } of signatures) {
+      if (usage <= budgetTokens) break;
+      const targetMsg = msgs.find((m) => typeof m.content === "string" && test(m.content));
+      if (targetMsg) {
+        trimSystemMessage(targetMsg, cap);
+        usage = estimateMessagesTokens(msgs);
+      }
+    }
+
+    // Still over? Trim older history messages aggressively
+    if (usage > budgetTokens) {
+      const userAndAssistantMsgs = msgs.filter((m) => m.role === "user" || m.role === "assistant");
+      // Keep the last user message in full; aggressively trim earlier turns
+      for (let i = 0; i < userAndAssistantMsgs.length - 1; i++) {
+        if (usage <= budgetTokens) break;
+        trimSystemMessage(userAndAssistantMsgs[i], 200);
+        usage = estimateMessagesTokens(msgs);
+      }
+    }
+
+    // Last resort: drop the lowest-priority system messages entirely
+    if (usage > budgetTokens) {
+      for (const { test } of signatures) {
+        if (usage <= budgetTokens) break;
+        const idx = msgs.findIndex((m) => typeof m.content === "string" && test(m.content));
+        if (idx > -1) {
+          msgs.splice(idx, 1);
+          usage = estimateMessagesTokens(msgs);
+        }
+      }
+    }
+
+    return msgs;
+  };
+
   const effectiveModelId = effectiveModelIdEarly;
 
   const encoder = new TextEncoder();
@@ -523,14 +621,23 @@ export async function POST(req: NextRequest) {
           for (const modelName of tryModels) {
             // Try full → slim on each model in the chain
             for (const attempt of ["full", "slim"] as const) {
-              const messagesToUse = attempt === "slim" ? slimMessages : groqMessages;
+              const rawMessages = attempt === "slim" ? slimMessages : groqMessages;
+              // Preemptively shrink to fit TPM. For full attempts, leave 1500-token
+              // safety margin under the model's TPM cap for output + variance.
+              const tpm = MODEL_TPM[modelName] ?? 6000;
+              const reservedOutput = attempt === "slim" ? Math.min(maxTokensForModel, 1536) : maxTokensForModel;
+              const inputBudget = Math.max(800, tpm - reservedOutput - 800);
+              // Clone so we don't mutate the caller's array
+              const messagesToUse = rawMessages.map((m) => ({ ...m }));
+              fitToBudget(messagesToUse, inputBudget);
+
               try {
                 const response = await groq.chat.completions.create({
                   model: modelName,
                   messages: messagesToUse,
                   stream: true,
                   temperature: 0.7,
-                  max_tokens: attempt === "slim" ? Math.min(maxTokensForModel, 1536) : maxTokensForModel,
+                  max_tokens: reservedOutput,
                 });
 
                 for await (const chunk of response) {
