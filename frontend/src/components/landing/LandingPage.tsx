@@ -8,41 +8,65 @@ import {
   ArrowRight, Sparkles, Search, Globe, Target, Radar, MessageSquare,
   Layers, BarChart3, Activity, ShieldCheck, Brain, Zap, CheckCircle2,
   TrendingUp, Building2, Crosshair, Mail, Mic2, Wand2,
+  BookOpen, FileText, Download, Paperclip, Mic, Hammer, Link as LinkIcon,
+  Database, RefreshCw,
 } from "lucide-react";
 
 const CAPABILITIES = [
-  { icon: Wand2, color: "text-violet-600", bg: "bg-violet-50", title: "Ad Copy & Creative", desc: "Google, Meta, LinkedIn, TikTok — variants tuned to your brand" },
-  { icon: Mail, color: "text-emerald-600", bg: "bg-emerald-50", title: "Email Sequences", desc: "Launch sequences, nurture flows, cold outreach that converts" },
-  { icon: Search, color: "text-blue-600", bg: "bg-blue-50", title: "SEO / AEO / GEO", desc: "Technical audits, AI-search citations, Generative Engine Optimization" },
+  { icon: BookOpen, color: "text-[var(--dmoop-accent)]", bg: "bg-[#fbf3ee]", title: "Brand Agent", desc: "Name your own agent. Upload brand docs once. Every asset comes out on-voice." },
+  { icon: LinkIcon, color: "text-blue-600", bg: "bg-blue-50", title: "Live Site Scraping", desc: "Paste any URL. DMOOP fetches the homepage + key pages and grounds answers in the real site." },
+  { icon: Paperclip, color: "text-violet-600", bg: "bg-violet-50", title: "File Analysis", desc: "Drop in a PDF, Word, Excel, or PowerPoint — DMOOP parses it locally and answers from it." },
+  { icon: Download, color: "text-emerald-600", bg: "bg-emerald-50", title: "Multi-Format Export", desc: "Ask in any format — PDF, Word, Excel, PowerPoint, CSV — and a download button appears." },
+  { icon: Wand2, color: "text-fuchsia-600", bg: "bg-fuchsia-50", title: "Ad Copy & Creative", desc: "Google, Meta, LinkedIn, TikTok — variants tuned to your brand voice" },
+  { icon: Mail, color: "text-teal-600", bg: "bg-teal-50", title: "Email Sequences", desc: "Launch sequences, nurture flows, cold outreach that converts" },
+  { icon: Search, color: "text-sky-600", bg: "bg-sky-50", title: "SEO / AEO / GEO", desc: "Technical audits, AI-search citations, Generative Engine Optimization" },
   { icon: Layers, color: "text-indigo-600", bg: "bg-indigo-50", title: "ABM Playbooks", desc: "Tier-1 account strategies, multi-thread sequences, intent triggers" },
   { icon: Activity, color: "text-rose-600", bg: "bg-rose-50", title: "Buyer Signal Intelligence", desc: "Lead scoring, intent interpretation, propensity models" },
   { icon: Building2, color: "text-slate-700", bg: "bg-slate-100", title: "Company Signals", desc: "Hiring, funding, leadership moves, tech stack tracking" },
   { icon: Target, color: "text-amber-600", bg: "bg-amber-50", title: "GTM Strategy", desc: "Positioning, ICP, channel mix, 90-day launch plans" },
   { icon: Crosshair, color: "text-red-600", bg: "bg-red-50", title: "Competitor Intelligence", desc: "Teardowns, win/loss analysis, counter-positioning angles" },
   { icon: ShieldCheck, color: "text-teal-600", bg: "bg-teal-50", title: "Brand Reputation", desc: "Sentiment monitoring, crisis response, review strategy" },
-  { icon: Mic2, color: "text-pink-600", bg: "bg-pink-50", title: "Brand Voice Scoring", desc: "Real-time copy scoring against your guidelines" },
+  { icon: Mic2, color: "text-pink-600", bg: "bg-pink-50", title: "Voice Input", desc: "Hands-free briefs — Web Speech API, auto-restart on pauses" },
   { icon: BarChart3, color: "text-purple-600", bg: "bg-purple-50", title: "Marketing Analytics", desc: "Attribution, MMM/MTA, channel ROI math" },
-  { icon: TrendingUp, color: "text-cyan-600", bg: "bg-cyan-50", title: "Trend Detection", desc: "60+ marketing topics scraped daily with citations" },
+  { icon: TrendingUp, color: "text-cyan-600", bg: "bg-cyan-50", title: "Trend Detection", desc: "130+ marketing topics across 13 asset types scraped every 6 hours" },
+];
+
+// Quick-action tools surfaced as button-style cards — mirrors the Tools menu in the chat.
+const TOOL_DEMOS = [
+  { icon: Search, title: "SEO audit",            sub: "Prioritized fix list with expected impact" },
+  { icon: Wand2,  title: "Write ad copy",        sub: "3 variants per channel, brand-on" },
+  { icon: Mail,   title: "Email sequence",       sub: "5-touch launch / nurture / cold flows" },
+  { icon: Crosshair, title: "Competitor teardown", sub: "Counter-positioning angles ready to ship" },
+  { icon: Activity, title: "Buyer signal analysis", sub: "Score leads + recommend next actions" },
+  { icon: Mic2,    title: "Brand voice score",   sub: "Rate copy against your guidelines" },
+  { icon: Target,  title: "GTM plan",            sub: "90-day launch plan for a new market" },
+  { icon: Layers,  title: "ABM playbook",        sub: "Tier-1 motion across email + LinkedIn + paid" },
 ];
 
 const HOW_IT_WORKS = [
   {
     n: "01",
-    title: "Ask anything marketing",
-    desc: "From ad variants to ABM playbooks to SEO audits. DMOOP handles the full surface of B2B and B2C marketing.",
+    title: "Brief in any channel",
+    desc: "Type, paste a URL, drop a PDF, or talk via voice. DMOOP scrapes the site, parses the file locally, or transcribes — all grounded as authoritative context for the answer.",
     icon: MessageSquare,
   },
   {
     n: "02",
-    title: "Real-time data, automatically",
-    desc: "Every answer is grounded in live web search (Tavily) + a corpus of marketing articles scraped fresh every day.",
+    title: "Grounded in live marketing intel",
+    desc: "Every answer pulls from 130+ topics × 13 asset types scraped every 6 hours — articles, ebooks, playbooks, case studies, ad campaigns, social posts, reports. Plus Tavily web search on demand.",
     icon: Globe,
   },
   {
     n: "03",
-    title: "Self-learning from your feedback",
-    desc: "Thumbs-up on responses you like. DMOOP retrieves them as examples for similar future queries. Your model gets sharper weekly.",
-    icon: Brain,
+    title: "Your brand, locked in",
+    desc: "Upload brand guidelines, ICP, past campaigns once. Name your Brand Agent. Every asset comes out in your voice — Tuned model retrieves your brand context as primary signal.",
+    icon: BookOpen,
+  },
+  {
+    n: "04",
+    title: "Export to any format",
+    desc: "Ask in PDF, Word, Excel, PowerPoint, CSV, JSON, Markdown — or say 'convert this to X' after any answer. Generated locally, nothing leaves your browser.",
+    icon: Download,
   },
 ];
 
@@ -67,9 +91,9 @@ const MODELS = [
   },
   {
     name: "Tuned",
-    badge: "Custom",
+    badge: "Custom · RAG",
     color: "from-amber-500 to-orange-500",
-    desc: "Self-learning model that adapts to your brand voice",
+    desc: "Continuously-learning model: 130+ marketing queries scraped every 6h → asset-type-aware Q&A pairs → retrieved as your primary knowledge",
   },
 ];
 
@@ -98,6 +122,12 @@ export default function LandingPage() {
           <div className="flex items-center gap-1 sm:gap-3 shrink-0">
             <Link href="#features" className="hidden md:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
               Features
+            </Link>
+            <Link href="#brand-agent" className="hidden lg:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
+              Brand Agent
+            </Link>
+            <Link href="#tools" className="hidden lg:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
+              Tools
             </Link>
             <Link href="#how" className="hidden md:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
               How it works
@@ -157,7 +187,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-[14px] sm:text-[18px] text-[var(--dmoop-text-secondary)] max-w-2xl mx-auto leading-relaxed mb-6 sm:mb-8 dmoop-fade-in px-2 sm:px-0">
-            DMOOP is the enterprise-grade AI for the full marketing surface — SEO, ABM, buyer signals, ad copy, GTM strategy. Self-learning from your team&apos;s feedback. Grounded in live web data, every day.
+            DMOOP is the enterprise AI for the full marketing surface. Upload your brand docs, name your Brand Agent, paste a URL, drop a file, export to any format — every answer grounded in <strong className="font-semibold text-[var(--dmoop-text-primary)]">130+ marketing topics scraped every 6 hours</strong>.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 dmoop-fade-in">
@@ -177,13 +207,14 @@ export default function LandingPage() {
 
           <div className="mt-7 sm:mt-10 flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-6 gap-y-2 text-[11px] sm:text-[12px] text-[var(--dmoop-text-tertiary)] dmoop-fade-in">
             <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> No credit card</span>
-            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> 60 topics scraped daily</span>
-            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> 4 specialized models</span>
-            <span className="hidden sm:flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> Self-learning loop</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> 130+ topics × 13 asset types</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> 4 models · Brand Agent</span>
+            <span className="hidden sm:flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /> Live site scraping · file analysis</span>
           </div>
         </div>
 
-        {/* Product preview frame */}
+        {/* Product preview frame — shows the actual chat surface with Brand Agent,
+            Tools, file upload, URL-in-prompt, and a multi-format Download button. */}
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pb-12 sm:pb-24">
           <div
             className="rounded-xl sm:rounded-2xl overflow-hidden mx-auto"
@@ -193,33 +224,98 @@ export default function LandingPage() {
               boxShadow: "var(--dmoop-shadow-xl)",
             }}
           >
+            {/* Browser chrome */}
             <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-[var(--dmoop-border-soft)] flex items-center gap-1.5 bg-[#f9f5ee]">
               <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-[#e8a293]" />
               <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-[#e8c993]" />
               <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-[#a0c898]" />
               <span className="ml-2 sm:ml-3 text-[10px] sm:text-[11px] font-medium text-[var(--dmoop-text-tertiary)] truncate">
-                DMOOP <span className="hidden sm:inline">— Enterprise Marketing Intelligence</span>
+                DMOOP <span className="hidden sm:inline">— dmoop.com/chat</span>
               </span>
             </div>
-            <div className="p-4 sm:p-10 bg-gradient-to-br from-[#fdfcfa] to-[#f7f3eb]">
-              <div className="flex items-start gap-2.5 sm:gap-3 mb-4 sm:mb-5">
+
+            <div className="p-4 sm:p-8 bg-gradient-to-br from-[#fdfcfa] to-[#f7f3eb]">
+              {/* User prompt bubble */}
+              <div className="flex justify-end mb-3 sm:mb-4">
+                <div className="max-w-[80%] px-3.5 py-2 rounded-2xl text-[12px] sm:text-[13.5px] text-[var(--dmoop-text-primary)]"
+                  style={{
+                    background: "linear-gradient(135deg, #f3eee6 0%, #ebe5da 100%)",
+                    border: "1px solid rgba(165, 138, 110, 0.15)",
+                  }}>
+                  Check eximius.ai — then create a GTM and give it to me as a Word doc.
+                </div>
+              </div>
+
+              {/* Assistant response */}
+              <div className="flex items-start gap-2.5 sm:gap-3 mb-4">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white border border-[var(--dmoop-border-soft)] p-1.5 shrink-0 flex items-center justify-center shadow-[var(--dmoop-shadow-sm)]">
                   <Image src="/dmoop-logo.png" alt="DMOOP" width={60} height={20} className="w-full h-auto object-contain" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11.5px] sm:text-[12px] font-semibold text-[var(--dmoop-text-primary)]">DMOOP <span className="text-[var(--dmoop-accent)] ml-1">Core</span></p>
-                  <p className="text-[12.5px] sm:text-[14px] text-[var(--dmoop-text-primary)] leading-relaxed mt-1.5">
-                    Based on the last 7 days of intel, three trends are reshaping B2B demand gen:
+                  <p className="text-[11.5px] sm:text-[12px] font-semibold text-[var(--dmoop-text-primary)]">
+                    DMOOP <span className="text-[var(--dmoop-accent)] ml-1">Tuned</span>
+                    <span className="ml-2 text-[9.5px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">scraped 5 pages</span>
                   </p>
-                  <ul className="mt-2 text-[12px] sm:text-[13.5px] text-[var(--dmoop-text-primary)] space-y-1.5 ml-4 list-disc marker:text-[var(--dmoop-text-tertiary)]">
-                    <li><strong className="font-semibold">AI Overviews</strong> are now responsible for 47% of zero-click queries — restructure pillar pages for citation eligibility <em className="text-[var(--dmoop-text-tertiary)] not-italic">[1]</em></li>
-                    <li><strong className="font-semibold">Signal-led ABM</strong> beats persona-only ABM by 2.3× on meeting rate <em className="text-[var(--dmoop-text-tertiary)] not-italic">[2]</em></li>
-                    <li><strong className="font-semibold">Cold outbound</strong> reply rates are at 5-year highs when paired with company-signal triggers <em className="text-[var(--dmoop-text-tertiary)] not-italic">[3]</em></li>
+                  <p className="text-[12px] sm:text-[14px] text-[var(--dmoop-text-primary)] leading-relaxed mt-1.5">
+                    <strong className="font-semibold">TL;DR.</strong> Eximius.ai is an AI hiring platform — automated screening, ranking, and candidate engagement. GTM should target Series B-D startups and mid-market recruiting agencies via signal-based outbound + content-led PLG.
+                  </p>
+
+                  <p className="text-[12.5px] sm:text-[13.5px] font-semibold text-[var(--dmoop-text-primary)] mt-3 mb-1.5">## ICP &amp; Positioning</p>
+                  <ul className="text-[11.5px] sm:text-[13px] text-[var(--dmoop-text-primary)] space-y-1 ml-4 list-disc marker:text-[var(--dmoop-text-tertiary)]">
+                    <li><strong>Primary ICP:</strong> 100-500-person SaaS hiring 5+ engineers/quarter <em className="not-italic text-[var(--dmoop-text-tertiary)]">[W1]</em></li>
+                    <li><strong>Wedge:</strong> &quot;screening cycle &lt; 24h&quot; vs Gem (3-5d) and Greenhouse manual <em className="not-italic text-[var(--dmoop-text-tertiary)]">[W2]</em></li>
+                    <li><strong>Pricing wedge:</strong> per-hire (not per-seat) — undercuts Lever/Greenhouse on burst hiring</li>
                   </ul>
+
+                  <p className="text-[12.5px] sm:text-[13.5px] font-semibold text-[var(--dmoop-text-primary)] mt-3 mb-1.5">## 90-day Channel Mix</p>
+                  <div className="overflow-x-auto -mx-1 sm:mx-0">
+                    <table className="w-full text-[11px] sm:text-[12.5px] border border-[var(--dmoop-border-soft)] rounded-lg">
+                      <thead className="bg-[#f9f5ee] text-[10px] sm:text-[11px] uppercase tracking-wide text-[var(--dmoop-text-secondary)]">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left">Channel</th>
+                          <th className="px-2 py-1.5 text-left">Tactic</th>
+                          <th className="px-2 py-1.5 text-left">Target</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-[var(--dmoop-text-primary)]">
+                        <tr className="border-t border-[var(--dmoop-border-soft)]"><td className="px-2 py-1.5">LinkedIn</td><td className="px-2 py-1.5">Signal-based outbound</td><td className="px-2 py-1.5">60 SQLs / mo</td></tr>
+                        <tr className="border-t border-[var(--dmoop-border-soft)]"><td className="px-2 py-1.5">Content</td><td className="px-2 py-1.5">Recruiter-focused SEO</td><td className="px-2 py-1.5">8K organic / mo</td></tr>
+                        <tr className="border-t border-[var(--dmoop-border-soft)]"><td className="px-2 py-1.5">PLG</td><td className="px-2 py-1.5">Free Chrome ATS-scraper</td><td className="px-2 py-1.5">1.5K signups</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <p className="text-[10.5px] sm:text-[11.5px] text-[var(--dmoop-text-tertiary)] pt-3 mt-3 border-t border-[var(--dmoop-border-soft)] truncate">
+                    Sources [W1] eximius.ai/about · [W2] eximius.ai/product · [W3] eximius.ai/pricing
+                  </p>
+
+                  {/* Download button */}
+                  <div className="mt-3 flex items-center gap-2 flex-wrap">
+                    <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11.5px] sm:text-[12px] font-semibold dmoop-btn-primary cursor-default">
+                      <Download size={12} /> Download as Word (.docx)
+                    </button>
+                    <span className="text-[10px] sm:text-[10.5px] text-[var(--dmoop-text-tertiary)]">Generated locally · nothing leaves your browser</span>
+                  </div>
                 </div>
               </div>
-              <div className="text-[10.5px] sm:text-[11.5px] text-[var(--dmoop-text-tertiary)] pt-2 border-t border-[var(--dmoop-border-soft)] truncate">
-                Sources: searchengineland.com · gartner.com · hubspot.com
+
+              {/* Faux input bar reflecting the real one */}
+              <div className="mt-4 sm:mt-5 rounded-xl p-2.5 sm:p-3 bg-white border border-[var(--dmoop-border-soft)] flex items-center gap-1.5 sm:gap-2 text-[10.5px] sm:text-[11.5px] text-[var(--dmoop-text-tertiary)]">
+                <Paperclip size={12} />
+                <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#fbf3ee] text-[var(--dmoop-accent)] font-semibold">
+                  <Globe size={11} /> Search · On
+                </span>
+                <span className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-[#f5f1ea] font-medium">
+                  <BookOpen size={11} /> Brand Agent
+                </span>
+                <span className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-[#f5f1ea] font-medium">
+                  <Hammer size={11} /> Tools
+                </span>
+                <span className="flex-1 truncate">How can DMOOP help you today?</span>
+                <span className="hidden sm:inline px-2 py-1 rounded-md bg-[#f5f1ea] font-semibold text-[var(--dmoop-accent)]">
+                  Tuned
+                </span>
+                <Mic size={12} />
               </div>
             </div>
           </div>
@@ -264,6 +360,165 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Brand Agent showcase ─────────────────────────── */}
+      <section id="brand-agent" className="relative py-12 sm:py-24 border-t border-[var(--dmoop-border-soft)] bg-gradient-to-b from-transparent to-[#fbf6ec]/30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-8 sm:mb-12">
+            <p className="text-[10.5px] sm:text-[11px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase mb-2.5 sm:mb-3">
+              Brand Agent
+            </p>
+            <h2 className="text-[24px] sm:text-[40px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-2.5 sm:mb-3 leading-tight px-2">
+              Name your agent. Upload your brand. Every asset on-voice.
+            </h2>
+            <p className="text-[13px] sm:text-[15px] text-[var(--dmoop-text-secondary)] max-w-2xl mx-auto px-2">
+              Drop in your brand guidelines, product datasheets, messaging frameworks, ICP, and past campaigns once. DMOOP indexes them and uses them as the source of truth on every asset you generate.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* Brand Library card */}
+            <div className="rounded-2xl p-5 sm:p-6 dmoop-card"
+              style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)" }}>
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#fbf3ee] flex items-center justify-center"
+                  style={{ boxShadow: "var(--dmoop-shadow-xs)" }}>
+                  <BookOpen size={17} className="text-[var(--dmoop-accent)]" strokeWidth={2.2} />
+                </div>
+                <div>
+                  <p className="text-[14px] sm:text-[15px] font-semibold tracking-tight text-[var(--dmoop-text-primary)]">Brand Library</p>
+                  <p className="text-[11.5px] text-[var(--dmoop-text-secondary)]">Per-user, RAG-indexed, similarity-ranked</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-4">
+                {[
+                  { icon: FileText, name: "Brand_Voice_Guide_v3.pdf",  type: "Brand guidelines",      chunks: 12 },
+                  { icon: FileText, name: "ICP_Personas_2026.docx",    type: "ICP / personas",        chunks: 8  },
+                  { icon: FileText, name: "Messaging_Framework.docx",  type: "Messaging framework",   chunks: 6  },
+                  { icon: FileText, name: "Q1_Pillar_Campaign.pptx",   type: "Past campaign",         chunks: 14 },
+                ].map((doc) => (
+                  <div key={doc.name} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white border border-[var(--dmoop-border-soft)]">
+                    <doc.icon size={13} className="text-[var(--dmoop-text-secondary)] shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-medium text-[var(--dmoop-text-primary)] truncate">{doc.name}</p>
+                      <p className="text-[10px] text-[var(--dmoop-text-tertiary)]">{doc.type} · {doc.chunks} chunks</p>
+                    </div>
+                    <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 text-[11px] text-[var(--dmoop-text-tertiary)] pt-3 border-t border-[var(--dmoop-border-soft)]">
+                <Database size={12} className="text-[var(--dmoop-accent)]" />
+                <span>40 chunks · 24,800 chars indexed · pg_trgm similarity</span>
+              </div>
+            </div>
+
+            {/* Custom-named agent card */}
+            <div className="rounded-2xl p-5 sm:p-6 dmoop-card"
+              style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)" }}>
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: "var(--dmoop-gradient-accent)", boxShadow: "var(--dmoop-shadow-accent)" }}>
+                  <Sparkles size={17} className="text-white" strokeWidth={2.2} />
+                </div>
+                <div>
+                  <p className="text-[14px] sm:text-[15px] font-semibold tracking-tight text-[var(--dmoop-text-primary)]">Your custom agent</p>
+                  <p className="text-[11.5px] text-[var(--dmoop-text-secondary)]">Give it a name. It speaks for your team.</p>
+                </div>
+              </div>
+
+              <div className="mb-3.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">Agent name</label>
+                <div className="mt-1 px-3 py-2 rounded-lg bg-white border border-[var(--dmoop-border-soft)] flex items-center gap-2">
+                  <span className="text-[14px] font-semibold text-[var(--dmoop-text-primary)]">Maya</span>
+                  <span className="text-[11.5px] text-[var(--dmoop-text-tertiary)]">— Brand Agent for Acme Co</span>
+                </div>
+              </div>
+
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-2">9 asset templates ready</p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Landing page", "LinkedIn post", "Cold email",
+                  "Ad copy variants", "Whitepaper outline", "Blog post",
+                  "Sales deck", "Case study", "Newsletter",
+                ].map((t) => (
+                  <span key={t} className="text-[11px] px-2.5 py-1 rounded-md bg-[#fbf3ee] text-[var(--dmoop-accent-rich)] font-medium border border-[#f1e3d6]">
+                    {t}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-4 p-3 rounded-lg bg-[#faf6ef] border border-[var(--dmoop-border-soft)]">
+                <p className="text-[10.5px] font-bold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-1">How Maya answers</p>
+                <p className="text-[12px] text-[var(--dmoop-text-primary)] leading-relaxed">
+                  Pulls from your brand guidelines + ICP + past campaigns, then matches the voice every time. No generic AI prose — just your brand, on tap.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Tools demo ───────────────────────────────────── */}
+      <section id="tools" className="relative py-12 sm:py-24 border-t border-[var(--dmoop-border-soft)]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-8 sm:mb-12">
+            <p className="text-[10.5px] sm:text-[11px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase mb-2.5 sm:mb-3">
+              Tools
+            </p>
+            <h2 className="text-[24px] sm:text-[40px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-2.5 sm:mb-3 leading-tight px-2">
+              One-tap quick actions for every marketing task.
+            </h2>
+            <p className="text-[13px] sm:text-[15px] text-[var(--dmoop-text-secondary)] max-w-2xl mx-auto px-2">
+              Click any tool to pre-fill DMOOP with a structured brief. Customize the slot inputs (product, audience, market) and send.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
+            {TOOL_DEMOS.map((t, i) => (
+              <div
+                key={t.title}
+                style={{ animationDelay: `${i * 40}ms` }}
+                className="group p-4 rounded-2xl bg-white border border-[var(--dmoop-border-soft)] dmoop-card dmoop-stagger-in"
+              >
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#fbf3ee] flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <t.icon size={14} className="text-[var(--dmoop-accent)]" strokeWidth={2.2} />
+                  </div>
+                  <p className="text-[13px] font-semibold tracking-tight text-[var(--dmoop-text-primary)]">{t.title}</p>
+                </div>
+                <p className="text-[11.5px] text-[var(--dmoop-text-secondary)] leading-relaxed">{t.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Inline mini-demo strip */}
+          <div className="mt-7 sm:mt-9 rounded-2xl p-4 sm:p-5"
+            style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)" }}>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{ background: "var(--dmoop-gradient-accent)", boxShadow: "var(--dmoop-shadow-accent)" }}>
+                  <RefreshCw size={15} className="text-white" />
+                </div>
+                <p className="text-[12.5px] sm:text-[13.5px] font-semibold text-[var(--dmoop-text-primary)]">Convert any answer</p>
+              </div>
+              <p className="text-[12px] sm:text-[13px] text-[var(--dmoop-text-secondary)] flex-1 leading-relaxed">
+                Type <span className="px-1.5 py-0.5 rounded bg-[#faf6ef] font-mono text-[11px]">&quot;convert this to PDF&quot;</span> after any answer — DMOOP packages it instantly without re-calling the model. Works for PDF, Word, Excel, PowerPoint, CSV, JSON, Markdown.
+              </p>
+              <div className="flex flex-wrap gap-1.5 shrink-0">
+                {["PDF", "DOCX", "XLSX", "PPTX", "CSV"].map((f) => (
+                  <span key={f} className="text-[10.5px] px-2 py-0.5 rounded-md bg-white border border-[var(--dmoop-border-soft)] font-semibold text-[var(--dmoop-text-secondary)]">
+                    {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── How it works ────────────────────────────────── */}
       <section id="how" className="relative py-12 sm:py-24 border-t border-[var(--dmoop-border-soft)] bg-gradient-to-b from-transparent to-[#fbf6ec]/40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -276,7 +531,7 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {HOW_IT_WORKS.map((s, i) => (
               <div
                 key={s.n}
@@ -369,7 +624,7 @@ export default function LandingPage() {
                 Try DMOOP free.
               </h2>
               <p className="text-[13px] sm:text-[15px] text-[var(--dmoop-text-secondary)] mb-5 sm:mb-6 max-w-md mx-auto px-2">
-                No credit card. No setup. Sign up and ask your first marketing question in under 60 seconds.
+                No credit card. Sign up, upload your brand docs, name your Brand Agent, and ship your first on-voice asset in under 5 minutes.
               </p>
               <Link
                 href={primaryHref}
