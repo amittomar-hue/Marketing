@@ -122,7 +122,15 @@ type EvolutionKind = "specific" | "tactical" | "strategic";
 const EVOLUTION_PROMPTS: Record<EvolutionKind, string> = {
   specific: `You are evolving a marketing training pair to be MORE SPECIFIC. Rewrite the Q&A so it targets a concrete industry segment (B2B SaaS, retail, fintech, healthcare, or DTC e-commerce — pick the one that fits the original best). Keep the same teaching intent. The new instruction should name the segment; the new output should reference industry-specific tactics, named platforms, and segment-typical metrics. Return ONLY the JSON object {"instruction": "...", "output": "..."}. No prose.`,
 
-  tactical: `You are evolving a marketing training pair to be MORE TACTICAL and OPERATIONAL. Rewrite the Q&A so the answer becomes a step-by-step execution plan: named tools (e.g. HubSpot, 6sense, Mutiny, GA4), exact field configs, timeline in days/weeks, success thresholds. The new instruction asks "how do I execute…" or "what's the step-by-step…". Return ONLY the JSON object {"instruction": "...", "output": "..."}. No prose.`,
+  tactical: `You are evolving a marketing training pair to be MORE TACTICAL and OPERATIONAL. Rewrite the Q&A so the answer becomes a step-by-step execution plan the user can run with their OWN stack: named tools (e.g. HubSpot, 6sense, Mutiny, GA4, Apollo, Outreach), exact field configs, timeline in days/weeks, success thresholds.
+
+CRITICAL CONSTRAINTS:
+- The new instruction asks "how do I execute…" or "what's the step-by-step…".
+- NEVER reference the source article, source URL, or imply DMOOP owns the source material. Do NOT say "download our whitepaper" or "from the [vendor] content hub" — the source is just context the LLM read, not a product DMOOP sells.
+- NEVER instruct the user to download an external whitepaper, ebook, or PDF. Steps must be actions the user takes in their own marketing stack.
+- If the original pair was a "where to find X" question, replace it with "how to do X" — turn information-retrieval into execution.
+
+Return ONLY the JSON object {"instruction": "...", "output": "..."}. No prose.`,
 
   strategic: `You are evolving a marketing training pair to be MORE STRATEGIC. Rewrite the Q&A so it ladders up to budget tradeoffs, portfolio prioritization, channel mix decisions, or CMO-level resource allocation. The instruction should sound like a CMO/VP question; the output should compare options with TAM/CAC/payback logic and recommend a default with caveats. Return ONLY the JSON object {"instruction": "...", "output": "..."}. No prose.`,
 };
@@ -161,8 +169,8 @@ Evolve it per the system prompt and return the new pair as a JSON object.`;
     if (
       typeof obj.instruction !== "string" ||
       typeof obj.output !== "string" ||
-      obj.instruction.length < 10 ||
-      obj.output.length < 80
+      obj.instruction.length < 15 ||
+      obj.output.length < 200
     ) {
       return null;
     }
@@ -207,9 +215,12 @@ Generate 3 training Q&A pairs in the required JSON format.`;
   if (!match) return [];
   try {
     const pairs = JSON.parse(match[0]) as QAPair[];
+    // Quality floor: instructions >= 15 chars, outputs >= 200 chars.
+    // Below 200 the answer is too thin to teach anything — was producing
+    // truncated stubs (12% of corpus) before this filter.
     return pairs.filter(
       (p) => typeof p.instruction === "string" && typeof p.output === "string" &&
-             p.instruction.length > 10 && p.output.length > 50
+             p.instruction.length > 15 && p.output.length >= 200
     );
   } catch {
     return [];
