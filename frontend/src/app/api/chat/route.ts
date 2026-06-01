@@ -13,6 +13,7 @@ import { hfStreamGenerate, isFineTunedModelConfigured } from "@/lib/huggingface"
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getLatestIntel, formatIntelAsContext } from "@/lib/intel";
 import { retrieveBrandChunks, formatBrandContext } from "@/lib/brand";
+import { retrieveTrainingPairs, formatTrainingPairsAsContext } from "@/lib/training-pairs";
 
 type ExportFormat = "pdf" | "docx" | "xlsx" | "pptx" | "csv" | "json" | "md" | "txt" | "html";
 const FORMAT_INSTRUCTIONS: Record<ExportFormat, string> = {
@@ -39,16 +40,43 @@ const GROQ_MODEL_MAP: Record<string, string> = {
   "dmoop-tuned": "llama-3.1-8b-instant",
 };
 
-const TUNED_SYSTEM_PROMPT = `You are DMOOP Tuned — the self-learning variant of DMOOP. You specialize in marketing tasks by learning from your team's own approved high-rated responses, which are injected into your context as 'High-rated past examples'.
+const TUNED_SYSTEM_PROMPT = `You are DMOOP Tuned — DMOOP's custom marketing model. You are NOT a generic LLM with retrieval bolted on. You are a model whose actual knowledge lives in a continuously-updated training corpus built from the live marketing web:
+
+Pipeline that feeds you (running every 6 hours, automatically):
+  1. SCRAPE  — Tavily pulls 130+ queries across 13 marketing asset types
+               (articles, ebooks, whitepapers, playbooks, case studies, social
+               posts, ad campaigns, reports, newsletters, podcasts, videos,
+               templates, guides).
+  2. CONVERT — Each scraped artifact is run through asset-type-aware prompts
+               that produce structured Q&A training pairs (case studies
+               surface metrics + transferable lessons; playbooks produce
+               numbered steps; social posts dissect hooks + CTAs; etc.).
+  3. STORE   — Pairs land in your training_pairs corpus with source URLs and
+               quality scores.
+
+On every chat turn, the top-N most relevant pairs from this corpus are
+injected as your primary system context, labeled "DMOOP TUNED — YOUR
+CONTINUOUSLY-LEARNED MARKETING KNOWLEDGE BASE". You also get:
+  • Brand documents the user uploaded (treat as authoritative on their brand)
+  • Thumbs-up past responses (style/voice signal)
+  • Thumbs-down patterns (avoid)
+  • Recent raw scraped articles (freshness)
+  • Optional web search
 
 Your behavior contract:
-- Lean HEAVILY on the high-rated past examples. They represent the user's brand voice, depth, and quality bar. Match or exceed their style.
-- If past examples are present for the intent, model your response structure, tone, and depth on them.
-- Be opinionated. The past examples have a perspective — adopt and extend it.
-- If no examples exist for this intent, say so briefly and produce a baseline response that future feedback can shape.
-- You still get web search and intel context, but the past examples are your strongest signal.
-- Format responses in clean markdown with bold section headers and structured bullet lists.
-- Never refer to yourself as "Marketing LLM" or any other name. You are DMOOP Tuned.`;
+- Your knowledge of marketing = what's in your training pairs. Cite them.
+  When you use a tactic / number / framework that came from a pair, cite the
+  source_url. Never invent sources.
+- Match the STRUCTURE and DEPTH of the most relevant pairs. If pairs were
+  case studies, return Situation / Approach / Result. If playbooks, return
+  numbered steps. If social posts, dissect hooks.
+- If NO pairs were retrieved (cold start on a niche intent), say so briefly
+  ("No closely-matched pairs in the corpus yet — the scraper will catch up.
+  Here's a baseline answer.") and produce the best baseline you can.
+- Be opinionated. Pairs have a perspective — adopt and extend it.
+- Format in clean markdown with ## headers, bullets, and tables where useful.
+- Never refer to yourself as "Marketing LLM" or "Groq" or "Llama". You are
+  DMOOP Tuned, the model that learns from continuous marketing intel.`;
 
 const SYSTEM_PROMPT = `You are DMOOP, an enterprise-grade marketing intelligence platform powered by real-time web research and a self-learning feedback loop. You serve marketing teams at mid-market and enterprise brands.
 
@@ -165,17 +193,32 @@ export async function POST(req: NextRequest) {
     : "dmoop-core";
   const isTuned = effectiveModelIdEarly === "dmoop-tuned";
 
-  // ── Self-learning: retrieve top-rated past examples for this intent ─
-  // Tuned used to pull 8 examples but Groq's per-request TPM budget on 8B-instant
-  // returns 413 ("Request too large") when context piles up. Tuned now uses 5,
-  // and each example is capped tighter at the formatter via TUNED_EXAMPLE_CAP.
+  // ── TUNED-ONLY: training-pair retrieval is the PRIMARY signal ──
+  // These are the asset-type-aware Q&A pairs produced by the scrape→convert
+  // pipeline. This is what makes Tuned an actual custom learning model
+  // (RAG over a continuously-refreshed corpus) rather than just "Groq + RAG
+  // over thumbs-ups". RPC: retrieve_training_pairs_for_chat — fails soft if
+  // not yet deployed.
+  let trainingPairsContext = "";
+  let trainingPairCount = 0;
+  if (isTuned) {
+    try {
+      const pairs = await retrieveTrainingPairs(userQuery, intent, 5);
+      trainingPairsContext = formatTrainingPairsAsContext(pairs);
+      trainingPairCount = pairs.length;
+    } catch (err) {
+      console.error("retrieveTrainingPairs failed:", err);
+    }
+  }
+
+  // ── Self-learning: thumbs-up examples (style/voice signal, SECONDARY for Tuned) ─
   let examplesContext = "";
   try {
-    const examplesLimit = isTuned ? 5 : 3;
+    const examplesLimit = isTuned ? 3 : 3;
     const examples = await retrieveExamples(intent, userQuery, examplesLimit);
     examplesContext = formatExamplesAsContext(examples);
-    if (isTuned && examplesContext.length > 4000) {
-      examplesContext = examplesContext.slice(0, 4000) + "\n…";
+    if (isTuned && examplesContext.length > 2500) {
+      examplesContext = examplesContext.slice(0, 2500) + "\n…";
     }
   } catch (err) {
     console.error("retrieve examples failed:", err);
@@ -232,15 +275,20 @@ export async function POST(req: NextRequest) {
     groqMessages.push({ role: "system", content: FORMAT_INSTRUCTIONS[requestedFormat] });
   }
 
-  // Brand context goes FIRST (after system prompt) — it's the user's authoritative source
+  // ── TUNED ONLY: training pairs are injected FIRST — this IS the model's
+  // knowledge base. Everything else (brand, examples, intel) is supporting context.
+  if (isTuned && trainingPairsContext) {
+    groqMessages.push({ role: "system", content: trainingPairsContext });
+  }
+
+  // Brand context — authoritative for the user's brand voice / products
   if (brandContext) {
     groqMessages.push({ role: "system", content: brandContext });
   }
 
   if (examplesContext) {
-    // Tuned puts examples front-and-center; others get them as supporting context
     const label = isTuned
-      ? `Your team's high-rated past examples for intent="${intent}" — THIS IS YOUR PRIMARY SIGNAL, model your answer on these:`
+      ? `Style/voice reference — past thumbs-up responses for intent="${intent}" (use ONLY for tone, NOT for content — the training pairs above are your knowledge source):`
       : `High-rated past examples for intent="${intent}":`;
     groqMessages.push({ role: "system", content: `${label}\n\n${examplesContext}` });
   }
