@@ -59,6 +59,8 @@ interface IntelTotals {
   intel_total: number;
   intel_pending_conversion: number;
   training_pairs_total: number;
+  training_pairs_original?: number;
+  training_pairs_evolved?: number;
 }
 
 interface LearningHealth {
@@ -718,6 +720,14 @@ function IntelPanel({
             <div className="text-center">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">Training pairs</p>
               <p className="text-[22px] font-semibold text-emerald-600 tracking-tight mt-0.5">{totals.training_pairs_total.toLocaleString()}</p>
+              {(totals.training_pairs_original ?? 0) > 0 && (
+                <p className="text-[10px] text-[var(--dmoop-text-tertiary)] mt-0.5">
+                  <span className="text-emerald-700 font-semibold">{(totals.training_pairs_original ?? 0).toLocaleString()}</span> original
+                  {(totals.training_pairs_evolved ?? 0) > 0 && (
+                    <> · <span className="text-violet-700 font-semibold">{(totals.training_pairs_evolved ?? 0).toLocaleString()}</span> evolved (4× boost)</>
+                  )}
+                </p>
+              )}
             </div>
           </div>
         )}

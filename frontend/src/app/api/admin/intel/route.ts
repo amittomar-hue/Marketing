@@ -70,6 +70,14 @@ export async function GET(req: NextRequest) {
   const { count: totalPairs } = await service
     .from("training_pairs")
     .select("*", { count: "exact", head: true });
+  const { count: originalPairs } = await service
+    .from("training_pairs")
+    .select("*", { count: "exact", head: true })
+    .eq("is_evolved", false);
+  const { count: evolvedPairs } = await service
+    .from("training_pairs")
+    .select("*", { count: "exact", head: true })
+    .eq("is_evolved", true);
 
   return NextResponse.json({
     items: data,
@@ -81,6 +89,8 @@ export async function GET(req: NextRequest) {
       intel_total: totalIntel ?? 0,
       intel_pending_conversion: pendingIntel ?? 0,
       training_pairs_total: totalPairs ?? 0,
+      training_pairs_original: originalPairs ?? 0,
+      training_pairs_evolved: evolvedPairs ?? 0,
     },
   });
 }

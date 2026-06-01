@@ -104,6 +104,75 @@ function pickPrompt(asset_type: string | null | undefined): string {
   return PROMPTS[k] ?? PROMPTS.article;
 }
 
+// ─────────────────────────────────────────────────────────────────
+// WizardLM-style evol-instruct. After the initial pair is generated
+// from the scraped artifact, each pair is evolved 3 ways:
+//   - specific:  rewritten for a specific industry/segment context
+//   - tactical:  made more operational (named tools, exact steps, timing)
+//   - strategic: lifted to budget/tradeoff/portfolio framing
+//
+// Cost: 3 extra Groq calls per original pair. At 50 originals × 4 cron
+// runs/day = 200/day × 3 = 600 extra calls. 8B-instant has 14,400 RPD
+// on free tier, so headroom is fine. Each evolved pair gets parent_pair_id
+// + evolution_kind set so admin can audit augmentation quality.
+// ─────────────────────────────────────────────────────────────────
+
+type EvolutionKind = "specific" | "tactical" | "strategic";
+
+const EVOLUTION_PROMPTS: Record<EvolutionKind, string> = {
+  specific: `You are evolving a marketing training pair to be MORE SPECIFIC. Rewrite the Q&A so it targets a concrete industry segment (B2B SaaS, retail, fintech, healthcare, or DTC e-commerce — pick the one that fits the original best). Keep the same teaching intent. The new instruction should name the segment; the new output should reference industry-specific tactics, named platforms, and segment-typical metrics. Return ONLY the JSON object {"instruction": "...", "output": "..."}. No prose.`,
+
+  tactical: `You are evolving a marketing training pair to be MORE TACTICAL and OPERATIONAL. Rewrite the Q&A so the answer becomes a step-by-step execution plan: named tools (e.g. HubSpot, 6sense, Mutiny, GA4), exact field configs, timeline in days/weeks, success thresholds. The new instruction asks "how do I execute…" or "what's the step-by-step…". Return ONLY the JSON object {"instruction": "...", "output": "..."}. No prose.`,
+
+  strategic: `You are evolving a marketing training pair to be MORE STRATEGIC. Rewrite the Q&A so it ladders up to budget tradeoffs, portfolio prioritization, channel mix decisions, or CMO-level resource allocation. The instruction should sound like a CMO/VP question; the output should compare options with TAM/CAC/payback logic and recommend a default with caveats. Return ONLY the JSON object {"instruction": "...", "output": "..."}. No prose.`,
+};
+
+async function evolveOnce(
+  groq: OpenAI,
+  kind: EvolutionKind,
+  asset_type: string,
+  category: string,
+  original: QAPair
+): Promise<QAPair | null> {
+  try {
+    const systemPrompt = EVOLUTION_PROMPTS[kind];
+    const userPrompt = `Original training pair (asset_type=${asset_type}, category=${category}):
+
+Q: ${original.instruction}
+
+A: ${original.output.slice(0, 1400)}
+
+Evolve it per the system prompt and return the new pair as a JSON object.`;
+
+    const response = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 1400,
+    });
+
+    const text = response.choices[0]?.message?.content ?? "";
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    const obj = JSON.parse(match[0]) as QAPair;
+    if (
+      typeof obj.instruction !== "string" ||
+      typeof obj.output !== "string" ||
+      obj.instruction.length < 10 ||
+      obj.output.length < 80
+    ) {
+      return null;
+    }
+    return obj;
+  } catch {
+    // Best-effort — a failed evolution shouldn't take down the cron run
+    return null;
+  }
+}
+
 async function generatePairs(
   groq: OpenAI,
   asset_type: string | null | undefined,
@@ -166,7 +235,10 @@ export async function GET(req: NextRequest) {
   });
 
   const url = req.nextUrl;
-  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "20", 10), 50);
+  // Evolution turns each scraped item into ~12 pairs (3 originals × 4 incl.
+  // self). Default lowered to 12 so each run fits within 300s maxDuration
+  // even with the parallel evolution. ?limit=N to override.
+  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "12", 10), 30);
   const assetFilter = url.searchParams.get("asset_type");
 
   const { data: runRow } = await supa
@@ -188,9 +260,14 @@ export async function GET(req: NextRequest) {
 
   const { data: intelRows } = await query;
 
+  // Evolution can be disabled via ?evolve=0 for cost-control or debugging
+  const evolveEnabled = url.searchParams.get("evolve") !== "0";
+
   const rows = intelRows ?? [];
   let pairsCreated = 0;
   let pairsSkipped = 0;
+  let evolvedCreated = 0;
+  let evolvedSkipped = 0;
   const byAsset: Record<string, number> = {};
 
   for (const row of rows) {
@@ -201,21 +278,58 @@ export async function GET(req: NextRequest) {
         continue;
       }
       const pairs = await generatePairs(groq, row.asset_type, row.category, row.title, summary);
+      const assetType = row.asset_type ?? "article";
       for (const p of pairs) {
-        const { error } = await supa.from("training_pairs").insert({
-          intel_id: row.id,
-          intent: row.category,
-          asset_type: row.asset_type ?? "article",
-          instruction: p.instruction,
-          output: p.output,
-          source_url: row.url,
-          source_title: row.title,
-          quality: 1.0,
-        });
+        const { data: inserted, error } = await supa
+          .from("training_pairs")
+          .insert({
+            intel_id: row.id,
+            intent: row.category,
+            asset_type: assetType,
+            instruction: p.instruction,
+            output: p.output,
+            source_url: row.url,
+            source_title: row.title,
+            quality: 1.0,
+            is_evolved: false,
+          })
+          .select("id")
+          .single();
+
         if (!error) {
           pairsCreated++;
-          const key = row.asset_type ?? "article";
-          byAsset[key] = (byAsset[key] ?? 0) + 1;
+          byAsset[assetType] = (byAsset[assetType] ?? 0) + 1;
+
+          // EVOLUTION PASS — 3 variants (specific / tactical / strategic).
+          // Fire the 3 evolution Groq calls in PARALLEL — Groq's free-tier
+          // RPM is 30 which we'll never hit; keeps per-row latency to ~3-5s
+          // instead of ~10-15s sequential. Then DB-insert sequentially.
+          if (evolveEnabled && inserted?.id) {
+            const parentId = inserted.id as string;
+            const kinds: EvolutionKind[] = ["specific", "tactical", "strategic"];
+            const evolvedResults = await Promise.all(
+              kinds.map((k) => evolveOnce(groq, k, assetType, row.category, p))
+            );
+            for (let i = 0; i < kinds.length; i++) {
+              const evolved = evolvedResults[i];
+              if (!evolved) { evolvedSkipped++; continue; }
+              const { error: evErr } = await supa.from("training_pairs").insert({
+                intel_id: row.id,
+                intent: row.category,
+                asset_type: assetType,
+                instruction: evolved.instruction,
+                output: evolved.output,
+                source_url: row.url,
+                source_title: row.title,
+                quality: 0.85, // evolved pairs are good but rank below originals
+                is_evolved: true,
+                parent_pair_id: parentId,
+                evolution_kind: kinds[i],
+              });
+              if (!evErr) evolvedCreated++;
+              else evolvedSkipped++;
+            }
+          }
         }
       }
       await supa
@@ -246,6 +360,10 @@ export async function GET(req: NextRequest) {
     intel_processed: rows.length,
     pairs_created: pairsCreated,
     pairs_skipped: pairsSkipped,
+    evolution_enabled: evolveEnabled,
+    evolved_pairs_created: evolvedCreated,
+    evolved_pairs_skipped: evolvedSkipped,
+    total_pairs_added: pairsCreated + evolvedCreated,
     by_asset: byAsset,
   });
 }
