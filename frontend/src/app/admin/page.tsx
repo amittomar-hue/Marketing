@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, MessageSquare, ThumbsUp, ThumbsDown, Users, RefreshCw, Globe, ChevronRight, Search, Radar, ExternalLink, Clock, Brain, Zap, Activity } from "lucide-react";
+import { ArrowLeft, MessageSquare, ThumbsUp, ThumbsDown, Users, RefreshCw, Globe, ChevronRight, Search, Radar, ExternalLink, Clock, Brain, Zap, Activity, Shield, ShieldAlert, ShieldCheck, EyeOff, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Interaction {
@@ -89,8 +89,32 @@ interface NegativePattern {
   created_at: string;
 }
 
+interface SafetyHealth {
+  total_incidents: number;
+  last_24h: number;
+  last_7d: number;
+  input_unsafe: number;
+  output_unsafe: number;
+  prompt_injection: number;
+  pii_redacted: number;
+  high_severity: number;
+  last_incident_at: string | null;
+}
+interface SafetyIncident {
+  id: string;
+  occurred_at: string;
+  user_email: string | null;
+  kind: "input_unsafe" | "output_unsafe" | "prompt_injection" | "pii_redacted";
+  severity: "low" | "medium" | "high";
+  categories: string[];
+  excerpt: string | null;
+  action_taken: string;
+  model: string | null;
+  metadata: Record<string, unknown>;
+}
+
 export default function AdminPage() {
-  const [tab, setTab] = useState<"prompts" | "intel" | "learning">("prompts");
+  const [tab, setTab] = useState<"prompts" | "intel" | "learning" | "safety">("prompts");
   const [stats, setStats] = useState<Stats | null>(null);
   const [items, setItems] = useState<Interaction[]>([]);
   const [total, setTotal] = useState(0);
@@ -114,6 +138,11 @@ export default function AdminPage() {
   const [learningHealth, setLearningHealth] = useState<LearningHealth | null>(null);
   const [learningExamples, setLearningExamples] = useState<LearningExample[]>([]);
   const [negativePatterns, setNegativePatterns] = useState<NegativePattern[]>([]);
+
+  // Safety state
+  const [safetyHealth, setSafetyHealth] = useState<SafetyHealth | null>(null);
+  const [safetyIncidents, setSafetyIncidents] = useState<SafetyIncident[]>([]);
+  const [safetyKindFilter, setSafetyKindFilter] = useState<string>("");
 
   const load = async () => {
     setLoading(true);
@@ -169,9 +198,18 @@ export default function AdminPage() {
     setNegativePatterns(res.negatives ?? []);
   };
 
-  useEffect(() => { load(); loadIntel(); loadLearning(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadSafety = async () => {
+    const params = new URLSearchParams({ limit: "100" });
+    if (safetyKindFilter) params.set("kind", safetyKindFilter);
+    const res = await fetch(`/api/admin/safety?${params}`).then((r) => r.json());
+    setSafetyHealth(res.health ?? null);
+    setSafetyIncidents(res.incidents ?? []);
+  };
+
+  useEffect(() => { load(); loadIntel(); loadLearning(); loadSafety(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tab === "intel") loadIntel(); }, [intelCategory, intelAssetType]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tab === "learning") loadLearning(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tab === "safety") loadSafety(); }, [tab, safetyKindFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen" style={{ background: "var(--dmoop-bg-app)" }}>
@@ -210,6 +248,7 @@ export default function AdminPage() {
             { key: "prompts" as const, label: "User Prompts", icon: MessageSquare },
             { key: "intel" as const, label: "Marketing Intel", icon: Radar },
             { key: "learning" as const, label: "Self-Learning", icon: Brain },
+            { key: "safety" as const, label: "Safety", icon: Shield },
           ].map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={cn(
@@ -345,12 +384,20 @@ export default function AdminPage() {
             scraping={scraping}
             converting={converting}
           />
-        ) : (
+        ) : tab === "learning" ? (
           <LearningPanel
             health={learningHealth}
             examples={learningExamples}
             negatives={negativePatterns}
             onRefresh={loadLearning}
+          />
+        ) : (
+          <SafetyPanel
+            health={safetyHealth}
+            incidents={safetyIncidents}
+            kindFilter={safetyKindFilter}
+            setKindFilter={setSafetyKindFilter}
+            onRefresh={loadSafety}
           />
         )}
       </main>
@@ -791,6 +838,144 @@ function IntelPanel({
                 <ExternalLink size={10} /> Open source
               </div>
             </a>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Safety panel — surfaces the four classes of guardrail events
+// (input_unsafe, output_unsafe, prompt_injection, pii_redacted)
+// captured by the Llama-Guard + injection-detection + PII-redaction
+// layers. The KPI strip + filter dropdown + chronological feed give
+// admins one place to see what was caught and why.
+// ─────────────────────────────────────────────────────────────────
+
+const SAFETY_KIND_LABELS: Record<string, { label: string; emoji: string; color: string; icon: typeof Shield }> = {
+  input_unsafe:    { label: "Unsafe input",     emoji: "🛑", color: "bg-red-50 text-red-700",      icon: ShieldAlert },
+  output_unsafe:   { label: "Unsafe output",    emoji: "⚠️", color: "bg-orange-50 text-orange-700", icon: ShieldAlert },
+  prompt_injection:{ label: "Prompt injection", emoji: "🪤", color: "bg-fuchsia-50 text-fuchsia-700", icon: AlertTriangle },
+  pii_redacted:    { label: "PII redacted",     emoji: "🔒", color: "bg-emerald-50 text-emerald-700", icon: EyeOff },
+};
+
+function SafetyPanel({
+  health, incidents, kindFilter, setKindFilter, onRefresh,
+}: {
+  health: SafetyHealth | null;
+  incidents: SafetyIncident[];
+  kindFilter: string;
+  setKindFilter: (v: string) => void;
+  onRefresh: () => void;
+}) {
+  return (
+    <>
+      {/* Header strip */}
+      <div className="rounded-2xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: "var(--dmoop-gradient-accent)", boxShadow: "var(--dmoop-shadow-accent)" }}>
+            <ShieldCheck size={17} className="text-white" />
+          </div>
+          <div>
+            <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)] flex items-center gap-2">
+              Responsible-AI guardrails
+              <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+              </span>
+            </p>
+            <p className="text-[11.5px] text-[var(--dmoop-text-secondary)] mt-0.5">
+              Llama Guard 4 moderation on every chat in/out · prompt-injection detection (regex + LLM judge) · client-side PII redaction on brand uploads.
+            </p>
+          </div>
+        </div>
+        <button onClick={onRefresh}
+          className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-[var(--dmoop-text-secondary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] hover:text-[var(--dmoop-text-primary)] flex items-center gap-2 shrink-0">
+          <RefreshCw size={13} /> Refresh
+        </button>
+      </div>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <MiniStat label="Last 24h" value={health?.last_24h ?? "—"} icon={Clock} accent="violet" />
+        <MiniStat label="🛑 Unsafe in/out" value={(health?.input_unsafe ?? 0) + (health?.output_unsafe ?? 0) || "—"} icon={ShieldAlert} accent="rose" />
+        <MiniStat label="🪤 Injections caught" value={health?.prompt_injection ?? "—"} icon={AlertTriangle} accent="amber" />
+        <MiniStat label="🔒 PII redacted" value={health?.pii_redacted ?? "—"} icon={EyeOff} accent="emerald" />
+      </div>
+
+      {/* Filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <p className="text-[12.5px] text-[var(--dmoop-text-secondary)]">
+          {incidents.length} {incidents.length === 1 ? "incident" : "incidents"} shown
+          {health?.last_incident_at && (
+            <> · most recent {new Date(health.last_incident_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</>
+          )}
+        </p>
+        <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)}
+          className="h-8 px-3 rounded-md text-[12.5px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)]">
+          <option value="">All event types</option>
+          {Object.entries(SAFETY_KIND_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>{v.emoji} {v.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Incident feed */}
+      <div className="rounded-2xl overflow-hidden"
+        style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+        {incidents.length === 0 && (
+          <div className="text-center py-12 px-4 text-[13px] text-[var(--dmoop-text-tertiary)]">
+            <ShieldCheck size={28} className="mx-auto mb-2 text-emerald-500" />
+            No incidents recorded. The guardrails are watching every chat — when something gets caught, it shows up here.
+          </div>
+        )}
+        {incidents.map((inc) => {
+          const meta = SAFETY_KIND_LABELS[inc.kind] ?? { label: inc.kind, emoji: "•", color: "bg-slate-100 text-slate-700", icon: Shield };
+          const Icon = meta.icon;
+          return (
+            <div key={inc.id} className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-[var(--dmoop-border-soft)] last:border-0">
+              <div className="flex items-start gap-3">
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", meta.color)}>
+                  <Icon size={14} strokeWidth={2.2} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className={cn("text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider", meta.color)}>
+                      {meta.emoji} {meta.label}
+                    </span>
+                    <span className={cn(
+                      "text-[10px] px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wider",
+                      inc.severity === "high" ? "bg-red-100 text-red-700" :
+                      inc.severity === "medium" ? "bg-amber-100 text-amber-700" :
+                      "bg-slate-100 text-slate-600"
+                    )}>{inc.severity}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wider bg-slate-100 text-slate-600">
+                      {inc.action_taken}
+                    </span>
+                    {(inc.categories ?? []).map((c) => (
+                      <span key={c} className="text-[10px] px-1.5 py-0.5 rounded-md font-mono bg-[#f5f1ea] text-[var(--dmoop-text-secondary)]">
+                        {c}
+                      </span>
+                    ))}
+                    <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)] ml-auto">
+                      {new Date(inc.occurred_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                  {inc.user_email && (
+                    <p className="text-[11.5px] text-[var(--dmoop-text-secondary)] mb-0.5 truncate">
+                      {inc.user_email}{inc.model ? <span className="text-[var(--dmoop-text-tertiary)]"> · {inc.model}</span> : null}
+                    </p>
+                  )}
+                  {inc.excerpt && (
+                    <p className="text-[12px] text-[var(--dmoop-text-primary)] line-clamp-2 leading-relaxed bg-[#faf6ef] rounded px-2 py-1 font-mono mt-1">
+                      {inc.excerpt}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>

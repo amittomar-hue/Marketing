@@ -15,6 +15,14 @@ import { getLatestIntel, formatIntelAsContext } from "@/lib/intel";
 import { retrieveBrandChunks, formatBrandContext } from "@/lib/brand";
 import { retrieveTrainingPairs, formatTrainingPairsAsContext } from "@/lib/training-pairs";
 import { extractUrlsFromText, scrapeSite, formatScrapeAsContext } from "@/lib/web-scraper";
+import {
+  moderateText,
+  detectPromptInjection,
+  logSafetyIncident,
+  refusalForUnsafeInput,
+  refusalForUnsafeOutput,
+  refusalForInjection,
+} from "@/lib/safety";
 
 type ExportFormat = "pdf" | "docx" | "xlsx" | "pptx" | "csv" | "json" | "md" | "txt" | "html";
 const FORMAT_INSTRUCTIONS: Record<ExportFormat, string> = {
@@ -274,6 +282,50 @@ export async function POST(req: NextRequest) {
     userId = user?.id ?? null;
     userEmail = user?.email ?? null;
   } catch {}
+
+  // ── SAFETY: input guardrails (run in parallel to minimize latency) ──
+  // Llama Guard 4 moderates the last user message + a regex/LLM-judge
+  // classifier looks for prompt-injection attempts. If either flags,
+  // we return a polished refusal instead of calling the main model.
+  const [inputModeration, injection] = await Promise.all([
+    moderateText(userQuery, "user"),
+    detectPromptInjection(userQuery),
+  ]);
+
+  if (injection.detected) {
+    await logSafetyIncident({
+      kind: "prompt_injection",
+      severity: injection.confidence === "high" ? "high" : "medium",
+      categories: injection.patterns,
+      excerpt: userQuery.slice(0, 500),
+      action_taken: "blocked",
+      user_id: userId,
+      user_email: userEmail,
+      model: modelId,
+      metadata: { judge_used: injection.judgeUsed },
+    });
+    return new Response(refusalForInjection(injection.patterns), {
+      status: 200,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  if (!inputModeration.safe) {
+    await logSafetyIncident({
+      kind: "input_unsafe",
+      severity: "high",
+      categories: inputModeration.categories,
+      excerpt: userQuery.slice(0, 500),
+      action_taken: "blocked",
+      user_id: userId,
+      user_email: userEmail,
+      model: modelId,
+    });
+    return new Response(refusalForUnsafeInput(inputModeration.categories), {
+      status: 200,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
 
   // ── Web search context ─────────────────────────────────────
   let webContext = "";
@@ -693,6 +745,34 @@ export async function POST(req: NextRequest) {
               throw lastError;
             }
           }
+        }
+
+        // ── SAFETY: output guardrail (post-stream sidecar) ──
+        // Stream is already flushed for UX, so moderation runs in parallel
+        // with interaction-logging. If Llama Guard flags the response we log
+        // the incident AND append a visible warning trailer the client renders.
+        if (fullResponse.length > 20) {
+          moderateText(fullResponse, "assistant").then(async (modOut) => {
+            if (!modOut.safe) {
+              try {
+                controller.enqueue(
+                  encoder.encode(
+                    `\n\n---\n\n${refusalForUnsafeOutput(modOut.categories)}`
+                  )
+                );
+              } catch {}
+              await logSafetyIncident({
+                kind: "output_unsafe",
+                severity: "high",
+                categories: modOut.categories,
+                excerpt: fullResponse.slice(0, 500),
+                action_taken: "flagged",
+                user_id: userId,
+                user_email: userEmail,
+                model: modelId,
+              });
+            }
+          }).catch((err) => console.error("output moderation failed:", err));
         }
 
         // Log this interaction for learning (best-effort, non-blocking failure)

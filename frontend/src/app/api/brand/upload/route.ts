@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabase } from "@/lib/supabase";
 import { chunkText } from "@/lib/brand";
+import { logSafetyIncident } from "@/lib/safety";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -20,10 +21,11 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Bad request" }, { status: 400 });
 
-  const { filename, text, doc_type } = body as {
+  const { filename, text, doc_type, pii_summary } = body as {
     filename: string;
     text: string;
     doc_type?: string;
+    pii_summary?: { total: number; by_type: Record<string, number> } | null;
   };
 
   if (!filename || !text) {
@@ -84,6 +86,24 @@ export async function POST(req: NextRequest) {
     // Roll back the doc
     await service.from("brand_documents").delete().eq("id", doc.id);
     return NextResponse.json({ error: chunkErr.message }, { status: 500 });
+  }
+
+  // Log the PII redaction event for the admin Safety tab. The client did the
+  // actual redaction in-browser; we just log the summary so admins know which
+  // brand docs had PII scrubbed and how much.
+  if (pii_summary && pii_summary.total > 0) {
+    await logSafetyIncident({
+      kind: "pii_redacted",
+      severity: pii_summary.total >= 10 ? "high" : "medium",
+      categories: Object.keys(pii_summary.by_type),
+      excerpt: `${filename.slice(0, 200)} — ${pii_summary.total} items: ${
+        Object.entries(pii_summary.by_type).map(([k, v]) => `${v}× ${k}`).join(", ")
+      }`,
+      action_taken: "redacted",
+      user_id: user.id,
+      user_email: user.email ?? null,
+      metadata: { filename, doc_type: doc_type ?? "general", by_type: pii_summary.by_type },
+    });
   }
 
   return NextResponse.json({ ok: true, doc });

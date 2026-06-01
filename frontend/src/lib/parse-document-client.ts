@@ -17,6 +17,15 @@ export interface ParseResult {
   char_count: number;
   page_count?: number;
   truncated: boolean;
+  /** PII redaction summary — populated when scanForPii() was applied. */
+  pii?: PiiSummary;
+}
+
+export interface PiiSummary {
+  /** Total count across all types */
+  total: number;
+  /** Breakdown by type, e.g. { email: 4, phone: 2 } */
+  by_type: Record<string, number>;
 }
 
 export interface ParseError {
@@ -39,6 +48,83 @@ const PPTX_EXT = new Set(["pptx", "ppt"]);
 const ALL_EXT = new Set([
   ...TEXT_EXT, ...PDF_EXT, ...DOCX_EXT, ...XLSX_EXT, ...PPTX_EXT,
 ]);
+
+// ─────────────────────────────────────────────────────────────────
+// PII redaction. Runs entirely in the browser so customer PII in
+// uploaded brand docs never reaches the server. Each match is
+// replaced with [REDACTED:<type>] so the model still understands
+// the slot's role in the text (e.g. "Contact [REDACTED:EMAIL] for
+// pricing" reads correctly).
+// ─────────────────────────────────────────────────────────────────
+
+interface PiiPattern {
+  name: string;
+  re: RegExp;
+  replacement: string;
+}
+
+// Luhn check for credit-card-shaped numbers — eliminates false
+// positives on long invoice numbers, etc.
+function luhnValid(digits: string): boolean {
+  const d = digits.replace(/\D/g, "");
+  if (d.length < 13 || d.length > 19) return false;
+  let sum = 0;
+  let alt = false;
+  for (let i = d.length - 1; i >= 0; i--) {
+    let n = parseInt(d[i], 10);
+    if (alt) { n *= 2; if (n > 9) n -= 9; }
+    sum += n;
+    alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+
+const PII_PATTERNS: PiiPattern[] = [
+  // SSN — XXX-XX-XXXX (strict — common US format only)
+  { name: "ssn",   re: /\b\d{3}-\d{2}-\d{4}\b/g, replacement: "[REDACTED:SSN]" },
+  // Email
+  { name: "email", re: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, replacement: "[REDACTED:EMAIL]" },
+  // Phone (US/international common shapes — avoid matching ISO dates)
+  { name: "phone", re: /(?:\+?\d{1,2}[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b/g, replacement: "[REDACTED:PHONE]" },
+  // IBAN
+  { name: "iban",  re: /\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/g, replacement: "[REDACTED:IBAN]" },
+  // IPv4
+  { name: "ipv4",  re: /\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b/g, replacement: "[REDACTED:IP]" },
+  // AWS access keys / common API-key shapes
+  { name: "aws_key", re: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/g, replacement: "[REDACTED:AWS_KEY]" },
+  // Generic "secret-looking" hex tokens 32+ chars (catches many API keys)
+  { name: "api_key_hex", re: /\b[A-Fa-f0-9]{32,}\b/g, replacement: "[REDACTED:API_KEY]" },
+];
+
+// Credit cards run separately so we can Luhn-check before redacting.
+const CC_RE = /\b(?:\d[ -]?){13,19}\b/g;
+
+export function scanForPii(input: string): { redacted: string; summary: PiiSummary } {
+  if (!input) return { redacted: input, summary: { total: 0, by_type: {} } };
+
+  const by_type: Record<string, number> = {};
+  let out = input;
+
+  for (const { name, re, replacement } of PII_PATTERNS) {
+    const matches = out.match(re);
+    if (matches && matches.length > 0) {
+      by_type[name] = (by_type[name] ?? 0) + matches.length;
+      out = out.replace(re, replacement);
+    }
+  }
+
+  // Credit cards: only redact if Luhn-valid
+  out = out.replace(CC_RE, (match) => {
+    if (luhnValid(match)) {
+      by_type.credit_card = (by_type.credit_card ?? 0) + 1;
+      return "[REDACTED:CC]";
+    }
+    return match;
+  });
+
+  const total = Object.values(by_type).reduce((a, b) => a + b, 0);
+  return { redacted: out, summary: { total, by_type } };
+}
 
 function stripHtmlTags(html: string): string {
   return html
@@ -80,7 +166,17 @@ async function extractPptxText(bytes: Uint8Array): Promise<string> {
   return out.join("\n");
 }
 
-export async function parseDocumentClient(file: File): Promise<ParseResult | ParseError> {
+export interface ParseOptions {
+  /** Scan extracted text for PII and replace matches with [REDACTED:...] tokens
+   *  before returning. Default: true. Brand uploads should always redact;
+   *  chat attachments may opt out via `{ redactPii: false }`. */
+  redactPii?: boolean;
+}
+
+export async function parseDocumentClient(
+  file: File,
+  options: ParseOptions = {}
+): Promise<ParseResult | ParseError> {
   try {
     if (file.size > MAX_BYTES) {
       return { ok: false, error: `File too large. Max ${MAX_BYTES / 1024 / 1024} MB.` };
@@ -137,6 +233,14 @@ export async function parseDocumentClient(file: File): Promise<ParseResult | Par
     const truncated = text.length > MAX_TEXT_CHARS;
     if (truncated) text = text.slice(0, MAX_TEXT_CHARS);
 
+    // PII scan — defaults ON. The redacted text is what ships to the server.
+    let pii: PiiSummary | undefined;
+    if (options.redactPii !== false) {
+      const result = scanForPii(text);
+      text = result.redacted;
+      pii = result.summary;
+    }
+
     return {
       ok: true,
       filename: file.name,
@@ -147,6 +251,7 @@ export async function parseDocumentClient(file: File): Promise<ParseResult | Par
       char_count: text.length,
       page_count: pageCount,
       truncated,
+      pii,
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";

@@ -35,6 +35,8 @@ export default function BrandPage() {
   const [agentName, setAgentName] = useBrandAgentName();
   const [draftName, setDraftName] = useState<string>("");
   const [savedTick, setSavedTick] = useState(false);
+  // Most recent PII redaction summary, surfaced as a one-shot banner on success
+  const [lastPii, setLastPii] = useState<{ filename: string; total: number; by_type: Record<string, number> } | null>(null);
 
   useEffect(() => { setDraftName(agentName); }, [agentName]);
 
@@ -58,14 +60,24 @@ export default function BrandPage() {
     setUploading(true);
 
     try {
-      // Step 1: Parse client-side (bypasses Vercel's 4.5MB request body cap → no 413)
+      // Step 1: Parse client-side with PII redaction ON (default).
+      // Customer PII (emails, phones, SSN, CC, API keys) is replaced with
+      // [REDACTED:<type>] tokens locally — the raw values never leave the browser.
       setProgress(`Parsing ${file.name}…`);
-      const parsed = await parseDocumentClient(file);
+      const parsed = await parseDocumentClient(file, { redactPii: true });
       if (!parsed.ok) throw new Error(parsed.error);
 
-      // Step 2: Send extracted text to /api/brand/upload (always well under 4.5MB
-      // because the parser caps text at 80K chars)
-      setProgress(`Indexing into brand library…`);
+      const piiTotal = parsed.pii?.total ?? 0;
+      if (piiTotal > 0) {
+        setLastPii({ filename: file.name, total: piiTotal, by_type: parsed.pii!.by_type });
+      } else {
+        setLastPii(null);
+      }
+
+      // Step 2: Send redacted text to /api/brand/upload
+      setProgress(piiTotal > 0
+        ? `Indexing into brand library (${piiTotal} PII items redacted locally)…`
+        : `Indexing into brand library…`);
       const uploadRes = await fetch("/api/brand/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,6 +85,7 @@ export default function BrandPage() {
           filename: file.name,
           text: parsed.text,
           doc_type: docType,
+          pii_summary: parsed.pii ?? null,
         }),
       });
       const result = await uploadRes.json();
@@ -225,8 +238,25 @@ export default function BrandPage() {
             </div>
           )}
 
+          {lastPii && lastPii.total > 0 && (
+            <div className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[12.5px] text-emerald-800">
+              <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-emerald-600" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold">
+                  PII scrubbed before upload: {lastPii.total} item{lastPii.total === 1 ? "" : "s"} in {lastPii.filename}
+                </p>
+                <p className="text-[11.5px] mt-0.5 text-emerald-700">
+                  {Object.entries(lastPii.by_type)
+                    .map(([k, v]) => `${v}× ${k.replace(/_/g, " ")}`)
+                    .join("  ·  ")}
+                  <span className="ml-2 italic">— values were replaced with [REDACTED:&lt;type&gt;] tokens locally; raw PII never reached the server.</span>
+                </p>
+              </div>
+            </div>
+          )}
+
           <p className="text-[11.5px] text-[var(--dmoop-text-tertiary)] mt-3">
-            Supports PDF, Word, Excel, PowerPoint, CSV, Markdown, and text files (up to 10MB each).
+            Supports PDF, Word, Excel, PowerPoint, CSV, Markdown, and text files (up to 10MB each). PII (emails, phones, SSN, credit cards, API keys) is auto-redacted client-side before indexing.
           </p>
         </div>
 
