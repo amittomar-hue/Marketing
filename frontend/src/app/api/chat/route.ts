@@ -166,21 +166,25 @@ export async function POST(req: NextRequest) {
   const isTuned = effectiveModelIdEarly === "dmoop-tuned";
 
   // ── Self-learning: retrieve top-rated past examples for this intent ─
-  // Tuned pulls MORE examples (it's the self-learning model).
+  // Tuned used to pull 8 examples but Groq's per-request TPM budget on 8B-instant
+  // returns 413 ("Request too large") when context piles up. Tuned now uses 5,
+  // and each example is capped tighter at the formatter via TUNED_EXAMPLE_CAP.
   let examplesContext = "";
   try {
-    const examplesLimit = isTuned ? 8 : 3;
+    const examplesLimit = isTuned ? 5 : 3;
     const examples = await retrieveExamples(intent, userQuery, examplesLimit);
     examplesContext = formatExamplesAsContext(examples);
+    if (isTuned && examplesContext.length > 4000) {
+      examplesContext = examplesContext.slice(0, 4000) + "\n…";
+    }
   } catch (err) {
     console.error("retrieve examples failed:", err);
   }
 
   // ── Real-world intel: pull recently scraped marketing data for this intent ─
-  // Slimmed from 5 to 3 to stay under Groq's 12K TPM. Tuned uses 2 (RLMO-focused).
   let intelContext = "";
   try {
-    const intelLimit = isTuned ? 2 : 3;
+    const intelLimit = isTuned ? 1 : 3;
     const intel = await getLatestIntel(intent, intelLimit);
     intelContext = formatIntelAsContext(intel, intent);
   } catch (err) {
@@ -190,7 +194,7 @@ export async function POST(req: NextRequest) {
   // ── Negative learning: avoid patterns the user thumbs-downed before ─
   let negativeContext = "";
   try {
-    const negativeLimit = isTuned ? 3 : 2;
+    const negativeLimit = isTuned ? 2 : 2;
     const negatives = await retrieveNegativePatterns(intent, userQuery, negativeLimit);
     negativeContext = formatNegativePatternsAsContext(negatives);
   } catch (err) {
@@ -202,10 +206,13 @@ export async function POST(req: NextRequest) {
   let brandChunkCount = 0;
   if (userId) {
     try {
-      const brandLimit = isTuned ? 6 : 4;
+      const brandLimit = isTuned ? 3 : 4;
       const brandChunks = await retrieveBrandChunks(userId, userQuery, brandLimit);
       brandContext = formatBrandContext(brandChunks);
       brandChunkCount = brandChunks.length;
+      if (isTuned && brandContext.length > 4000) {
+        brandContext = brandContext.slice(0, 4000) + "\n…";
+      }
     } catch (err) {
       console.error("retrieveBrandChunks failed:", err);
     }
@@ -250,7 +257,25 @@ export async function POST(req: NextRequest) {
     groqMessages.push({ role: "system", content: webContext });
   }
 
-  messages.forEach((m) => {
+  // ── Conversation history ─────────────────────────────────────
+  // For Tuned: bound history aggressively. Past user turns can contain large
+  // parsed-file text (up to 80K chars per upload) which accumulates and is the
+  // dominant cause of Groq 413 ("Request too large") on the Tuned model.
+  // Keep the latest exchanges, and slice older messages to a small preview so
+  // dialog continuity survives without dragging in attachment payloads.
+  const historyForRequest = isTuned
+    ? (() => {
+        const recent = messages.slice(-6); // last 3 turns (user + assistant)
+        return recent.map((m, i) => {
+          const isLast = i === recent.length - 1;
+          // Always preserve the most recent user message in full; trim everything else
+          if (isLast) return m;
+          return { ...m, content: m.content.length > 1200 ? m.content.slice(0, 1200) + "\n…[trimmed]" : m.content };
+        });
+      })()
+    : messages;
+
+  historyForRequest.forEach((m) => {
     groqMessages.push({ role: m.role, content: m.content });
   });
 
@@ -286,14 +311,26 @@ export async function POST(req: NextRequest) {
             ? ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
             : [primaryModel];
 
+          // Stripped-down fallback message list when Groq returns 413
+          // ("Request too large for model … on tokens per minute"). Keeps only
+          // persona + last user message so the request always fits the TPM bucket.
+          const lastUserMsg = [...groqMessages].reverse().find((m) => m.role === "user");
+          const slimMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+            groqMessages[0], // system / persona
+            ...(requestedFormat ? [{ role: "system" as const, content: FORMAT_INSTRUCTIONS[requestedFormat] }] : []),
+            ...(lastUserMsg ? [lastUserMsg] : []),
+          ];
+
           let succeeded = false;
           let lastError: Error | null = null;
+          let messagesToUse: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = groqMessages;
+          let triedSlim = false;
 
           for (const modelName of tryModels) {
             try {
               const response = await groq.chat.completions.create({
                 model: modelName,
-                messages: groqMessages,
+                messages: messagesToUse,
                 stream: true,
                 temperature: 0.7,
                 max_tokens: 2048,
@@ -310,10 +347,46 @@ export async function POST(req: NextRequest) {
               break;
             } catch (err: unknown) {
               lastError = err instanceof Error ? err : new Error(String(err));
-              const isRateLimit = lastError.message.includes("429") || lastError.message.toLowerCase().includes("rate");
-              // Only attempt fallback for 429s; for other errors, throw immediately
-              if (!isRateLimit) throw lastError;
-              // Otherwise: continue to next model in chain
+              const msg = lastError.message;
+              const lower = msg.toLowerCase();
+              const isRateLimit = msg.includes("429") || lower.includes("rate");
+              const isTooLarge =
+                msg.includes("413") ||
+                lower.includes("too large") ||
+                lower.includes("context_length_exceeded") ||
+                lower.includes("maximum context");
+
+              // First-time 413 on this model: rebuild with slim context and try again
+              // (without consuming a chain slot, so the 70B→8B fallback still works).
+              if (isTooLarge && !triedSlim) {
+                triedSlim = true;
+                messagesToUse = slimMessages;
+                try {
+                  const slimResponse = await groq.chat.completions.create({
+                    model: modelName,
+                    messages: messagesToUse,
+                    stream: true,
+                    temperature: 0.7,
+                    max_tokens: 1536,
+                  });
+                  for await (const chunk of slimResponse) {
+                    const token = chunk.choices[0]?.delta?.content;
+                    if (token) {
+                      fullResponse += token;
+                      controller.enqueue(encoder.encode(token));
+                    }
+                  }
+                  succeeded = true;
+                  break;
+                } catch (err2: unknown) {
+                  lastError = err2 instanceof Error ? err2 : new Error(String(err2));
+                  // fall through to model-chain fallback below
+                }
+              }
+
+              // Rate-limit / over-budget: continue to next model in chain
+              if (isRateLimit || isTooLarge) continue;
+              throw lastError;
             }
           }
 
