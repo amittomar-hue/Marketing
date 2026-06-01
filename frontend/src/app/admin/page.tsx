@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, MessageSquare, ThumbsUp, ThumbsDown, Users, RefreshCw, Globe, ChevronRight, Search, Radar, ExternalLink, Clock, Brain, Zap, Activity, Shield, ShieldAlert, ShieldCheck, EyeOff, AlertTriangle } from "lucide-react";
+import { ArrowLeft, MessageSquare, ThumbsUp, ThumbsDown, Users, RefreshCw, Globe, ChevronRight, Search, Radar, ExternalLink, Clock, Brain, Zap, Activity, Shield, ShieldAlert, ShieldCheck, EyeOff, AlertTriangle, FileText, User as UserIcon, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Interaction {
@@ -115,8 +115,57 @@ interface SafetyIncident {
   metadata: Record<string, unknown>;
 }
 
+interface UserRow {
+  id: string | null;
+  email: string | null;
+  signed_up: string | null;
+  last_active: string | null;
+  total_prompts: number;
+  prompts_7d: number;
+  prompts_24h: number;
+  models_used: string[];
+  top_intent: string | null;
+  top_intent_count: number;
+  brand_docs: number;
+  safety_incidents: number;
+  feedback_given: number;
+  positive_rate: number;
+  is_anonymous?: boolean;
+}
+
+interface UserDetail {
+  profile: {
+    id: string;
+    email: string | null;
+    created_at: string | null;
+    is_anonymous?: boolean;
+  } | null;
+  summary: {
+    total_prompts: number;
+    sessions: number;
+    models: Record<string, number>;
+    intents: Record<string, number>;
+    web_search_count: number;
+    brand_docs_count: number;
+    safety_incidents_count: number;
+  };
+  interactions: Array<{
+    id: string;
+    user_query: string;
+    intent: string | null;
+    response: string;
+    model: string;
+    session_id: string | null;
+    web_search_used: boolean;
+    created_at: string;
+    user_rating: number | null;
+  }>;
+  brand_docs: Array<{ id: string; filename: string; doc_type: string; total_chars: number; uploaded_at: string }>;
+  safety_incidents: Array<{ id: string; occurred_at: string; kind: string; severity: string; categories: string[]; excerpt: string | null; action_taken: string }>;
+}
+
 export default function AdminPage() {
-  const [tab, setTab] = useState<"prompts" | "intel" | "learning" | "safety">("prompts");
+  const [tab, setTab] = useState<"prompts" | "users" | "intel" | "learning" | "safety">("prompts");
   const [stats, setStats] = useState<Stats | null>(null);
   const [items, setItems] = useState<Interaction[]>([]);
   const [total, setTotal] = useState(0);
@@ -145,6 +194,12 @@ export default function AdminPage() {
   const [safetyHealth, setSafetyHealth] = useState<SafetyHealth | null>(null);
   const [safetyIncidents, setSafetyIncidents] = useState<SafetyIncident[]>([]);
   const [safetyKindFilter, setSafetyKindFilter] = useState<string>("");
+
+  // Users tab state
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [usersSummary, setUsersSummary] = useState<{ total_registered: number; total_anonymous_prompts: number; total_prompts_all: number } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
+  const [loadingUserDetail, setLoadingUserDetail] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -208,10 +263,35 @@ export default function AdminPage() {
     setSafetyIncidents(res.incidents ?? []);
   };
 
-  useEffect(() => { load(); loadIntel(); loadLearning(); loadSafety(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadUsers = async () => {
+    const res = await fetch("/api/admin/users").then((r) => r.json());
+    setUsers(res.users ?? []);
+    setUsersSummary({
+      total_registered: res.total_registered ?? 0,
+      total_anonymous_prompts: res.total_anonymous_prompts ?? 0,
+      total_prompts_all: res.total_prompts_all ?? 0,
+    });
+  };
+
+  const openUserDetail = async (userId: string | null) => {
+    setLoadingUserDetail(true);
+    setSelectedUser(null);
+    try {
+      const path = userId ?? "anonymous";
+      const res = await fetch(`/api/admin/users/${path}`).then((r) => r.json());
+      setSelectedUser(res);
+    } catch (err) {
+      console.error("user detail load failed:", err);
+    } finally {
+      setLoadingUserDetail(false);
+    }
+  };
+
+  useEffect(() => { load(); loadIntel(); loadLearning(); loadSafety(); loadUsers(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tab === "intel") loadIntel(); }, [intelCategory, intelAssetType]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tab === "learning") loadLearning(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tab === "safety") loadSafety(); }, [tab, safetyKindFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tab === "users") loadUsers(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen" style={{ background: "var(--dmoop-bg-app)" }}>
@@ -248,6 +328,7 @@ export default function AdminPage() {
         <div className="flex items-center gap-1 mb-6 border-b border-[var(--dmoop-border-soft)]">
           {[
             { key: "prompts" as const, label: "User Prompts", icon: MessageSquare },
+            { key: "users" as const, label: "Users", icon: Users },
             { key: "intel" as const, label: "Marketing Intel", icon: Radar },
             { key: "learning" as const, label: "Self-Learning", icon: Brain },
             { key: "safety" as const, label: "Safety", icon: Shield },
@@ -370,6 +451,13 @@ export default function AdminPage() {
           </div>
         </div>
         </>
+        ) : tab === "users" ? (
+          <UsersPanel
+            users={users}
+            summary={usersSummary}
+            onOpen={openUserDetail}
+            onRefresh={loadUsers}
+          />
         ) : tab === "intel" ? (
           <IntelPanel
             intel={intel}
@@ -403,6 +491,27 @@ export default function AdminPage() {
           />
         )}
       </main>
+
+      {/* User detail drawer */}
+      {(selectedUser || loadingUserDetail) && (
+        <UserDetailDrawer
+          detail={selectedUser}
+          loading={loadingUserDetail}
+          onClose={() => { setSelectedUser(null); setLoadingUserDetail(false); }}
+          onOpenPrompt={(interaction) => {
+            setSelected({
+              id: interaction.id,
+              user_query: interaction.user_query,
+              intent: interaction.intent,
+              response: interaction.response,
+              model: interaction.model,
+              user_email: selectedUser?.profile?.email ?? null,
+              web_search_used: interaction.web_search_used,
+              created_at: interaction.created_at,
+            });
+          }}
+        />
+      )}
 
       {/* Detail drawer */}
       {selected && (
@@ -990,5 +1099,340 @@ function SafetyPanel({
         })}
       </div>
     </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Users tab — full visibility into who is using DMOOP, what they're
+// doing, how often, and with what outcomes. Registered users at the
+// top sorted by recency; anonymous aggregate at the bottom.
+// ─────────────────────────────────────────────────────────────────
+
+function fmtTimeAgo(iso: string | null): string {
+  if (!iso) return "never";
+  const ms = Date.now() - new Date(iso).getTime();
+  const min = ms / 60000;
+  if (min < 1) return "just now";
+  if (min < 60) return `${Math.floor(min)}m ago`;
+  if (min < 60 * 24) return `${Math.floor(min / 60)}h ago`;
+  if (min < 60 * 24 * 30) return `${Math.floor(min / (60 * 24))}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function UsersPanel({
+  users, summary, onOpen, onRefresh,
+}: {
+  users: UserRow[];
+  summary: { total_registered: number; total_anonymous_prompts: number; total_prompts_all: number } | null;
+  onOpen: (id: string | null) => void;
+  onRefresh: () => void;
+}) {
+  return (
+    <>
+      <div className="rounded-2xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: "var(--dmoop-gradient-accent)", boxShadow: "var(--dmoop-shadow-accent)" }}>
+            <Users size={17} className="text-white" />
+          </div>
+          <div>
+            <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)]">Every user, every signal</p>
+            <p className="text-[11.5px] text-[var(--dmoop-text-secondary)] mt-0.5">
+              {summary?.total_registered ?? 0} registered users · {summary?.total_anonymous_prompts ?? 0} anonymous prompts · {summary?.total_prompts_all ?? 0} total interactions. Click any row to drill in.
+            </p>
+          </div>
+        </div>
+        <button onClick={onRefresh}
+          className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-[var(--dmoop-text-secondary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] hover:text-[var(--dmoop-text-primary)] flex items-center gap-2 shrink-0">
+          <RefreshCw size={13} /> Refresh
+        </button>
+      </div>
+
+      <div className="rounded-2xl overflow-hidden"
+        style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+        <div className="hidden sm:grid grid-cols-[2fr_1.4fr_1fr_1fr_1.2fr_0.8fr_24px] gap-3 px-4 sm:px-5 py-2.5 border-b border-[var(--dmoop-border-soft)] bg-[#faf6ef] text-[10.5px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">
+          <div>User</div>
+          <div>Last active · signed up</div>
+          <div className="text-right">Prompts (7d / all)</div>
+          <div className="text-right">Feedback</div>
+          <div>Top intent · model</div>
+          <div className="text-right">Files · Safety</div>
+          <div />
+        </div>
+
+        {users.length === 0 && (
+          <p className="text-center text-[12.5px] text-[var(--dmoop-text-tertiary)] py-10">No users yet.</p>
+        )}
+
+        {users.map((u) => {
+          const intentLabel = (u.top_intent ?? "—").replace(/_/g, " ");
+          const primaryModel = u.models_used[0] ?? "—";
+          return (
+            <button key={u.id ?? "anon"} onClick={() => onOpen(u.id)}
+              className="w-full text-left grid sm:grid-cols-[2fr_1.4fr_1fr_1fr_1.2fr_0.8fr_24px] gap-3 px-4 sm:px-5 py-3 sm:py-3.5 border-b border-[var(--dmoop-border-soft)] last:border-0 hover:bg-[#faf6ef] transition-colors items-center">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                  u.is_anonymous ? "bg-slate-100" : "bg-[#fbf3ee]")}>
+                  {u.is_anonymous
+                    ? <EyeOff size={13} className="text-slate-500" />
+                    : <UserIcon size={13} className="text-[var(--dmoop-accent)]" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-semibold text-[var(--dmoop-text-primary)] truncate">
+                    {u.is_anonymous ? "Anonymous sessions" : (u.email ?? "—")}
+                  </p>
+                  <p className="text-[10.5px] text-[var(--dmoop-text-tertiary)] truncate">
+                    {u.is_anonymous ? "Unauthenticated users" : (u.id ? u.id.slice(0, 8) + "…" : "—")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-[11.5px]">
+                <p className="text-[var(--dmoop-text-primary)] font-medium">{fmtTimeAgo(u.last_active)}</p>
+                {u.signed_up && (
+                  <p className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">
+                    joined {new Date(u.signed_up).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                  </p>
+                )}
+              </div>
+
+              <div className="text-right">
+                <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)] font-mono">
+                  {u.prompts_7d}<span className="text-[var(--dmoop-text-tertiary)] text-[11px]"> / {u.total_prompts}</span>
+                </p>
+                {u.prompts_24h > 0 && (
+                  <p className="text-[10px] text-emerald-700 font-semibold">+{u.prompts_24h} today</p>
+                )}
+              </div>
+
+              <div className="text-right">
+                {u.feedback_given > 0 ? (
+                  <>
+                    <p className="text-[12px] font-semibold text-[var(--dmoop-text-primary)]">{u.feedback_given} rated</p>
+                    <p className={cn("text-[10.5px] font-semibold",
+                      u.positive_rate >= 0.7 ? "text-emerald-700" : u.positive_rate >= 0.4 ? "text-amber-700" : "text-rose-700"
+                    )}>
+                      {Math.round(u.positive_rate * 100)}% 👍
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-[11px] text-[var(--dmoop-text-tertiary)]">—</p>
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium text-[var(--dmoop-text-primary)] truncate">{intentLabel}</p>
+                <p className="text-[10.5px] text-[var(--dmoop-text-tertiary)] truncate font-mono">{primaryModel}</p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-[11px]">
+                  {u.brand_docs > 0 && (
+                    <span className="inline-flex items-center gap-0.5 text-[var(--dmoop-text-secondary)]">
+                      <FileText size={10} /> {u.brand_docs}
+                    </span>
+                  )}
+                </p>
+                {u.safety_incidents > 0 && (
+                  <p className="text-[10.5px] text-rose-700 font-semibold inline-flex items-center gap-0.5 mt-0.5">
+                    <Shield size={10} /> {u.safety_incidents}
+                  </p>
+                )}
+              </div>
+
+              <ChevronRight size={14} className="text-[var(--dmoop-text-tertiary)] hidden sm:block" />
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function UserDetailDrawer({
+  detail, loading, onClose, onOpenPrompt,
+}: {
+  detail: UserDetail | null;
+  loading: boolean;
+  onClose: () => void;
+  onOpenPrompt: (i: UserDetail["interactions"][number]) => void;
+}) {
+  if (loading && !detail) {
+    return (
+      <div className="fixed inset-0 z-30 flex items-center justify-center px-0 sm:px-4 dmoop-fade-in" onClick={onClose}>
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+        <div className="relative px-5 py-4 rounded-xl bg-white shadow-lg flex items-center gap-2.5">
+          <RefreshCw size={14} className="animate-spin text-[var(--dmoop-accent)]" />
+          <span className="text-[13px] text-[var(--dmoop-text-primary)]">Loading user activity…</span>
+        </div>
+      </div>
+    );
+  }
+  if (!detail) return null;
+
+  const isAnonymous = detail.profile?.is_anonymous;
+  const email = detail.profile?.email ?? (isAnonymous ? "Anonymous sessions" : "—");
+  const created = detail.profile?.created_at;
+  const s = detail.summary;
+  const topIntents = Object.entries(s.intents).sort(([, a], [, b]) => b - a).slice(0, 5);
+  const modelsList = Object.entries(s.models).sort(([, a], [, b]) => b - a);
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-end sm:items-center justify-center px-0 sm:px-4 dmoop-fade-in" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="relative max-w-4xl w-full max-h-[90vh] sm:max-h-[88vh] rounded-t-2xl sm:rounded-2xl overflow-hidden dmoop-scale-in flex flex-col"
+        style={{ background: "var(--dmoop-gradient-card)", boxShadow: "var(--dmoop-shadow-xl)", border: "1px solid var(--dmoop-border-soft)" }}
+        onClick={(e) => e.stopPropagation()}>
+        <div className="px-4 sm:px-5 py-3.5 border-b border-[var(--dmoop-border-soft)] flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+              isAnonymous ? "bg-slate-100" : "bg-[#fbf3ee]")}>
+              {isAnonymous
+                ? <EyeOff size={16} className="text-slate-500" />
+                : <Mail size={16} className="text-[var(--dmoop-accent)]" />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[14px] font-semibold text-[var(--dmoop-text-primary)] truncate">{email}</p>
+              <p className="text-[11px] text-[var(--dmoop-text-tertiary)]">
+                {created
+                  ? `joined ${new Date(created).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}`
+                  : "Aggregate of all unauthenticated traffic"}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] text-sm font-medium shrink-0">Close</button>
+        </div>
+
+        <div className="px-4 sm:px-5 py-3 border-b border-[var(--dmoop-border-soft)] grid grid-cols-2 sm:grid-cols-5 gap-3 shrink-0">
+          <DrawerStat label="Prompts" value={s.total_prompts} />
+          <DrawerStat label="Sessions" value={s.sessions || "—"} />
+          <DrawerStat label="Web search" value={s.web_search_count} />
+          <DrawerStat label="Brand docs" value={s.brand_docs_count} />
+          <DrawerStat label="Safety flags" value={s.safety_incidents_count} accent={s.safety_incidents_count > 0 ? "rose" : "neutral"} />
+        </div>
+
+        {(topIntents.length > 0 || modelsList.length > 0) && (
+          <div className="px-4 sm:px-5 py-3 border-b border-[var(--dmoop-border-soft)] grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0">
+            {topIntents.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-1.5">Top intents</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {topIntents.map(([k, v]) => (
+                    <span key={k} className="text-[11px] px-2 py-0.5 rounded-md bg-[#fbf3ee] text-[var(--dmoop-accent-rich)] font-medium">
+                      {k.replace(/_/g, " ")} · {v}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {modelsList.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-1.5">Models used</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {modelsList.map(([k, v]) => (
+                    <span key={k} className="text-[11px] px-2 py-0.5 rounded-md bg-[#f5f1ea] text-[var(--dmoop-text-secondary)] font-mono">
+                      {k} · {v}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto dmoop-scroll">
+          {detail.brand_docs.length > 0 && (
+            <div className="px-4 sm:px-5 py-3 border-b border-[var(--dmoop-border-soft)]">
+              <p className="text-[10.5px] font-bold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-2">
+                Brand Library · {detail.brand_docs.length} document{detail.brand_docs.length === 1 ? "" : "s"}
+              </p>
+              <div className="space-y-1.5">
+                {detail.brand_docs.map((d) => (
+                  <div key={d.id} className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-white border border-[var(--dmoop-border-soft)]">
+                    <FileText size={12} className="text-[var(--dmoop-text-secondary)] shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-medium text-[var(--dmoop-text-primary)] truncate">{d.filename}</p>
+                      <p className="text-[10px] text-[var(--dmoop-text-tertiary)]">
+                        {d.doc_type.replace(/_/g, " ")} · {(d.total_chars / 1000).toFixed(1)}K chars · {new Date(d.uploaded_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {detail.safety_incidents.length > 0 && (
+            <div className="px-4 sm:px-5 py-3 border-b border-[var(--dmoop-border-soft)] bg-rose-50/30">
+              <p className="text-[10.5px] font-bold uppercase tracking-wider text-rose-700 mb-2">
+                Safety flags · {detail.safety_incidents.length}
+              </p>
+              <div className="space-y-1.5">
+                {detail.safety_incidents.slice(0, 5).map((s) => (
+                  <div key={s.id} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-white border border-rose-100">
+                    <Shield size={12} className="text-rose-600 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11.5px] font-semibold text-[var(--dmoop-text-primary)]">
+                        {s.kind.replace(/_/g, " ")} · {s.severity}
+                      </p>
+                      {s.excerpt && (
+                        <p className="text-[11px] text-[var(--dmoop-text-secondary)] mt-0.5 line-clamp-2 font-mono">{s.excerpt}</p>
+                      )}
+                      <p className="text-[10px] text-[var(--dmoop-text-tertiary)] mt-0.5">
+                        {new Date(s.occurred_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="px-4 sm:px-5 py-3">
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-2">
+              Recent prompts · {detail.interactions.length}
+            </p>
+            {detail.interactions.length === 0 && (
+              <p className="text-center text-[12px] text-[var(--dmoop-text-tertiary)] py-6">No prompts yet.</p>
+            )}
+            <div className="space-y-2">
+              {detail.interactions.map((i) => (
+                <button key={i.id} onClick={() => onOpenPrompt(i)}
+                  className="w-full text-left px-3 py-2 rounded-lg bg-white border border-[var(--dmoop-border-soft)] hover:bg-[#faf6ef] hover:shadow-[var(--dmoop-shadow-xs)] transition-all">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    {i.intent && (
+                      <span className="text-[9.5px] px-1.5 py-0.5 rounded-md bg-[#f5f1ea] text-[var(--dmoop-text-secondary)] font-semibold uppercase tracking-wide">
+                        {i.intent.replace(/_/g, " ")}
+                      </span>
+                    )}
+                    <span className="text-[9.5px] px-1.5 py-0.5 rounded-md bg-[#fbf3ee] text-[var(--dmoop-accent-rich)] font-mono font-semibold">
+                      {i.model}
+                    </span>
+                    {i.web_search_used && <Globe size={10} className="text-blue-500" />}
+                    {i.user_rating === 1 && <ThumbsUp size={10} className="text-emerald-600" />}
+                    {i.user_rating === -1 && <ThumbsDown size={10} className="text-rose-600" />}
+                    <span className="text-[10px] text-[var(--dmoop-text-tertiary)] ml-auto">
+                      {new Date(i.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                  <p className="text-[12.5px] text-[var(--dmoop-text-primary)] line-clamp-2 leading-snug">{i.user_query}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DrawerStat({ label, value, accent }: { label: string; value: number | string; accent?: "rose" | "neutral" }) {
+  const color = accent === "rose" ? "text-rose-700" : "text-[var(--dmoop-text-primary)]";
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">{label}</p>
+      <p className={cn("text-[20px] font-semibold tracking-tight mt-0.5", color)}>{value}</p>
+    </div>
   );
 }
