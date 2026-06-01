@@ -132,6 +132,26 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
         <div className="mx-4 mb-3 h-px bg-gradient-to-r from-transparent via-[var(--dmoop-border-soft)] to-transparent" />
 
+        {/* Primary nav — always visible, no nested dropdown */}
+        <div className="px-2 mb-2">
+          <Link
+            href="/brand"
+            onClick={onMobileClose}
+            className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[13px] text-[var(--dmoop-text-primary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] transition-all duration-200 group"
+          >
+            <div className="w-8 h-8 rounded-lg bg-[#fbf3ee] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"
+              style={{ boxShadow: "var(--dmoop-shadow-xs)" }}>
+              <BookOpen size={14} className="text-[var(--dmoop-accent)]" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-[13px] tracking-tight">Brand Library</p>
+              <p className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">Your brand docs & agent</p>
+            </div>
+          </Link>
+        </div>
+
+        <div className="mx-4 mb-1 h-px bg-gradient-to-r from-transparent via-[var(--dmoop-border-soft)] to-transparent" />
+
         {/* Conversations */}
         <div className="flex-1 overflow-y-auto px-2 py-1 dmoop-scroll">
           {conversations.length === 0 ? (
@@ -150,19 +170,16 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           {menuOpen && (
             <div className="absolute bottom-full left-2 right-2 mb-1.5 rounded-xl overflow-hidden dmoop-scale-in"
               style={{ background: "var(--dmoop-gradient-card)", boxShadow: "var(--dmoop-shadow-lg)", border: "1px solid var(--dmoop-border-soft)" }}>
-              <Link href="/brand" onClick={() => { setMenuOpen(false); onMobileClose(); }}
-                className="flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[var(--dmoop-text-primary)] hover:bg-[#faf6ef] transition-colors">
-                <BookOpen size={13} className="text-[var(--dmoop-accent)]" />
-                <span className="font-medium">Brand library</span>
-              </Link>
               {isAdmin && (
-                <Link href="/admin" onClick={() => { setMenuOpen(false); onMobileClose(); }}
-                  className="flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[var(--dmoop-text-primary)] hover:bg-[#faf6ef] transition-colors">
-                  <Shield size={13} className="text-[var(--dmoop-accent)]" />
-                  <span className="font-medium">Admin dashboard</span>
-                </Link>
+                <>
+                  <Link href="/admin" onClick={() => { setMenuOpen(false); onMobileClose(); }}
+                    className="flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[var(--dmoop-text-primary)] hover:bg-[#faf6ef] transition-colors">
+                    <Shield size={13} className="text-[var(--dmoop-accent)]" />
+                    <span className="font-medium">Admin dashboard</span>
+                  </Link>
+                  <div className="h-px bg-[var(--dmoop-border-soft)] mx-2" />
+                </>
               )}
-              <div className="h-px bg-[var(--dmoop-border-soft)] mx-2" />
               <button onClick={signOut} className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[var(--dmoop-text-primary)] hover:bg-[#faf6ef] transition-colors text-left">
                 <LogOut size={13} className="text-[var(--dmoop-text-secondary)]" />
                 <span className="font-medium">Sign out</span>
