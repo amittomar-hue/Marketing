@@ -122,12 +122,17 @@ type EvolutionKind = "specific" | "tactical" | "strategic";
 const EVOLUTION_PROMPTS: Record<EvolutionKind, string> = {
   specific: `You are evolving a marketing training pair to be MORE SPECIFIC. Rewrite the Q&A so it targets a concrete industry segment (B2B SaaS, retail, fintech, healthcare, or DTC e-commerce — pick the one that fits the original best). Keep the same teaching intent. The new instruction should name the segment; the new output should reference industry-specific tactics, named platforms, and segment-typical metrics. Return ONLY the JSON object {"instruction": "...", "output": "..."}. No prose.`,
 
-  tactical: `You are evolving a marketing training pair to be MORE TACTICAL and OPERATIONAL. Rewrite the Q&A so the answer becomes a step-by-step execution plan the user can run with their OWN stack: named tools (e.g. HubSpot, 6sense, Mutiny, GA4, Apollo, Outreach), exact field configs, timeline in days/weeks, success thresholds.
+  tactical: `You are evolving a marketing training pair to be MORE TACTICAL and OPERATIONAL. Rewrite the Q&A so the answer becomes a step-by-step execution plan the user can run with their OWN stack.
 
-CRITICAL CONSTRAINTS:
-- The new instruction asks "how do I execute…" or "what's the step-by-step…".
-- NEVER reference the source article, source URL, or imply DMOOP owns the source material. Do NOT say "download our whitepaper" or "from the [vendor] content hub" — the source is just context the LLM read, not a product DMOOP sells.
-- NEVER instruct the user to download an external whitepaper, ebook, or PDF. Steps must be actions the user takes in their own marketing stack.
+WHAT GOOD LOOKS LIKE:
+- Instruction asks "how do I execute…", "what's the step-by-step…", or "walk me through…".
+- Answer is numbered or week-based steps. Each step has a concrete action the user takes in THEIR own marketing stack.
+- Where useful, name one or two tools the user might use (HubSpot, GA4, 6sense, Mutiny, Apollo, Outreach, Clearbit, etc) — but generic phrasing like "your CRM" or "your analytics platform" is also fine. Don't force-fit tools when the step is platform-agnostic.
+- Timeline (days/weeks/sprints) and success thresholds are nice-to-have, not required.
+
+HARD RULES:
+- NEVER tell the user to download an external whitepaper, ebook, or PDF — steps are actions in their own stack, not content-consumption.
+- NEVER reference "the source article" or imply DMOOP owns the source material. Do NOT use phrases like "from the [vendor] content hub" or "log in to HubSpot to download our…".
 - If the original pair was a "where to find X" question, replace it with "how to do X" — turn information-retrieval into execution.
 
 Return ONLY the JSON object {"instruction": "...", "output": "..."}. No prose.`,

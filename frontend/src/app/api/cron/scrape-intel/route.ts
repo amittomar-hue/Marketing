@@ -57,15 +57,20 @@ const TOPICS: Topic[] = [
   { category: "company_signals", asset_type: "article", query: "CMO changes marketing leadership moves this month", days: 30 },
 
   // ━━━━━━ EBOOKS (long-form guides, evergreen) ━━━━━━
-  { category: "seo",             asset_type: "ebook", query: '"SEO ebook" OR "complete SEO guide" download 2026', days: 365 },
-  { category: "abm",             asset_type: "ebook", query: '"ABM ebook" account-based marketing complete guide download', days: 365 },
-  { category: "demand_gen",      asset_type: "ebook", query: '"demand generation ebook" B2B SaaS guide download', days: 365 },
-  { category: "ad_copy",         asset_type: "ebook", query: '"copywriting ebook" OR "ad copy ebook" download', days: 365 },
-  { category: "email",           asset_type: "ebook", query: '"email marketing ebook" deliverability OR lifecycle download', days: 365 },
-  { category: "analytics",       asset_type: "ebook", query: '"marketing analytics ebook" attribution measurement download', days: 365 },
-  { category: "strategy",        asset_type: "ebook", query: '"GTM strategy ebook" OR "go-to-market guide" B2B SaaS download', days: 365 },
-  { category: "buyer_signals",   asset_type: "ebook", query: '"intent data ebook" buyer signals B2B download', days: 365 },
-  { category: "orm",             asset_type: "ebook", query: '"brand reputation ebook" online reputation management guide', days: 365 },
+  // Reframed: drop "download" — many ebooks live as web-readable summaries
+  // or chapter excerpts. Add "summary" / "review" / "key takeaways" to surface
+  // article-style writeups of ebook content.
+  { category: "seo",             asset_type: "ebook", query: '"SEO ebook" summary OR "complete SEO guide" chapter key takeaways 2026', days: 365 },
+  { category: "abm",             asset_type: "ebook", query: '"ABM ebook" account-based marketing summary chapter key takeaways', days: 365 },
+  { category: "demand_gen",      asset_type: "ebook", query: '"demand generation ebook" B2B SaaS summary chapter takeaways', days: 365 },
+  { category: "ad_copy",         asset_type: "ebook", query: '"copywriting ebook" OR "ad copy ebook" summary chapter excerpt takeaways', days: 365 },
+  { category: "email",           asset_type: "ebook", query: '"email marketing ebook" deliverability lifecycle summary key takeaways', days: 365 },
+  { category: "analytics",       asset_type: "ebook", query: '"marketing analytics ebook" attribution measurement summary takeaways', days: 365 },
+  { category: "strategy",        asset_type: "ebook", query: '"GTM strategy ebook" OR "go-to-market guide" B2B SaaS summary takeaways', days: 365 },
+  { category: "buyer_signals",   asset_type: "ebook", query: '"intent data ebook" buyer signals B2B summary key takeaways', days: 365 },
+  { category: "orm",             asset_type: "ebook", query: '"brand reputation ebook" online reputation management summary takeaways', days: 365 },
+  { category: "competitor",      asset_type: "ebook", query: '"competitive intelligence ebook" win-loss summary chapter takeaways', days: 365 },
+  { category: "company_signals", asset_type: "ebook", query: '"signal-based marketing ebook" company triggers summary takeaways 2026', days: 365 },
 
   // ━━━━━━ WHITEPAPERS (formal research, evidence-based) ━━━━━━
   { category: "abm",             asset_type: "whitepaper", query: 'ABM whitepaper "account based marketing" research benchmarks', days: 365 },
@@ -78,7 +83,9 @@ const TOPICS: Topic[] = [
   { category: "ad_copy",         asset_type: "whitepaper", query: 'advertising effectiveness whitepaper creative testing research', days: 365 },
 
   // ━━━━━━ PLAYBOOKS (tactical step-by-step) ━━━━━━
-  { category: "abm",             asset_type: "playbook", query: '"ABM playbook" tier-1 enterprise tactics steps', days: 180 },
+  // "playbook" + "steps" / "framework" / "tactics" — these are blog-format
+  // playbook excerpts, easier for Tavily to surface than gated PDFs.
+  { category: "abm",             asset_type: "playbook", query: '"ABM playbook" tier-1 enterprise tactics steps 2026', days: 180 },
   { category: "demand_gen",      asset_type: "playbook", query: '"demand gen playbook" pipeline tactics B2B 2026', days: 180 },
   { category: "seo",             asset_type: "playbook", query: '"SEO playbook" technical content link building tactics 2026', days: 180 },
   { category: "ad_copy",         asset_type: "playbook", query: '"ad copy playbook" testing Google Ads Meta LinkedIn winning patterns', days: 180 },
@@ -104,23 +111,30 @@ const TOPICS: Topic[] = [
   { category: "strategy",        asset_type: "case_study", query: '"GTM case study" product launch B2B SaaS results', days: 365 },
 
   // ━━━━━━ SOCIAL POSTS (LinkedIn / X viral marketing) ━━━━━━
-  { category: "ad_copy",         asset_type: "social_post", query: 'LinkedIn post viral B2B marketing ad copy hooks 2026', days: 60 },
-  { category: "demand_gen",      asset_type: "social_post", query: 'LinkedIn marketing leader posts demand gen growth 2026', days: 30 },
-  { category: "abm",             asset_type: "social_post", query: 'LinkedIn ABM tactical post marketing leadership 2026', days: 60 },
-  { category: "trend",           asset_type: "social_post", query: 'LinkedIn viral marketing post trend B2B 2026', days: 30 },
-  { category: "seo",             asset_type: "social_post", query: 'LinkedIn SEO marketing post tactical thread 2026', days: 60 },
-  { category: "strategy",        asset_type: "social_post", query: 'LinkedIn marketing strategy thread viral B2B 2026', days: 30 },
-  { category: "analytics",       asset_type: "social_post", query: 'LinkedIn marketing analytics attribution post viral 2026', days: 60 },
-  { category: "buyer_signals",   asset_type: "social_post", query: 'LinkedIn intent data buyer signals post B2B sales 2026', days: 60 },
+  // Reframed: find ARTICLES that break down / analyze viral posts.
+  // (Tavily can't crawl LinkedIn directly — gated.) These ARTICLES contain
+  // the post + the structural analysis DMOOP needs to learn from.
+  { category: "ad_copy",         asset_type: "social_post", query: 'viral LinkedIn post breakdown hook structure marketing analysis', days: 90, topic: "general" },
+  { category: "ad_copy",         asset_type: "social_post", query: '"best LinkedIn posts" examples B2B marketing 2026 teardown', days: 90 },
+  { category: "demand_gen",      asset_type: "social_post", query: 'LinkedIn growth post analysis demand gen leader examples', days: 90 },
+  { category: "trend",           asset_type: "social_post", query: 'X Twitter viral marketing post examples 2026 analysis', days: 90 },
+  { category: "seo",             asset_type: "social_post", query: 'high-engagement LinkedIn SEO thread example breakdown', days: 90 },
+  { category: "strategy",        asset_type: "social_post", query: 'viral marketing thread structure hook examples 2026', days: 90 },
+  { category: "ad_copy",         asset_type: "social_post", query: 'LinkedIn ad creative organic post viral examples B2B marketing analysis 2026', days: 60 },
+  { category: "buyer_signals",   asset_type: "social_post", query: 'sales LinkedIn post examples intent data B2B leaders breakdown', days: 90 },
 
   // ━━━━━━ AD CAMPAIGNS (creative breakdowns, campaign analyses) ━━━━━━
-  { category: "ad_copy",         asset_type: "ad_campaign", query: '"best ad campaigns 2026" creative breakdown analysis', days: 180 },
-  { category: "ad_copy",         asset_type: "ad_campaign", query: 'Super Bowl 2026 ads creative analysis ROI', days: 180 },
-  { category: "ad_copy",         asset_type: "ad_campaign", query: 'B2B SaaS ad campaign teardown copy creative analysis', days: 180 },
-  { category: "ad_copy",         asset_type: "ad_campaign", query: 'TikTok ad campaign viral creative breakdown 2026', days: 90 },
-  { category: "ad_copy",         asset_type: "ad_campaign", query: 'LinkedIn ad campaign B2B sponsored content creative analysis', days: 180 },
-  { category: "ad_copy",         asset_type: "ad_campaign", query: 'retail media ad campaign Amazon Walmart sponsored ads case study', days: 180 },
-  { category: "trend",           asset_type: "ad_campaign", query: '"campaign of the year" 2026 marketing advertising', days: 365 },
+  // Use "ad teardown" / "ad breakdown" — these phrases match how MarketerHire,
+  // Marketing Examined, Demand Curve etc. title their content.
+  { category: "ad_copy",         asset_type: "ad_campaign", query: '"ad teardown" 2026 OR "campaign teardown" B2B SaaS marketing', days: 180 },
+  { category: "ad_copy",         asset_type: "ad_campaign", query: '"creative breakdown" Meta Facebook ads 2026 marketing analysis', days: 180 },
+  { category: "ad_copy",         asset_type: "ad_campaign", query: 'Super Bowl 2026 ads creative analysis ROI behind-the-scenes', days: 365 },
+  { category: "ad_copy",         asset_type: "ad_campaign", query: 'B2B SaaS ad campaign breakdown hook insight creative analysis 2026', days: 180 },
+  { category: "ad_copy",         asset_type: "ad_campaign", query: 'TikTok ad viral campaign creative analysis breakdown 2026', days: 90 },
+  { category: "ad_copy",         asset_type: "ad_campaign", query: 'LinkedIn ads B2B campaign analysis creative breakdown ROI 2026', days: 180 },
+  { category: "ad_copy",         asset_type: "ad_campaign", query: 'retail media Amazon Walmart sponsored ads campaign analysis 2026', days: 180 },
+  { category: "trend",           asset_type: "ad_campaign", query: '"best ad campaigns" 2026 marketing advertising effectiveness breakdown', days: 365 },
+  { category: "trend",           asset_type: "ad_campaign", query: 'Cannes Lions 2026 winning campaigns analysis creative effectiveness', days: 365 },
 
   // ━━━━━━ REPORTS (Gartner / Forrester / McKinsey style) ━━━━━━
   { category: "trend",           asset_type: "report", query: 'Gartner CMO Spend Survey 2026 marketing budget research', days: 365 },
@@ -134,21 +148,35 @@ const TOPICS: Topic[] = [
   { category: "orm",             asset_type: "report", query: 'consumer trust brand reputation report Edelman 2026', days: 365 },
 
   // ━━━━━━ NEWSLETTERS (Morning Brew, TLDR Marketing, MarketingProfs) ━━━━━━
-  { category: "trend",           asset_type: "newsletter", query: 'Marketing Brew newsletter top stories this week', days: 7 },
-  { category: "ad_copy",         asset_type: "newsletter", query: 'TLDR Marketing newsletter ad campaigns this week', days: 7 },
-  { category: "demand_gen",      asset_type: "newsletter", query: 'Morning Brew marketing newsletter B2B demand gen 2026', days: 14 },
-  { category: "seo",             asset_type: "newsletter", query: 'Search Engine Roundtable newsletter SEO updates this week', days: 7 },
+  // Use "marketing newsletter recap" and "this week in marketing" — these
+  // phrases match how editorial roundup posts are titled.
+  { category: "trend",           asset_type: "newsletter", query: '"this week in marketing" recap top stories 2026', days: 14, topic: "news" },
+  { category: "trend",           asset_type: "newsletter", query: 'marketing newsletter recap weekly B2B SaaS trends 2026', days: 14, topic: "news" },
+  { category: "ad_copy",         asset_type: "newsletter", query: 'advertising newsletter recap weekly ad campaigns 2026', days: 14 },
+  { category: "demand_gen",      asset_type: "newsletter", query: 'demand gen newsletter weekly B2B SaaS recap', days: 14, topic: "news" },
+  { category: "seo",             asset_type: "newsletter", query: 'SEO newsletter weekly recap algorithm updates 2026', days: 14, topic: "news" },
+  { category: "analytics",       asset_type: "newsletter", query: 'marketing analytics newsletter weekly attribution recap 2026', days: 14 },
+  { category: "company_signals", asset_type: "newsletter", query: 'B2B marketing newsletter funding hiring company signals 2026', days: 14, topic: "news" },
 
   // ━━━━━━ PODCASTS (show notes / transcripts) ━━━━━━
-  { category: "demand_gen",      asset_type: "podcast", query: 'B2B demand gen podcast Pavilion CRO show notes 2026', days: 60 },
-  { category: "abm",             asset_type: "podcast", query: 'ABM podcast Demandbase 6sense show notes 2026', days: 60 },
-  { category: "seo",             asset_type: "podcast", query: 'SEO podcast Search Engine Journal show notes 2026', days: 60 },
-  { category: "ad_copy",         asset_type: "podcast", query: 'copywriting podcast direct response marketing show notes', days: 90 },
+  // Use "podcast episode" + "transcript" or specific show names. Most podcasts
+  // post show notes with key quotes — Tavily can crawl those.
+  { category: "demand_gen",      asset_type: "podcast", query: '"podcast episode" demand gen B2B SaaS Pavilion show notes 2026', days: 180 },
+  { category: "abm",             asset_type: "podcast", query: '"podcast episode" ABM Demandbase 6sense show notes 2026', days: 180 },
+  { category: "seo",             asset_type: "podcast", query: '"podcast episode" SEO Search Engine Journal show notes 2026', days: 180 },
+  { category: "ad_copy",         asset_type: "podcast", query: '"podcast episode" copywriting direct response marketing show notes', days: 180 },
+  { category: "strategy",        asset_type: "podcast", query: '"podcast episode" marketing strategy CMO leader show notes 2026', days: 180 },
+  { category: "buyer_signals",   asset_type: "podcast", query: '"podcast episode" intent data buyer signals B2B sales show notes', days: 180 },
+  { category: "analytics",       asset_type: "podcast", query: '"podcast episode" marketing attribution analytics show notes 2026', days: 180 },
 
   // ━━━━━━ VIDEO / WEBINAR ━━━━━━
-  { category: "abm",             asset_type: "video", query: 'ABM webinar replay B2B marketing tactics 2026 transcript', days: 90 },
-  { category: "demand_gen",      asset_type: "video", query: 'demand gen webinar transcript B2B SaaS 2026', days: 90 },
-  { category: "buyer_signals",   asset_type: "video", query: 'intent data webinar transcript Bombora 6sense 2026', days: 90 },
+  // Use "webinar recap" or "webinar summary" — many vendors post written recaps.
+  { category: "abm",             asset_type: "video", query: '"webinar recap" ABM B2B marketing tactics 2026 takeaways', days: 180 },
+  { category: "demand_gen",      asset_type: "video", query: '"webinar summary" demand gen B2B SaaS 2026 takeaways', days: 180 },
+  { category: "buyer_signals",   asset_type: "video", query: '"webinar recap" intent data Bombora 6sense 2026 takeaways', days: 180 },
+  { category: "seo",             asset_type: "video", query: '"webinar recap" SEO algorithm updates 2026 takeaways', days: 180 },
+  { category: "analytics",       asset_type: "video", query: '"webinar summary" marketing attribution analytics 2026 takeaways', days: 180 },
+  { category: "ad_copy",         asset_type: "video", query: '"webinar recap" advertising copy creative B2B SaaS 2026 takeaways', days: 180 },
 
   // ━━━━━━ TEMPLATES & FRAMEWORKS ━━━━━━
   { category: "ad_copy",         asset_type: "template", query: '"ad copy template" "Google Ads template" download', days: 365 },
@@ -166,8 +194,22 @@ const TOPICS: Topic[] = [
   { category: "company_signals", asset_type: "guide", query: '"guide" company signal triggers hiring funding B2B sales', days: 180 },
 ];
 
-async function tavilySearch(query: string, apiKey: string, opts: { days: number; topic: "news" | "general" }): Promise<TavilyResponse | null> {
+// Asset types with historically sparse hit rates get a larger Tavily window.
+// (Confirmed by data audit: social_post / ad_campaign / newsletter / podcast /
+// video / ebook / playbook produced very few pairs vs articles/reports/case_studies.)
+const SPARSE_ASSET_TYPES = new Set<AssetType>([
+  "social_post", "ad_campaign", "newsletter", "podcast", "video", "ebook", "playbook",
+]);
+
+async function tavilySearch(
+  query: string,
+  apiKey: string,
+  opts: { days: number; topic: "news" | "general"; assetType: AssetType }
+): Promise<TavilyResponse | null> {
   try {
+    // Sparse asset types pull 10 results instead of 5 to compensate for lower
+    // signal density on these niches.
+    const maxResults = SPARSE_ASSET_TYPES.has(opts.assetType) ? 10 : 5;
     const res = await fetch("https://api.tavily.com/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -176,7 +218,7 @@ async function tavilySearch(query: string, apiKey: string, opts: { days: number;
         query,
         search_depth: "advanced",
         include_answer: false,
-        max_results: 5,
+        max_results: maxResults,
         topic: opts.topic,
         days: opts.days,
       }),
@@ -230,6 +272,7 @@ export async function GET(req: NextRequest) {
       const tav = await tavilySearch(t.query, tavilyKey, {
         days: t.days ?? 30,
         topic: t.topic ?? (t.asset_type === "article" || t.asset_type === "social_post" || t.asset_type === "newsletter" ? "news" : "general"),
+        assetType: t.asset_type,
       });
       if (!tav) return [];
       return tav.results.map((r) => ({
