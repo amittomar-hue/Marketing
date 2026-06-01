@@ -14,6 +14,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getLatestIntel, formatIntelAsContext } from "@/lib/intel";
 import { retrieveBrandChunks, formatBrandContext } from "@/lib/brand";
 import { retrieveTrainingPairs, formatTrainingPairsAsContext } from "@/lib/training-pairs";
+import { extractUrlsFromText, scrapeSite, formatScrapeAsContext } from "@/lib/web-scraper";
 
 type ExportFormat = "pdf" | "docx" | "xlsx" | "pptx" | "csv" | "json" | "md" | "txt" | "html";
 const FORMAT_INSTRUCTIONS: Record<ExportFormat, string> = {
@@ -295,6 +296,24 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Site scraper ─────────────────────────────────────────────
+  // If the user mentioned a URL or bare domain, fetch the actual site
+  // content (homepage + a handful of priority pages: about, products,
+  // pricing, customers). The model then grounds on the REAL site text
+  // instead of inventing claims or relying on Tavily snippets.
+  let siteContext = "";
+  const urlsInQuery = extractUrlsFromText(userQuery).slice(0, 1); // limit: 1 site per turn
+  if (urlsInQuery.length > 0) {
+    try {
+      const scraped = await scrapeSite(urlsInQuery[0], 5);
+      siteContext = formatScrapeAsContext(scraped);
+    } catch (err) {
+      siteContext = `(Site scrape unavailable for ${urlsInQuery[0]}: ${
+        err instanceof Error ? err.message : "unknown"
+      })`;
+    }
+  }
+
   // ── Decide model-specific behavior ────────────────────────────
   // Map any legacy model IDs to DMOOP defaults
   const effectiveModelIdEarly = (modelId in GROQ_MODEL_MAP || modelId === "dmoop-tuned")
@@ -396,8 +415,15 @@ export async function POST(req: NextRequest) {
     groqMessages.push({ role: "system", content: FORMAT_INSTRUCTIONS[requestedFormat] });
   }
 
-  // ── TUNED ONLY: training pairs are injected FIRST — this IS the model's
-  // knowledge base. Everything else (brand, examples, intel) is supporting context.
+  // ── HIGHEST PRIORITY: a URL the user explicitly asked us to look at.
+  // Goes ABOVE training pairs because the user's intent is to ground on
+  // THIS site specifically — pulling generic pairs first would be confusing.
+  if (siteContext) {
+    groqMessages.push({ role: "system", content: siteContext });
+  }
+
+  // ── TUNED: training pairs are injected next — this is the model's
+  // knowledge base. Brand / examples / intel are supporting context.
   if (isTuned && trainingPairsContext) {
     groqMessages.push({ role: "system", content: trainingPairsContext });
   }
@@ -583,8 +609,25 @@ export async function POST(req: NextRequest) {
 
         controller.close();
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        controller.enqueue(encoder.encode(`\n\n⚠️ ${msg}`));
+        // Even if a quota error escapes the chain loop's friendly handler
+        // (e.g. error class with a different shape), catch it here too so
+        // the user never sees the raw Groq 413/429 text.
+        const errObj = err instanceof Error ? err : new Error(String(err));
+        const msg = errObj.message;
+        const lower = msg.toLowerCase();
+        const isQuotaError =
+          msg.includes("413") ||
+          msg.includes("429") ||
+          lower.includes("too large") ||
+          lower.includes("rate limit") ||
+          lower.includes("tokens per minute") ||
+          lower.includes("tokens per day") ||
+          lower.includes("quota");
+        if (isQuotaError) {
+          controller.enqueue(encoder.encode(buildQuotaExhaustedMessage(errObj, isTuned)));
+        } else {
+          controller.enqueue(encoder.encode(`\n\n⚠️ ${msg}`));
+        }
         controller.close();
       }
     },
