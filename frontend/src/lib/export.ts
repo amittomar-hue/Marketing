@@ -42,15 +42,17 @@ export const FORMAT_MIME: Record<ExportFormat, string> = {
 // Matches phrases like "as PDF", "in Excel", "give me a Word doc",
 // "make this a deck", "csv format", etc.
 // ─────────────────────────────────────────────────────────────────
+// Each pattern includes the canonical form + common typos / variants the
+// model sees in the wild. "dox", "ducks", "wrd", "exel", "powepoint" etc.
 const PATTERNS: Array<{ format: ExportFormat; re: RegExp }> = [
-  { format: "pdf",  re: /\b(pdf|portable document|\.pdf)\b/i },
-  { format: "docx", re: /\b(docx?|word document|word doc|microsoft word|\.docx?)\b/i },
-  { format: "xlsx", re: /\b(xlsx?|excel(?:\s+file)?|spread\s*sheet|workbook|\.xlsx?)\b/i },
-  { format: "pptx", re: /\b(ppt|pptx|power\s*point|deck|presentation|slides?(?:\s+(?:deck|format))?|\.pptx?)\b/i },
+  { format: "pdf",  re: /\b(pdf|pdfs|portable document|\.pdf)\b/i },
+  { format: "docx", re: /\b(docx?|dox|ducks|docks|wrd|word document|word doc|word file|microsoft word|ms\s*word|\.docx?)\b/i },
+  { format: "xlsx", re: /\b(xlsx?|excel(?:\s+file)?|exel|excell|excelll?|spread\s*sheet|workbook|\.xlsx?)\b/i },
+  { format: "pptx", re: /\b(ppt|pptx|power\s*point|powepoint|powerpiont|deck|presentation|slides?(?:\s+(?:deck|format))?|\.pptx?)\b/i },
   { format: "csv",  re: /\b(csv|comma[-\s]separated(?:\s+values)?|\.csv)\b/i },
   { format: "json", re: /\b(json(?:\s+(?:format|file))?|\.json)\b/i },
-  { format: "md",   re: /\b(markdown|\.md|md\s+file)\b/i },
-  { format: "html", re: /\b(html|webpage|\.html?)\b/i },
+  { format: "md",   re: /\b(markdown|mark\s*down|\.md|md\s+file)\b/i },
+  { format: "html", re: /\b(html|webpage|web\s*page|\.html?)\b/i },
   { format: "txt",  re: /\b(plain\s*text|text\s*file|\.txt)\b/i },
 ];
 
@@ -61,6 +63,25 @@ export function detectFormat(prompt: string): ExportFormat | null {
     if (re.test(prompt)) return format;
   }
   return null;
+}
+
+// "Convert this", "give this as", "save this as", "turn this into", etc.
+// When detected AND a format is detected AND there's a prior assistant
+// message, we should NOT call the LLM — we should just take the prior
+// answer and offer it as a download in the requested format.
+const CONVERSION_INTENT_RE =
+  /\b(?:convert|export|save|download|give\s+(?:me\s+)?(?:this|it)|turn|make|put|render|change|transform|format)\b.{0,40}\b(?:this|it|above|previous|that)\b|\b(?:this|it|above|previous|that)\b.{0,40}\b(?:in(?:to)?|as|to)\s+(?:a\s+)?(?:pdf|doc|docx|word|excel|xlsx|csv|json|ppt|pptx|powerpoint|deck|markdown|md|html|txt)|\b(?:convert|export|download)\s+(?:in(?:to)?|to|as)\s+(?:pdf|doc|docx|word|excel|xlsx|csv|json|ppt|pptx|powerpoint|deck|markdown|md|html|txt)/i;
+
+/**
+ * Returns true if the user's message reads like "please convert the
+ * previous answer into <format>" rather than "please generate a new
+ * answer in <format>". The distinction matters: the conversion case
+ * should NOT call the LLM — just package the prior message as the file.
+ */
+export function isConversionRequest(prompt: string): boolean {
+  if (!prompt) return false;
+  if (prompt.length > 200) return false; // long prompts are real questions
+  return CONVERSION_INTENT_RE.test(prompt);
 }
 
 // ─────────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useChatStore } from "@/lib/chat-store";
 import { streamChat } from "@/lib/stream-chat";
-import { detectFormat } from "@/lib/export";
+import { detectFormat, isConversionRequest, FORMAT_LABELS, type ExportFormat } from "@/lib/export";
 import { parseDocumentClient } from "@/lib/parse-document-client";
 import Link from "next/link";
 import ModelSelector from "./ModelSelector";
@@ -245,6 +245,36 @@ export default function InputBar() {
 
     // Detect requested output format (pdf/docx/xlsx/pptx/csv/json/md/txt/html)
     const requestedFormat = detectFormat(text) ?? undefined;
+
+    // SHORT-CIRCUIT: "convert this into <format>" — don't re-call the LLM.
+    // Take the previous assistant message's content and offer it as a
+    // download in the requested format directly.
+    if (requestedFormat && isConversionRequest(text)) {
+      const conv = useChatStore.getState().conversations.find((c) => c.id === convId);
+      const priorAssistant = [...(conv?.messages ?? [])].reverse().find(
+        (m) => m.role === "assistant" && m.content && !m.isStreaming
+      );
+      if (priorAssistant) {
+        addMessage(convId, {
+          role: "user",
+          content: userContent,
+          attachmentName: pendingAttachment?.name,
+        });
+        setValue("");
+        setPendingAttachment(null);
+        const label = FORMAT_LABELS[requestedFormat as ExportFormat] ?? requestedFormat.toUpperCase();
+        addMessage(convId, {
+          role: "assistant",
+          content: `Here's the previous answer ready as **${label}**. Click the green button below to download it.`,
+          model: selectedModel,
+          isStreaming: false,
+          requestedFormat,
+          formatPromptHint: text,
+          conversionSource: priorAssistant.content,
+        });
+        return;
+      }
+    }
 
     addMessage(convId, {
       role: "user",

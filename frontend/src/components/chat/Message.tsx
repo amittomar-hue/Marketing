@@ -93,10 +93,14 @@ export default function Message({ message }: { message: MessageType }) {
     if (!message.requestedFormat || downloading) return;
     setDownloading(true);
     try {
+      // For "convert this to X" follow-ups, the actual export payload is the
+      // prior assistant message (stashed in conversionSource), not this
+      // message's thin "click below" acknowledgment.
+      const payload = message.conversionSource ?? message.content;
       await downloadAs(
         message.requestedFormat as ExportFormat,
-        message.content,
-        message.formatPromptHint ?? message.content.slice(0, 40)
+        payload,
+        message.formatPromptHint ?? payload.slice(0, 40)
       );
       setDownloaded(true);
       setTimeout(() => setDownloaded(false), 1800);

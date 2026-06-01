@@ -18,6 +18,8 @@ export interface Message {
   requestedFormat?: string;
   /** The verbatim text used to derive the filename when downloading. */
   formatPromptHint?: string;
+  /** For "convert this to X" follow-ups: the prior message's content used as the actual export payload (so the downloadable file contains the real answer, not the thin acknowledgment text). */
+  conversionSource?: string;
 }
 
 export interface Conversation {
