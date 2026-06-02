@@ -9,7 +9,7 @@ const poppins = Poppins({
   display: "swap",
 });
 
-const SITE_URL = "https://dmoop.com";
+const SITE_URL = "https://www.dmoop.com";
 const SITE_NAME = "DMOOP";
 const SITE_TITLE = "DMOOP — Enterprise Marketing Intelligence";
 const SITE_DESCRIPTION =
