@@ -230,6 +230,11 @@ h1, h2, h3, h4, h5, h6 {
 .dmoop-fade-in   { animation: dmoop-fade-in 0.35s ease-out both; }
 .dmoop-scale-in  { animation: dmoop-scale-in 0.25s ease-out both; }
 .dmoop-stagger-in { animation: dmoop-stagger-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.dmoop-slide-in-right { animation: dmoop-slide-in-right 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes dmoop-slide-in-right {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 .dmoop-shimmer {
   background-image: linear-gradient(90deg,
     transparent 0%,

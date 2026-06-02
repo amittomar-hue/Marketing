@@ -7,6 +7,7 @@ import WelcomeScreen from "./WelcomeScreen";
 import MessageThread from "./MessageThread";
 import InputBar from "./InputBar";
 import OnboardingTour from "./OnboardingTour";
+import PreviewDrawer from "./PreviewDrawer";
 import { getModel } from "@/lib/models";
 import Image from "next/image";
 import {
@@ -287,6 +288,11 @@ export default function ChatLayout() {
           <InputBar />
         </div>
       </main>
+
+      {/* Code preview drawer — slides in from the right when any code block
+          triggers usePreviewStore.openPreview(). Mounted at the layout root
+          so it overlays both sidebar and main panel. */}
+      <PreviewDrawer />
     </div>
   );
 }

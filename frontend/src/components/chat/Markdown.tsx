@@ -4,8 +4,10 @@ import { useState, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { detectPreviewKind } from "@/lib/preview-detect";
+import { usePreviewStore } from "@/lib/preview-store";
 
 interface MarkdownProps {
   content: string;
@@ -15,11 +17,18 @@ function CodeBlock({ className, children }: { className?: string; children?: Rea
   const [copied, setCopied] = useState(false);
   const text = String(children ?? "").replace(/\n$/, "");
   const lang = className?.replace("hljs language-", "").replace("language-", "") || "text";
+  const previewKind = detectPreviewKind(lang, text);
+  const openPreview = usePreviewStore((s) => s.openPreview);
 
   const copy = async () => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const preview = () => {
+    if (!previewKind) return;
+    openPreview({ kind: previewKind, language: lang, code: text });
   };
 
   return (
@@ -28,13 +37,25 @@ function CodeBlock({ className, children }: { className?: string; children?: Rea
         <span className="text-[10.5px] font-semibold tracking-wider uppercase text-[#a89685]">
           {lang}
         </span>
-        <button
-          onClick={copy}
-          className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-medium text-[#c9b7a4] hover:text-white hover:bg-white/10 transition-colors"
-        >
-          {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
-          <span>{copied ? "Copied" : "Copy"}</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          {previewKind && (
+            <button
+              onClick={preview}
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-semibold text-[#fff] bg-[var(--dmoop-accent)] hover:opacity-90 transition-all"
+              title="Open in preview drawer"
+            >
+              <Eye size={11} />
+              <span>Preview</span>
+            </button>
+          )}
+          <button
+            onClick={copy}
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-medium text-[#c9b7a4] hover:text-white hover:bg-white/10 transition-colors"
+          >
+            {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+            <span>{copied ? "Copied" : "Copy"}</span>
+          </button>
+        </div>
       </div>
       <pre className="px-4 py-3 overflow-x-auto text-[13px] leading-[1.65] text-[#e8d9c5]">
         <code className={className}>{children}</code>
