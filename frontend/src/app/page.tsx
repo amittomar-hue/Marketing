@@ -1,6 +1,6 @@
 import LandingPage from "@/components/landing/LandingPage";
 
-const SITE_URL = "https://www.dmoop.com";
+const SITE_URL = "https://dmoop.com";
 
 // ─────────────────────────────────────────────────────────────────
 // JSON-LD structured data. Helps DMOOP get cited correctly by
