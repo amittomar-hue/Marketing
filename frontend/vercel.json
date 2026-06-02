@@ -10,7 +10,7 @@
     {
       "source": "/(.*)",
       "destination": "https://www.dmoop.com/$1",
-      "has": [{ "type": "host", "value": "dmoop.com" }],
+      "has": [{ "type": "host", "value": "^dmoop\\.com$" }],
       "permanent": true
     }
   ],
