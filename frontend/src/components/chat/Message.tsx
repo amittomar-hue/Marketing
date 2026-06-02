@@ -1,17 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Message as MessageType, useChatStore } from "@/lib/chat-store";
 import { getModel } from "@/lib/models";
 import { submitFeedback, streamChat } from "@/lib/stream-chat";
 import { downloadAs, FORMAT_LABELS, type ExportFormat } from "@/lib/export";
 import Image from "next/image";
-import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Check, Download } from "lucide-react";
+import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Check, Download, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Markdown from "./Markdown";
 
 export default function Message({ message }: { message: MessageType }) {
   const updateMessage = useChatStore((s) => s.updateMessage);
+  const addMessage = useChatStore((s) => s.addMessage);
+  const truncateAfter = useChatStore((s) => s.truncateAfter);
   const activeId = useChatStore((s) => s.activeId);
   const selectedModel = useChatStore((s) => s.selectedModel);
   const webSearchForced = useChatStore((s) => s.webSearchForced);
@@ -20,9 +22,137 @@ export default function Message({ message }: { message: MessageType }) {
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
+  // User-message editing state
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(message.content);
+  const [resubmitting, setResubmitting] = useState(false);
+  const editTaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (editing && editTaRef.current) {
+      editTaRef.current.focus();
+      editTaRef.current.setSelectionRange(editTaRef.current.value.length, editTaRef.current.value.length);
+    }
+  }, [editing]);
+
+  useEffect(() => {
+    if (!editing && editTaRef.current) return;
+    if (editTaRef.current) {
+      editTaRef.current.style.height = "auto";
+      editTaRef.current.style.height = Math.min(editTaRef.current.scrollHeight, 320) + "px";
+    }
+  }, [draft, editing]);
+
   if (message.role === "user") {
+    const startEdit = () => {
+      if (message.isStreaming) return;
+      setDraft(message.content);
+      setEditing(true);
+    };
+    const cancelEdit = () => {
+      setEditing(false);
+      setDraft(message.content);
+    };
+    const submitEdit = async () => {
+      const next = draft.trim();
+      if (!next || !activeId || resubmitting) return;
+      if (next === message.content.trim()) { setEditing(false); return; }
+
+      setResubmitting(true);
+      // 1. Update the user message in-place
+      updateMessage(activeId, message.id, { content: next });
+      // 2. Drop every message that came AFTER this one
+      truncateAfter(activeId, message.id);
+      // 3. Add a fresh assistant placeholder
+      const asstId = addMessage(activeId, {
+        role: "assistant",
+        content: "",
+        model: selectedModel,
+        isStreaming: true,
+      });
+      setEditing(false);
+
+      try {
+        const conv = useChatStore.getState().conversations.find((c) => c.id === activeId);
+        const history = conv?.messages.filter((m) => m.id !== asstId) ?? [];
+        const { text, interactionId } = await streamChat({
+          messages: history,
+          model: selectedModel,
+          webSearchMode: webSearchForced,
+          onToken: (acc) => updateMessage(activeId, asstId, { content: acc }),
+        });
+        updateMessage(activeId, asstId, {
+          content: text,
+          isStreaming: false,
+          interactionId: interactionId ?? undefined,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        updateMessage(activeId, asstId, { content: `⚠️ ${msg}`, isStreaming: false });
+      } finally {
+        setResubmitting(false);
+      }
+    };
+    const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submitEdit(); }
+    };
+
+    if (editing) {
+      return (
+        <div className="flex justify-end dmoop-fade-in">
+          <div
+            className="w-full max-w-[92%] sm:max-w-[80%] rounded-[20px] px-3.5 sm:px-4 py-2.5 sm:py-3 text-[14px] sm:text-[15px] text-[var(--dmoop-text-primary)] leading-relaxed"
+            style={{
+              background: "linear-gradient(135deg, #f3eee6 0%, #ebe5da 100%)",
+              border: "1px solid var(--dmoop-accent)",
+              boxShadow: "var(--dmoop-shadow-md)",
+            }}
+          >
+            <textarea
+              ref={editTaRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={onKey}
+              rows={1}
+              className="w-full bg-transparent resize-none outline-none border-0 text-[14px] sm:text-[15px] leading-relaxed placeholder:text-[var(--dmoop-text-tertiary)]"
+              placeholder="Edit your message…"
+              disabled={resubmitting}
+            />
+            <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-[rgba(165,138,110,0.2)]">
+              <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)] mr-auto">
+                Cmd/Ctrl + Enter to regenerate · Esc to cancel
+              </span>
+              <button
+                onClick={cancelEdit}
+                disabled={resubmitting}
+                className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-[var(--dmoop-text-secondary)] hover:bg-white/60 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitEdit}
+                disabled={resubmitting || draft.trim().length === 0}
+                className="px-3.5 py-1.5 rounded-lg text-[12px] font-semibold dmoop-btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {resubmitting ? "Sending…" : "Regenerate"}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex justify-end dmoop-fade-in">
+      <div className="flex justify-end items-start gap-1.5 dmoop-fade-in group/user">
+        {/* Edit button — appears on hover, sits to the left of the bubble */}
+        <button
+          onClick={startEdit}
+          title="Edit message"
+          className="opacity-0 group-hover/user:opacity-100 transition-opacity duration-200 p-1.5 rounded-lg text-[var(--dmoop-text-secondary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] hover:text-[var(--dmoop-text-primary)] mt-1.5 shrink-0"
+        >
+          <Pencil size={13} />
+        </button>
         <div
           className="max-w-[90%] sm:max-w-[80%] rounded-[20px] px-4 sm:px-5 py-2.5 sm:py-3 text-[14px] sm:text-[15px] text-[var(--dmoop-text-primary)] whitespace-pre-wrap leading-relaxed break-words"
           style={{

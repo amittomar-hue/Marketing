@@ -46,6 +46,10 @@ interface ChatState {
   setActive: (id: string) => void;
   addMessage: (conversationId: string, message: Omit<Message, "id" | "createdAt">) => string;
   updateMessage: (conversationId: string, messageId: string, patch: Partial<Message>) => void;
+  /** Drop every message strictly AFTER the given message id. Used when a user
+   *  edits an earlier prompt — the assistant reply (and any follow-ups) get
+   *  removed so the new regenerated response can replace them. */
+  truncateAfter: (conversationId: string, messageId: string) => void;
   activeConversation: () => Conversation | null;
   clearAll: () => void;
 }
@@ -131,6 +135,21 @@ export const useChatStore = create<ChatState>()(
                 }
               : c
           ),
+        }));
+      },
+
+      truncateAfter: (conversationId, messageId) => {
+        set((s) => ({
+          conversations: s.conversations.map((c) => {
+            if (c.id !== conversationId) return c;
+            const idx = c.messages.findIndex((m) => m.id === messageId);
+            if (idx < 0) return c;
+            return {
+              ...c,
+              messages: c.messages.slice(0, idx + 1),
+              updatedAt: new Date(),
+            };
+          }),
         }));
       },
 
