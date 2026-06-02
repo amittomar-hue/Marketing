@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, memo } from "react";
+import { useState, memo, isValidElement, type ReactNode, type ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -9,13 +9,30 @@ import { cn } from "@/lib/utils";
 import { detectPreviewKind } from "@/lib/preview-detect";
 import { usePreviewStore } from "@/lib/preview-store";
 
+// rehype-highlight wraps each token in a <span>, so `code` receives an array
+// of React elements as children — not a raw string. String(children) on that
+// array gives "[object Object],[object Object],…" which broke Copy AND Preview.
+// This walks the tree and pulls out just the text content.
+function flattenText(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(flattenText).join("");
+  if (isValidElement(node)) {
+    const props = (node as ReactElement<{ children?: ReactNode }>).props;
+    return flattenText(props?.children);
+  }
+  return "";
+}
+
 interface MarkdownProps {
   content: string;
 }
 
 function CodeBlock({ className, children }: { className?: string; children?: React.ReactNode }) {
   const [copied, setCopied] = useState(false);
-  const text = String(children ?? "").replace(/\n$/, "");
+  // Walk the React tree to extract just the source text — rehype-highlight
+  // gives us a forest of <span> tokens, not a flat string.
+  const text = flattenText(children).replace(/\n$/, "");
   const lang = className?.replace("hljs language-", "").replace("language-", "") || "text";
   const previewKind = detectPreviewKind(lang, text);
   const openPreview = usePreviewStore((s) => s.openPreview);
