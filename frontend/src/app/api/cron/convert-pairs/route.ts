@@ -140,6 +140,93 @@ Return ONLY the JSON object {"instruction": "...", "output": "..."}. No prose.`,
   strategic: `You are evolving a marketing training pair to be MORE STRATEGIC. Rewrite the Q&A so it ladders up to budget tradeoffs, portfolio prioritization, channel mix decisions, or CMO-level resource allocation. The instruction should sound like a CMO/VP question; the output should compare options with TAM/CAC/payback logic and recommend a default with caveats. Return ONLY the JSON object {"instruction": "...", "output": "..."}. No prose.`,
 };
 
+// ─────────────────────────────────────────────────────────────────
+// Robust JSON extractor for LLM evolution responses. The previous greedy
+// regex `/\{[\s\S]*\}/` + raw JSON.parse failed silently when the model
+// produced common malformations:
+//   - smart quotes ("…") instead of straight ("…")
+//   - literal newlines inside JSON string values (tactical's numbered steps)
+//   - markdown fences ```json …``` wrapping the object
+//   - trailing prose after the closing brace
+// That was killing the entire tactical lens (0 pairs/24h since prompt
+// relaxation). This walker counts braces with proper string/escape
+// awareness to find the first complete JSON object, then escapes raw
+// newlines inside its strings before parsing.
+// ─────────────────────────────────────────────────────────────────
+function extractJsonObject(raw: string): string | null {
+  const start = raw.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0;
+  let end = -1;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < raw.length; i++) {
+    const c = raw[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === "\\") { escaped = true; continue; }
+    if (c === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (c === "{") depth++;
+    else if (c === "}") {
+      depth--;
+      if (depth === 0) { end = i; break; }
+    }
+  }
+  if (end < 0) return null;
+  let candidate = raw.slice(start, end + 1)
+    .replace(/[“”]/g, '"')   // smart double quotes → straight
+    .replace(/[‘’]/g, "'");  // smart single quotes → straight
+  // Escape raw \n / \r / \t inside JSON strings — model often emits
+  // multi-line numbered steps as raw newlines, which break JSON.parse.
+  let out = "";
+  inString = false;
+  escaped = false;
+  for (const c of candidate) {
+    if (escaped) { out += c; escaped = false; continue; }
+    if (c === "\\") { out += c; escaped = true; continue; }
+    if (c === '"') { inString = !inString; out += c; continue; }
+    if (inString) {
+      if (c === "\n") { out += "\\n"; continue; }
+      if (c === "\r") { out += "\\r"; continue; }
+      if (c === "\t") { out += "\\t"; continue; }
+    }
+    out += c;
+  }
+  candidate = out;
+  return candidate;
+}
+
+function tryParseQAPair(raw: string): QAPair | null {
+  if (!raw) return null;
+  const candidate = extractJsonObject(raw);
+  if (!candidate) return null;
+  try {
+    return JSON.parse(candidate) as QAPair;
+  } catch {
+    return null;
+  }
+}
+
+// Source-leakage detector — catches phrases that imply DMOOP owns the
+// scraped source ("download our whitepaper", "log in to HubSpot to find…").
+// Used at INSERT time to immediately downgrade quality below the 0.7
+// retrieval floor instead of relying on periodic SQL cleanups.
+const LEAKAGE_PATTERNS = [
+  /\bdownload our (?:whitepaper|ebook|report|guide|template|case study)\b/i,
+  /\bour (?:whitepaper|ebook|report|content hub)\b/i,
+  /\bfrom (?:the |our )?(?:[a-z]+ )?content hub\b/i,
+  /\blog in to [a-z][a-z0-9 ]{2,30}? (?:download|access|find|search for)\b/i,
+  /\bsearch for the (?:whitepaper|ebook|report)\b/i,
+  /\bnavigate to (?:our|the [a-z]+ )?content hub\b/i,
+  /\baccess (?:our|the full) (?:whitepaper|ebook|report|guide)\b/i,
+  /\bdownload the (?:full )?(?:whitepaper|ebook|report) (?:here|now|today)\b/i,
+];
+
+function containsSourceLeakage(text: string | null | undefined): boolean {
+  if (!text) return false;
+  return LEAKAGE_PATTERNS.some((re) => re.test(text));
+}
+
 async function evolveOnce(
   groq: OpenAI,
   kind: EvolutionKind,
@@ -164,13 +251,14 @@ Evolve it per the system prompt and return the new pair as a JSON object.`;
         { role: "user", content: userPrompt },
       ],
       temperature: 0.7,
-      max_tokens: 1400,
+      // Bumped 1400 → 2000 so longer multi-step tactical answers don't
+      // get truncated mid-JSON (which silently dropped tactical pairs to 0).
+      max_tokens: 2000,
     });
 
     const text = response.choices[0]?.message?.content ?? "";
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    const obj = JSON.parse(match[0]) as QAPair;
+    const obj = tryParseQAPair(text);
+    if (!obj) return null;
     if (
       typeof obj.instruction !== "string" ||
       typeof obj.output !== "string" ||
@@ -216,20 +304,38 @@ Generate 3 training Q&A pairs in the required JSON format.`;
   });
 
   const text = response.choices[0]?.message?.content ?? "";
-  const match = text.match(/\[[\s\S]*\]/);
-  if (!match) return [];
+  // The originals are returned as a JSON ARRAY of pairs, not a single object.
+  // Same parse risks apply (smart quotes, raw newlines inside step lists);
+  // we use the same brace-aware/quote-aware fallback after a direct attempt.
+  const arrayMatch = text.match(/\[[\s\S]*\]/);
+  if (!arrayMatch) return [];
+  let pairs: QAPair[] = [];
   try {
-    const pairs = JSON.parse(match[0]) as QAPair[];
-    // Quality floor: instructions >= 15 chars, outputs >= 200 chars.
-    // Below 200 the answer is too thin to teach anything — was producing
-    // truncated stubs (12% of corpus) before this filter.
-    return pairs.filter(
-      (p) => typeof p.instruction === "string" && typeof p.output === "string" &&
-             p.instruction.length > 15 && p.output.length >= 200
-    );
+    pairs = JSON.parse(arrayMatch[0]) as QAPair[];
   } catch {
-    return [];
+    // Fallback: walk the array element-by-element using the object extractor.
+    // The JSON.parse of the whole array can fail if just ONE entry has a raw
+    // newline; this rescues the surviving entries.
+    const recovered: QAPair[] = [];
+    let cursor = 0;
+    const body = arrayMatch[0];
+    while (cursor < body.length) {
+      const rest = body.slice(cursor);
+      const candidate = tryParseQAPair(rest);
+      if (!candidate) break;
+      recovered.push(candidate);
+      // Skip past this object by re-locating the next `{` after the current one
+      const nextOpen = body.indexOf("{", cursor + 1);
+      if (nextOpen < 0) break;
+      cursor = nextOpen;
+    }
+    pairs = recovered;
   }
+  // Quality floor: instructions >= 15 chars, outputs >= 200 chars.
+  return pairs.filter(
+    (p) => typeof p.instruction === "string" && typeof p.output === "string" &&
+           p.instruction.length > 15 && p.output.length >= 200
+  );
 }
 
 export async function GET(req: NextRequest) {
@@ -296,6 +402,12 @@ export async function GET(req: NextRequest) {
       const pairs = await generatePairs(groq, row.asset_type, row.category, row.title, summary);
       const assetType = row.asset_type ?? "article";
       for (const p of pairs) {
+        // Server-side leakage guard: if the model emitted phrases like
+        // "download our whitepaper" or "log in to HubSpot to find…", the
+        // pair gets inserted with quality=0.5 so the retrieve RPC's 0.7
+        // floor skips it. Was previously cleaned via periodic SQL — now
+        // it's prevented at write time.
+        const originalQuality = containsSourceLeakage(p.output) ? 0.5 : 1.0;
         const { data: inserted, error } = await supa
           .from("training_pairs")
           .insert({
@@ -306,7 +418,7 @@ export async function GET(req: NextRequest) {
             output: p.output,
             source_url: row.url,
             source_title: row.title,
-            quality: 1.0,
+            quality: originalQuality,
             is_evolved: false,
           })
           .select("id")
@@ -329,6 +441,10 @@ export async function GET(req: NextRequest) {
             for (let i = 0; i < kinds.length; i++) {
               const evolved = evolvedResults[i];
               if (!evolved) { evolvedSkipped++; continue; }
+              // Same leakage guard on evolved pairs — evolutions are more
+              // likely to absorb source-doc voice from the parent if the LLM
+              // forgets the HARD RULES in the prompt.
+              const evQuality = containsSourceLeakage(evolved.output) ? 0.5 : 0.85;
               const { error: evErr } = await supa.from("training_pairs").insert({
                 intel_id: row.id,
                 intent: row.category,
@@ -337,7 +453,7 @@ export async function GET(req: NextRequest) {
                 output: evolved.output,
                 source_url: row.url,
                 source_title: row.title,
-                quality: 0.85, // evolved pairs are good but rank below originals
+                quality: evQuality, // 0.85 for clean, 0.5 if leakage detected
                 is_evolved: true,
                 parent_pair_id: parentId,
                 evolution_kind: kinds[i],
