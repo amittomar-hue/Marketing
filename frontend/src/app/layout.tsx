@@ -9,23 +9,62 @@ const poppins = Poppins({
   display: "swap",
 });
 
+const SITE_URL = "https://www.dmoop.com";
+const SITE_NAME = "DMOOP";
+const SITE_TITLE = "DMOOP — Enterprise Marketing Intelligence";
+const SITE_DESCRIPTION =
+  "DMOOP is the enterprise AI for the full marketing surface — SEO, AEO, GEO, ABM, ad copy, GTM strategy, brand voice. Upload brand docs, name your Brand Agent, paste any URL, and get answers grounded in 130+ marketing topics scraped every 6 hours.";
+
 export const metadata: Metadata = {
-  title: "DMOOP — Enterprise Marketing Intelligence",
-  description: "Self-learning marketing AI fine-tuned on your brand. Real-time intelligence, multi-channel content generation, RLMO-driven optimization.",
-  // Next.js auto-discovers app/icon.png + app/apple-icon.png — explicit
-  // config here makes the resolved URLs predictable for OG / browser
-  // tab tooling (Slack/Twitter/iMessage previews use these).
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_TITLE, template: "%s · DMOOP" },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: "DMOOP" }],
+  generator: "Next.js",
+  keywords: [
+    "marketing AI", "AI marketing", "brand agent",
+    "GTM strategy", "ABM playbook", "AEO", "GEO", "SEO",
+    "AI overviews", "generative engine optimization",
+    "marketing intelligence", "brand voice scoring",
+    "content marketing AI",
+  ],
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    locale: "en_US",
+    images: [{
+      url: "/opengraph-image",
+      width: 1200,
+      height: 630,
+      alt: "DMOOP — Enterprise Marketing Intelligence",
+    }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/opengraph-image"],
+  },
   // Cache-busting query string: browsers cache favicons in a separate
-  // store that hard-refresh (Ctrl+Shift+R) doesn't always clear. Bumping
-  // ?v=N here forces a re-fetch the next time the page loads anywhere.
-  // Increment when the icon source changes.
+  // store that hard-refresh (Ctrl+Shift+R) doesn't always clear.
   icons: {
-    icon: [
-      { url: "/icon.png?v=3", type: "image/png" },
-    ],
-    apple: [
-      { url: "/apple-icon.png?v=3", type: "image/png" },
-    ],
+    icon: [{ url: "/icon.png?v=3", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png?v=3", type: "image/png" }],
     shortcut: ["/icon.png?v=3"],
   },
 };
