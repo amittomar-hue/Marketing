@@ -15,14 +15,18 @@ export const metadata: Metadata = {
   // Next.js auto-discovers app/icon.png + app/apple-icon.png — explicit
   // config here makes the resolved URLs predictable for OG / browser
   // tab tooling (Slack/Twitter/iMessage previews use these).
+  // Cache-busting query string: browsers cache favicons in a separate
+  // store that hard-refresh (Ctrl+Shift+R) doesn't always clear. Bumping
+  // ?v=N here forces a re-fetch the next time the page loads anywhere.
+  // Increment when the icon source changes.
   icons: {
     icon: [
-      { url: "/icon.png", type: "image/png" },
+      { url: "/icon.png?v=3", type: "image/png" },
     ],
     apple: [
-      { url: "/apple-icon.png", type: "image/png" },
+      { url: "/apple-icon.png?v=3", type: "image/png" },
     ],
-    shortcut: ["/icon.png"],
+    shortcut: ["/icon.png?v=3"],
   },
 };
 
