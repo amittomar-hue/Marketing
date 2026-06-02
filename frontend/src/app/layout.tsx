@@ -12,6 +12,18 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "DMOOP — Enterprise Marketing Intelligence",
   description: "Self-learning marketing AI fine-tuned on your brand. Real-time intelligence, multi-channel content generation, RLMO-driven optimization.",
+  // Next.js auto-discovers app/icon.png + app/apple-icon.png — explicit
+  // config here makes the resolved URLs predictable for OG / browser
+  // tab tooling (Slack/Twitter/iMessage previews use these).
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-icon.png", type: "image/png" },
+    ],
+    shortcut: ["/icon.png"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
