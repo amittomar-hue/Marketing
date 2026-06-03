@@ -1,14 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useChatStore } from "@/lib/chat-store";
 import { streamChat } from "@/lib/stream-chat";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import {
   TrendingUp, Wand2, Mail, Target, Mic2, Crosshair,
   Search, ShieldCheck, Bot, Radar, Building2, Activity,
   Layers, BarChart3, Compass, Sparkles, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Pretty-case "amit_tomar" / "amit tomar" / "AMIT" → "Amit"
+// Pulls the first token only — "Amit Tomar" → "Amit".
+function firstNameFromMetaOrEmail(fullName?: string | null, email?: string | null): string {
+  const source = (fullName ?? email?.split("@")[0] ?? "").trim();
+  if (!source) return "there";
+  const first = source.split(/[\s._-]+/)[0] ?? source;
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
+// Local-time-aware salutation. Uses the browser's clock, not the server's,
+// so a user in IST at 7 PM sees "Good evening" even though Vercel's edge
+// region might be in UTC at 1:30 PM.
+function localGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 5)  return "Working late";
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  if (h < 22) return "Good evening";
+  return "Burning the midnight oil";
+}
 
 interface Suggestion {
   category: string;
@@ -69,6 +91,27 @@ const CATEGORIES = ["All", "Content", "Strategy", "Search", "Signals", "Reputati
 export default function WelcomeScreen() {
   const { newConversation, addMessage, updateMessage, selectedModel } = useChatStore();
   const [activeCategory, setActiveCategory] = useState("All");
+  const [firstName, setFirstName] = useState<string>("there");
+  const [greeting, setGreeting] = useState<string>(localGreeting());
+
+  // Pull the logged-in user's name from Supabase auth.user_metadata
+  // (set during signup) or fall back to the email prefix.
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled || !user) return;
+      const name = firstNameFromMetaOrEmail(
+        (user.user_metadata?.full_name as string | undefined) ?? null,
+        user.email
+      );
+      setFirstName(name);
+    });
+    // Keep the greeting accurate if the user leaves the tab open across an
+    // hour boundary (e.g. 4:55 PM → 5:01 PM should flip to "Good evening").
+    const t = setInterval(() => setGreeting(localGreeting()), 60_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
 
   const visible = activeCategory === "All"
     ? SUGGESTIONS
@@ -103,13 +146,13 @@ export default function WelcomeScreen() {
               </span>
             </div>
             <h1 className="text-[28px] sm:text-[36px] md:text-[40px] font-medium tracking-tight text-[var(--dmoop-text-primary)] mb-2 sm:mb-2.5 leading-tight">
-              Good evening, <span style={{
+              {greeting}, <span style={{
                 background: "var(--dmoop-gradient-accent)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 fontWeight: 700,
-              }}>Amit</span>
+              }}>{firstName}</span>
             </h1>
             <p className="text-[13px] sm:text-[14.5px] text-[var(--dmoop-text-secondary)] font-normal px-2">
               From SEO to ABM to buyer intent — what would you like to work on?
