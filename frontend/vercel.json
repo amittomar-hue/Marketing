@@ -12,20 +12,8 @@
       "schedule": "0 2 * * 1"
     },
     {
-      "path": "/api/cron/scrape-intel?slice=0",
+      "path": "/api/cron/scrape-intel",
       "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/cron/scrape-intel?slice=1",
-      "schedule": "0 12 * * *"
-    },
-    {
-      "path": "/api/cron/scrape-intel?slice=2",
-      "schedule": "0 18 * * *"
-    },
-    {
-      "path": "/api/cron/scrape-intel?slice=3",
-      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/cron/convert-pairs?limit=12",

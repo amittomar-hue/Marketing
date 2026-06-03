@@ -57,9 +57,6 @@ const TOPICS: Topic[] = [
   { category: "company_signals", asset_type: "article", query: "CMO changes marketing leadership moves this month", days: 30 },
 
   // ━━━━━━ EBOOKS (long-form guides, evergreen) ━━━━━━
-  // Reframed: drop "download" — many ebooks live as web-readable summaries
-  // or chapter excerpts. Add "summary" / "review" / "key takeaways" to surface
-  // article-style writeups of ebook content.
   { category: "seo",             asset_type: "ebook", query: '"SEO ebook" summary OR "complete SEO guide" chapter key takeaways 2026', days: 365 },
   { category: "abm",             asset_type: "ebook", query: '"ABM ebook" account-based marketing summary chapter key takeaways', days: 365 },
   { category: "demand_gen",      asset_type: "ebook", query: '"demand generation ebook" B2B SaaS summary chapter takeaways', days: 365 },
@@ -83,8 +80,6 @@ const TOPICS: Topic[] = [
   { category: "ad_copy",         asset_type: "whitepaper", query: 'advertising effectiveness whitepaper creative testing research', days: 365 },
 
   // ━━━━━━ PLAYBOOKS (tactical step-by-step) ━━━━━━
-  // "playbook" + "steps" / "framework" / "tactics" — these are blog-format
-  // playbook excerpts, easier for Tavily to surface than gated PDFs.
   { category: "abm",             asset_type: "playbook", query: '"ABM playbook" tier-1 enterprise tactics steps 2026', days: 180 },
   { category: "demand_gen",      asset_type: "playbook", query: '"demand gen playbook" pipeline tactics B2B 2026', days: 180 },
   { category: "seo",             asset_type: "playbook", query: '"SEO playbook" technical content link building tactics 2026', days: 180 },
@@ -110,10 +105,7 @@ const TOPICS: Topic[] = [
   { category: "competitor",      asset_type: "case_study", query: '"win-loss analysis case study" displacement competitive marketing', days: 365 },
   { category: "strategy",        asset_type: "case_study", query: '"GTM case study" product launch B2B SaaS results', days: 365 },
 
-  // ━━━━━━ SOCIAL POSTS (LinkedIn / X viral marketing) ━━━━━━
-  // Reframed: find ARTICLES that break down / analyze viral posts.
-  // (Tavily can't crawl LinkedIn directly — gated.) These ARTICLES contain
-  // the post + the structural analysis DMOOP needs to learn from.
+  // ━━━━━━ SOCIAL POSTS ━━━━━━
   { category: "ad_copy",         asset_type: "social_post", query: 'viral LinkedIn post breakdown hook structure marketing analysis', days: 90, topic: "general" },
   { category: "ad_copy",         asset_type: "social_post", query: '"best LinkedIn posts" examples B2B marketing 2026 teardown', days: 90 },
   { category: "demand_gen",      asset_type: "social_post", query: 'LinkedIn growth post analysis demand gen leader examples', days: 90 },
@@ -123,9 +115,7 @@ const TOPICS: Topic[] = [
   { category: "ad_copy",         asset_type: "social_post", query: 'LinkedIn ad creative organic post viral examples B2B marketing analysis 2026', days: 60 },
   { category: "buyer_signals",   asset_type: "social_post", query: 'sales LinkedIn post examples intent data B2B leaders breakdown', days: 90 },
 
-  // ━━━━━━ AD CAMPAIGNS (creative breakdowns, campaign analyses) ━━━━━━
-  // Use "ad teardown" / "ad breakdown" — these phrases match how MarketerHire,
-  // Marketing Examined, Demand Curve etc. title their content.
+  // ━━━━━━ AD CAMPAIGNS ━━━━━━
   { category: "ad_copy",         asset_type: "ad_campaign", query: '"ad teardown" 2026 OR "campaign teardown" B2B SaaS marketing', days: 180 },
   { category: "ad_copy",         asset_type: "ad_campaign", query: '"creative breakdown" Meta Facebook ads 2026 marketing analysis', days: 180 },
   { category: "ad_copy",         asset_type: "ad_campaign", query: 'Super Bowl 2026 ads creative analysis ROI behind-the-scenes', days: 365 },
@@ -136,7 +126,7 @@ const TOPICS: Topic[] = [
   { category: "trend",           asset_type: "ad_campaign", query: '"best ad campaigns" 2026 marketing advertising effectiveness breakdown', days: 365 },
   { category: "trend",           asset_type: "ad_campaign", query: 'Cannes Lions 2026 winning campaigns analysis creative effectiveness', days: 365 },
 
-  // ━━━━━━ REPORTS (Gartner / Forrester / McKinsey style) ━━━━━━
+  // ━━━━━━ REPORTS ━━━━━━
   { category: "trend",           asset_type: "report", query: 'Gartner CMO Spend Survey 2026 marketing budget research', days: 365 },
   { category: "abm",             asset_type: "report", query: 'Forrester ABM benchmark report 2026 enterprise marketing', days: 365 },
   { category: "demand_gen",      asset_type: "report", query: 'Pipeline benchmark report B2B SaaS marketing 2026', days: 365 },
@@ -147,9 +137,7 @@ const TOPICS: Topic[] = [
   { category: "strategy",        asset_type: "report", query: 'B2B marketing maturity model report Forrester research', days: 365 },
   { category: "orm",             asset_type: "report", query: 'consumer trust brand reputation report Edelman 2026', days: 365 },
 
-  // ━━━━━━ NEWSLETTERS (Morning Brew, TLDR Marketing, MarketingProfs) ━━━━━━
-  // Use "marketing newsletter recap" and "this week in marketing" — these
-  // phrases match how editorial roundup posts are titled.
+  // ━━━━━━ NEWSLETTERS ━━━━━━
   { category: "trend",           asset_type: "newsletter", query: '"this week in marketing" recap top stories 2026', days: 14, topic: "news" },
   { category: "trend",           asset_type: "newsletter", query: 'marketing newsletter recap weekly B2B SaaS trends 2026', days: 14, topic: "news" },
   { category: "ad_copy",         asset_type: "newsletter", query: 'advertising newsletter recap weekly ad campaigns 2026', days: 14 },
@@ -158,9 +146,7 @@ const TOPICS: Topic[] = [
   { category: "analytics",       asset_type: "newsletter", query: 'marketing analytics newsletter weekly attribution recap 2026', days: 14 },
   { category: "company_signals", asset_type: "newsletter", query: 'B2B marketing newsletter funding hiring company signals 2026', days: 14, topic: "news" },
 
-  // ━━━━━━ PODCASTS (show notes / transcripts) ━━━━━━
-  // Use "podcast episode" + "transcript" or specific show names. Most podcasts
-  // post show notes with key quotes — Tavily can crawl those.
+  // ━━━━━━ PODCASTS ━━━━━━
   { category: "demand_gen",      asset_type: "podcast", query: '"podcast episode" demand gen B2B SaaS Pavilion show notes 2026', days: 180 },
   { category: "abm",             asset_type: "podcast", query: '"podcast episode" ABM Demandbase 6sense show notes 2026', days: 180 },
   { category: "seo",             asset_type: "podcast", query: '"podcast episode" SEO Search Engine Journal show notes 2026', days: 180 },
@@ -170,7 +156,6 @@ const TOPICS: Topic[] = [
   { category: "analytics",       asset_type: "podcast", query: '"podcast episode" marketing attribution analytics show notes 2026', days: 180 },
 
   // ━━━━━━ VIDEO / WEBINAR ━━━━━━
-  // Use "webinar recap" or "webinar summary" — many vendors post written recaps.
   { category: "abm",             asset_type: "video", query: '"webinar recap" ABM B2B marketing tactics 2026 takeaways', days: 180 },
   { category: "demand_gen",      asset_type: "video", query: '"webinar summary" demand gen B2B SaaS 2026 takeaways', days: 180 },
   { category: "buyer_signals",   asset_type: "video", query: '"webinar recap" intent data Bombora 6sense 2026 takeaways', days: 180 },
@@ -194,12 +179,19 @@ const TOPICS: Topic[] = [
   { category: "company_signals", asset_type: "guide", query: '"guide" company signal triggers hiring funding B2B sales', days: 180 },
 ];
 
-// Asset types with historically sparse hit rates get a larger Tavily window.
-// (Confirmed by data audit: social_post / ad_campaign / newsletter / podcast /
-// video / ebook / playbook produced very few pairs vs articles/reports/case_studies.)
+// Asset types with sparse hit rates get a larger Tavily window.
 const SPARSE_ASSET_TYPES = new Set<AssetType>([
   "social_post", "ad_campaign", "newsletter", "podcast", "video", "ebook", "playbook",
 ]);
+
+// Path B (Tavily free-tier safe): no ?slice= param? Then auto-rotate
+// based on day-of-year so the full TOPICS list cycles across multiple
+// days. Math:
+//   130 queries / 9 slices ≈ 14 queries/day
+//   14 × 2 credits (advanced) × 30 days = 840 credits/month
+//   (fits inside 1,000 free quota with 16% headroom)
+// Each topic gets revisited ~3-4 times per month.
+const AUTO_ROTATE_SLICES = 9;
 
 // Diagnostic state: the FIRST Tavily failure per scrape run gets stashed
 // here so the route response can include the real error. Was silently
@@ -256,14 +248,31 @@ export async function GET(req: NextRequest) {
   const supa = getSupabase();
   if (!supa) return NextResponse.json({ error: "Supabase missing" }, { status: 503 });
 
-  // Allow slicing for parallel cron runs (slice=0/1/2/3 for quarters)
+  // Slicing strategy:
+  // - ?slice=N (0..AUTO_ROTATE_SLICES-1) — explicit, used for manual triggers
+  //   or staged rollout. Falls back to slice=0 if out of range.
+  // - No ?slice param — AUTO-ROTATE: pick the slice based on day-of-year
+  //   modulo AUTO_ROTATE_SLICES. Cycles through the entire TOPICS list
+  //   across 9 daily runs. Fits Tavily's 1,000 credits/month free quota
+  //   (≈14 queries/day × 2 credits × 30 days = 840 credits).
   const url = req.nextUrl;
-  const slice = url.searchParams.get("slice");
-  let topicsForRun = TOPICS;
-  if (slice) {
-    const totalSlices = 4;
-    const sliceIdx = parseInt(slice, 10);
-    const size = Math.ceil(TOPICS.length / totalSlices);
+  const sliceParam = url.searchParams.get("slice");
+  const allTopicsFlag = url.searchParams.get("all") === "1";
+  const size = Math.ceil(TOPICS.length / AUTO_ROTATE_SLICES);
+  let sliceIdx: number;
+  let topicsForRun: typeof TOPICS;
+  if (allTopicsFlag) {
+    sliceIdx = -1;
+    topicsForRun = TOPICS;
+  } else if (sliceParam !== null) {
+    sliceIdx = Math.max(0, Math.min(AUTO_ROTATE_SLICES - 1, parseInt(sliceParam, 10) || 0));
+    topicsForRun = TOPICS.slice(sliceIdx * size, (sliceIdx + 1) * size);
+  } else {
+    // Auto-rotate by day-of-year — every UTC day picks the next slice.
+    const now = new Date();
+    const start = Date.UTC(now.getUTCFullYear(), 0, 0);
+    const dayOfYear = Math.floor((now.getTime() - start) / 86400000);
+    sliceIdx = dayOfYear % AUTO_ROTATE_SLICES;
     topicsForRun = TOPICS.slice(sliceIdx * size, (sliceIdx + 1) * size);
   }
 
@@ -328,7 +337,10 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     run_id: runId,
-    topics: topicsForRun.length,
+    topics_total: TOPICS.length,
+    slice_idx: sliceIdx,
+    slice_size: topicsForRun.length,
+    auto_rotate_slices: AUTO_ROTATE_SLICES,
     items_added: added,
     items_skipped: skipped,
     duration_ms: Date.now() - startedAt,
