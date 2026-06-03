@@ -201,14 +201,17 @@ const SPARSE_ASSET_TYPES = new Set<AssetType>([
   "social_post", "ad_campaign", "newsletter", "podcast", "video", "ebook", "playbook",
 ]);
 
+// Diagnostic state: the FIRST Tavily failure per scrape run gets stashed
+// here so the route response can include the real error. Was silently
+// returning null on every failure, hiding 401/403/429/etc problems.
+const tavilyDiag: { status?: number; statusText?: string; body?: string; error?: string } = {};
+
 async function tavilySearch(
   query: string,
   apiKey: string,
   opts: { days: number; topic: "news" | "general"; assetType: AssetType }
 ): Promise<TavilyResponse | null> {
   try {
-    // Sparse asset types pull 10 results instead of 5 to compensate for lower
-    // signal density on these niches.
     const maxResults = SPARSE_ASSET_TYPES.has(opts.assetType) ? 10 : 5;
     const res = await fetch("https://api.tavily.com/search", {
       method: "POST",
@@ -223,9 +226,19 @@ async function tavilySearch(
         days: opts.days,
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (!tavilyDiag.status) {
+        tavilyDiag.status = res.status;
+        tavilyDiag.statusText = res.statusText;
+        tavilyDiag.body = (await res.text().catch(() => "")).slice(0, 300);
+      }
+      return null;
+    }
     return await res.json();
-  } catch {
+  } catch (e) {
+    if (!tavilyDiag.error) {
+      tavilyDiag.error = e instanceof Error ? e.message : String(e);
+    }
     return null;
   }
 }
@@ -319,5 +332,8 @@ export async function GET(req: NextRequest) {
     items_added: added,
     items_skipped: skipped,
     duration_ms: Date.now() - startedAt,
+    tavily_key_set: !!tavilyKey,
+    tavily_key_prefix: tavilyKey?.slice(0, 6) ?? null,
+    tavily_first_failure: Object.keys(tavilyDiag).length ? tavilyDiag : null,
   });
 }
