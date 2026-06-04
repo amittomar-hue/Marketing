@@ -303,9 +303,14 @@ export async function POST(req: NextRequest) {
   // Llama Guard 4 moderates the last user message + a regex/LLM-judge
   // classifier looks for prompt-injection attempts. If either flags,
   // we return a polished refusal instead of calling the main model.
+  // isFollowUp = true once the conversation already has an assistant reply;
+  // tells the injection detector to skip its over-zealous LLM judge layer
+  // for in-conversation refinement requests like "shorter version" /
+  // "translate to French" / "in US English". The regex layer still runs.
+  const isFollowUp = messages.some((m) => m.role === "assistant" && m.content.trim().length > 0);
   const [inputModeration, injection] = await Promise.all([
     moderateText(userQuery, "user"),
-    detectPromptInjection(userQuery),
+    detectPromptInjection(userQuery, { isFollowUp }),
   ]);
 
   if (injection.detected) {
