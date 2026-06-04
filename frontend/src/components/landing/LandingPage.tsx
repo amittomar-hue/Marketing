@@ -9,7 +9,7 @@ import {
   Layers, BarChart3, Activity, ShieldCheck, Brain, Zap, CheckCircle2,
   TrendingUp, Building2, Crosshair, Mail, Mic2, Wand2,
   BookOpen, FileText, Download, Paperclip, Mic, Hammer, Link as LinkIcon,
-  Database, RefreshCw,
+  Database, RefreshCw, Bot,
 } from "lucide-react";
 
 const CAPABILITIES = [
@@ -134,6 +134,9 @@ export default function LandingPage() {
             </Link>
             <Link href="#models" className="hidden md:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
               Models
+            </Link>
+            <Link href="#resources" className="hidden md:block px-3 py-2 text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] transition-colors">
+              Resources
             </Link>
             {signedIn ? (
               <Link href="/chat" className="h-8 sm:h-9 px-3 sm:px-4 rounded-lg dmoop-btn-primary text-[12.5px] sm:text-[13px] font-semibold flex items-center gap-1.5 shrink-0">
@@ -606,6 +609,150 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Product Resources ───────────────────────────── */}
+      <section id="resources" className="relative py-12 sm:py-24 border-t border-[var(--dmoop-border-soft)] bg-gradient-to-b from-transparent to-[#fbf6ec]/30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-8 sm:mb-12">
+            <p className="text-[10.5px] sm:text-[11px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase mb-2.5 sm:mb-3">
+              Resources
+            </p>
+            <h2 className="text-[24px] sm:text-[40px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-2.5 sm:mb-3 leading-tight px-2">
+              How DMOOP actually works.
+            </h2>
+            <p className="text-[13px] sm:text-[15px] text-[var(--dmoop-text-secondary)] max-w-2xl mx-auto px-2">
+              The training corpus, the asset taxonomy, the safety layers, and the open architecture — what powers the answers you see, in detail.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {/* Marketing Intel Schema */}
+            <ResourceCard
+              icon={Radar}
+              category="Reference"
+              accent="from-blue-500 to-cyan-500"
+              iconBg="bg-blue-50"
+              iconColor="text-blue-600"
+              title="The Marketing Intel Schema"
+              description="130+ Tavily queries × 13 asset types × 13 marketing intents drive the corpus. Auto-rotates across 9 daily slices."
+              bullets={[
+                "Asset types: article · report · case study · whitepaper · playbook · ebook · guide · template · social post · ad campaign · newsletter · podcast · video",
+                "Intents: SEO · AEO/GEO · ABM · demand gen · ad copy · email · strategy · analytics · ORM · competitor · buyer signals · company signals · trend",
+                "Refreshes daily; every topic revisited 3–4× per month",
+              ]}
+              actionLabel="Open in Admin → Intel"
+              actionHref="/admin"
+            />
+
+            {/* Brand Agent setup */}
+            <ResourceCard
+              icon={BookOpen}
+              category="Guide"
+              accent="from-[#d8593a] to-[#b03e21]"
+              iconBg="bg-[#fbf3ee]"
+              iconColor="text-[var(--dmoop-accent)]"
+              title="Brand Agent setup in 3 minutes"
+              description="Upload your brand docs once, name your agent, generate every asset on-voice. The Brand Library is per-user, indexed with pg_trgm similarity."
+              bullets={[
+                "Drop PDFs, Word, Excel, PowerPoint — parsed locally in browser (PII auto-redacted)",
+                "Name your agent (e.g. 'Maya for Acme Co') — it appears in the Brand Agent menu",
+                "9 asset templates ready: landing page · LinkedIn post · cold email · whitepaper · sales deck · case study",
+              ]}
+              actionLabel="Set up Brand Library"
+              actionHref="/brand"
+            />
+
+            {/* AEO / GEO methodology */}
+            <ResourceCard
+              icon={Bot}
+              category="Methodology"
+              accent="from-fuchsia-500 to-pink-500"
+              iconBg="bg-fuchsia-50"
+              iconColor="text-fuchsia-600"
+              title="AEO + GEO — get cited by AI"
+              description="Answer Engine Optimization (Google AI Overviews, Bing Copilot) and Generative Engine Optimization (ChatGPT, Claude, Perplexity, Gemini)."
+              bullets={[
+                "AEO: structured answer formats with schema markup for AI Overviews / SGE",
+                "GEO: authority signals + citation-ready content for LLM training & retrieval",
+                "DMOOP's own homepage ships 4 JSON-LD schemas as a working reference",
+              ]}
+              actionLabel="Ask DMOOP for an audit"
+              actionHref="/chat?q=run%20an%20AEO%20audit"
+            />
+
+            {/* Self-Learning Pipeline */}
+            <ResourceCard
+              icon={Brain}
+              category="Architecture"
+              accent="from-amber-500 to-orange-500"
+              iconBg="bg-amber-50"
+              iconColor="text-amber-600"
+              title="The self-learning loop"
+              description="Scrape → Convert → Evolve → Retrieve. The Tuned model's primary knowledge lives in the continuously-refreshed training_pairs corpus."
+              bullets={[
+                "Scrape: Tavily pulls 14 marketing queries/day across 13 asset types",
+                "Convert: Groq turns articles into asset-type-aware Q&A pairs (3 per article)",
+                "Evolve: WizardLM-style evol-instruct creates 3 variants per original (specific / tactical / strategic)",
+                "Retrieve: trigram-similarity RAG injects top-5 pairs as Tuned's primary system context",
+              ]}
+              actionLabel="See live corpus stats"
+              actionHref="/admin"
+            />
+
+            {/* Responsible AI Guardrails */}
+            <ResourceCard
+              icon={ShieldCheck}
+              category="Trust & Safety"
+              accent="from-teal-500 to-emerald-500"
+              iconBg="bg-emerald-50"
+              iconColor="text-emerald-600"
+              title="Responsible-AI guardrails"
+              description="Four layers run on every chat to keep DMOOP enterprise-pitchable without slowing the response down."
+              bullets={[
+                "Input + output moderation via Llama Guard 4 (MLCommons hazard taxonomy)",
+                "Prompt-injection detection: 10-pattern regex + LLM judge (skipped on follow-ups)",
+                "PII redaction on brand uploads — browser-side, before bytes reach the server",
+                "All incidents logged to /admin → Safety with kind / severity / excerpt / action",
+              ]}
+              actionLabel="View Safety tab"
+              actionHref="/admin"
+            />
+
+            {/* Open Source / Architecture */}
+            <ResourceCard
+              icon={Layers}
+              category="Open Source"
+              accent="from-indigo-500 to-purple-500"
+              iconBg="bg-indigo-50"
+              iconColor="text-indigo-600"
+              title="Open architecture · MIT-style"
+              description="The full DMOOP repo — Next.js 16 + React 19 + Supabase + Vercel — with every migration, prompt, and config in the open."
+              bullets={[
+                "Next.js App Router · Edge runtimes for OG + auth · Node runtimes for chat + cron",
+                "Supabase Postgres with pg_trgm for similarity search · RLS-policied tables",
+                "Groq LLM provider (free tier) with fallback chains (Llama 4 Scout → Kimi-k2 → 8B)",
+                "Resend SMTP · Tavily search · jspdf / docx / xlsx / pptxgenjs for client-side export",
+              ]}
+              actionLabel="View source on GitHub"
+              actionHref="https://github.com/amittomar-hue/Marketing"
+              external
+            />
+          </div>
+
+          {/* Footer strip */}
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-[11.5px] text-[var(--dmoop-text-tertiary)]">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 size={11} className="text-emerald-600" />
+              Every number cited above maps to a real, queryable row in the database
+            </span>
+            <span className="hidden sm:block h-3 w-px bg-[var(--dmoop-border-soft)]" />
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 size={11} className="text-emerald-600" />
+              No vendor lock-in — swap Groq/Supabase/Vercel without rewriting business logic
+            </span>
+          </div>
+        </div>
+      </section>
+
       {/* ── Final CTA ───────────────────────────────────── */}
       <section className="relative py-12 sm:py-24 border-t border-[var(--dmoop-border-soft)]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
@@ -651,6 +798,79 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Card used in the Product Resources section. Each card has a category
+// chip, an icon tile with hover scale, 3-5 bullet points, and a CTA
+// that links into the app (in-product) or out to the public repo.
+// ─────────────────────────────────────────────────────────────────
+function ResourceCard({
+  icon: Icon,
+  category,
+  accent,
+  iconBg,
+  iconColor,
+  title,
+  description,
+  bullets,
+  actionLabel,
+  actionHref,
+  external = false,
+}: {
+  icon: React.ComponentType<{ size: number; className?: string; strokeWidth?: number }>;
+  category: string;
+  accent: string;
+  iconBg: string;
+  iconColor: string;
+  title: string;
+  description: string;
+  bullets: string[];
+  actionLabel: string;
+  actionHref: string;
+  external?: boolean;
+}) {
+  return (
+    <div className="group relative p-5 rounded-2xl bg-[var(--dmoop-gradient-card)] border border-[var(--dmoop-border-soft)] overflow-hidden dmoop-card dmoop-stagger-in flex flex-col">
+      {/* Hover glow */}
+      <div className={`absolute -top-16 -right-16 w-40 h-40 rounded-full bg-gradient-to-br ${accent} opacity-0 group-hover:opacity-20 blur-2xl transition-opacity duration-500 pointer-events-none`} />
+
+      <div className="relative flex items-start justify-between mb-3">
+        <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center transition-transform duration-300 group-hover:scale-110`}
+          style={{ boxShadow: "var(--dmoop-shadow-xs)" }}>
+          <Icon size={17} className={iconColor} strokeWidth={2.2} />
+        </div>
+        <span className="text-[9.5px] font-bold tracking-wider uppercase text-[var(--dmoop-text-tertiary)] px-1.5 py-0.5 rounded-md bg-[#f5f1ea]">
+          {category}
+        </span>
+      </div>
+
+      <h3 className="relative text-[15px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-1.5">
+        {title}
+      </h3>
+      <p className="relative text-[12.5px] text-[var(--dmoop-text-secondary)] leading-relaxed mb-3">
+        {description}
+      </p>
+
+      <ul className="relative space-y-1.5 mb-4 flex-1">
+        {bullets.map((b, i) => (
+          <li key={i} className="text-[11.5px] text-[var(--dmoop-text-primary)] leading-[1.5] flex items-start gap-1.5">
+            <span className="text-[var(--dmoop-accent)] mt-1 shrink-0">▸</span>
+            <span>{b}</span>
+          </li>
+        ))}
+      </ul>
+
+      <Link
+        href={actionHref}
+        {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        className="relative inline-flex items-center justify-between gap-2 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-[var(--dmoop-text-primary)] bg-white border border-[var(--dmoop-border-soft)] hover:bg-[#fbf3ee] hover:border-[var(--dmoop-accent)] transition-all duration-200 mt-auto"
+      >
+        <span>{actionLabel}</span>
+        <ArrowRight size={12} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+      </Link>
     </div>
   );
 }
