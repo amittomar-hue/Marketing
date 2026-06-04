@@ -351,3 +351,127 @@ h1, h2, h3, h4, h5, h6 {
 /* Override default first/last margins inside markdown blocks */
 .dmoop-md > :first-child { margin-top: 0; }
 .dmoop-md > :last-child  { margin-bottom: 0; }
+
+/* Long-form prose styles for /resources/[slug] reader pages */
+.resource-prose {
+  color: var(--dmoop-text-primary);
+  font-size: 16px;
+  line-height: 1.7;
+}
+.resource-prose > :first-child { margin-top: 0; }
+.resource-prose > :last-child  { margin-bottom: 0; }
+.resource-prose h2 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--dmoop-text-primary);
+  margin-top: 2.25rem;
+  margin-bottom: 0.9rem;
+  line-height: 1.25;
+}
+.resource-prose h3 {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--dmoop-text-primary);
+  margin-top: 1.6rem;
+  margin-bottom: 0.6rem;
+  line-height: 1.3;
+}
+.resource-prose p {
+  margin-top: 0;
+  margin-bottom: 1.15rem;
+  color: var(--dmoop-text-primary);
+}
+.resource-prose strong { font-weight: 600; color: var(--dmoop-text-primary); }
+.resource-prose em { font-style: italic; }
+.resource-prose ul,
+.resource-prose ol {
+  margin: 0 0 1.2rem 0;
+  padding-left: 1.5rem;
+}
+.resource-prose ul { list-style: disc; }
+.resource-prose ol { list-style: decimal; }
+.resource-prose ul li::marker { color: var(--dmoop-accent); }
+.resource-prose ol li::marker { color: var(--dmoop-accent); font-weight: 600; }
+.resource-prose li {
+  margin: 0.35rem 0;
+  padding-left: 0.35rem;
+  color: var(--dmoop-text-primary);
+}
+.resource-prose li > p { margin-bottom: 0.35rem; }
+.resource-prose blockquote {
+  border-left: 3px solid var(--dmoop-accent);
+  padding: 0.4rem 1rem;
+  margin: 1.25rem 0;
+  color: var(--dmoop-text-secondary);
+  background: rgba(193,74,42,0.04);
+  border-radius: 0 6px 6px 0;
+  font-style: italic;
+}
+.resource-prose a {
+  color: var(--dmoop-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.resource-prose a:hover { color: var(--dmoop-accent-rich); }
+.resource-prose code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: 0.88em;
+  background: #f5f1ea;
+  color: var(--dmoop-text-primary);
+  padding: 0.12em 0.4em;
+  border-radius: 4px;
+}
+.resource-prose pre {
+  background: #2a2521;
+  color: #f5ede2;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1.25rem 0;
+}
+.resource-prose pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: 0.9em;
+}
+.resource-prose hr {
+  border: 0;
+  border-top: 1px solid var(--dmoop-border-soft);
+  margin: 2rem 0;
+}
+.resource-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 14px;
+  border: 1px solid var(--dmoop-border-soft);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.resource-prose thead th {
+  background: #f9f5ee;
+  color: var(--dmoop-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--dmoop-border-soft);
+}
+.resource-prose tbody td {
+  padding: 0.55rem 0.75rem;
+  border-top: 1px solid var(--dmoop-border-soft);
+  color: var(--dmoop-text-primary);
+  vertical-align: top;
+}
+.resource-prose tbody tr:nth-child(even) { background: #fbf8f1; }
+
+@media (min-width: 640px) {
+  .resource-prose { font-size: 17px; line-height: 1.75; }
+  .resource-prose h2 { font-size: 28px; margin-top: 2.6rem; }
+  .resource-prose h3 { font-size: 21px; margin-top: 1.9rem; }
+}
