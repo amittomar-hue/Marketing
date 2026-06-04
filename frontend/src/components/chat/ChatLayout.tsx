@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useChatStore } from "@/lib/chat-store";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import Sidebar from "./Sidebar";
 import WelcomeScreen from "./WelcomeScreen";
 import MessageThread from "./MessageThread";
@@ -34,6 +35,33 @@ export default function ChatLayout() {
   const selectedModel = useChatStore((s) => s.selectedModel);
   const deleteConversation = useChatStore((s) => s.deleteConversation);
   const renameConversation = useChatStore((s) => s.renameConversation);
+  const hydrateFromServer = useChatStore((s) => s.hydrateFromServer);
+  const unbind = useChatStore((s) => s.unbind);
+
+  // Cross-device chat sync: pull this user's conversations from Supabase
+  // on sign-in and merge with anything localStorage still has. Re-subscribes
+  // on auth state changes so a sign-out wipes the in-memory list and a
+  // fresh sign-in re-hydrates from the new user's rows.
+  useEffect(() => {
+    const sb = createSupabaseBrowserClient();
+    let cancelled = false;
+
+    sb.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled) return;
+      if (user) void hydrateFromServer(user.id);
+    });
+
+    const { data: sub } = sb.auth.onAuthStateChange((_evt, session) => {
+      if (cancelled) return;
+      if (session?.user) void hydrateFromServer(session.user.id);
+      else unbind();
+    });
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, [hydrateFromServer, unbind]);
   const current = getModel(selectedModel);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
