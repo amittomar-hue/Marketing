@@ -324,24 +324,26 @@ export default function AdminPage() {
           <p className="text-[12.5px] sm:text-[13.5px] text-[var(--dmoop-text-secondary)] mt-1">All user activity + live marketing intel. Visible only to admins.</p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 mb-6 border-b border-[var(--dmoop-border-soft)]">
+        {/* Tabs — horizontally scrollable on mobile so all 5 fit any screen.
+            Labels shorten on small screens, scrollbar hidden via utility class. */}
+        <div className="flex items-center gap-0.5 sm:gap-1 mb-6 border-b border-[var(--dmoop-border-soft)] overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 dmoop-no-scrollbar">
           {[
-            { key: "prompts" as const, label: "User Prompts", icon: MessageSquare },
-            { key: "users" as const, label: "Users", icon: Users },
-            { key: "intel" as const, label: "Marketing Intel", icon: Radar },
-            { key: "learning" as const, label: "Self-Learning", icon: Brain },
-            { key: "safety" as const, label: "Safety", icon: Shield },
+            { key: "prompts" as const, label: "User Prompts", short: "Prompts", icon: MessageSquare },
+            { key: "users" as const, label: "Users", short: "Users", icon: Users },
+            { key: "intel" as const, label: "Marketing Intel", short: "Intel", icon: Radar },
+            { key: "learning" as const, label: "Self-Learning", short: "Learning", icon: Brain },
+            { key: "safety" as const, label: "Safety", short: "Safety", icon: Shield },
           ].map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 -mb-px text-[13px] font-semibold border-b-2 transition-all duration-200",
+                "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 -mb-px text-[12px] sm:text-[13px] font-semibold border-b-2 transition-all duration-200 shrink-0 whitespace-nowrap",
                 tab === t.key
                   ? "text-[var(--dmoop-accent)] border-[var(--dmoop-accent)]"
                   : "text-[var(--dmoop-text-secondary)] border-transparent hover:text-[var(--dmoop-text-primary)]"
               )}>
               <t.icon size={13} strokeWidth={2.2} />
-              {t.label}
+              <span className="sm:hidden">{t.short}</span>
+              <span className="hidden sm:inline">{t.label}</span>
             </button>
           ))}
         </div>
@@ -815,25 +817,26 @@ function IntelPanel({
           </div>
         </div>
 
-        {/* Pipeline KPIs */}
+        {/* Pipeline KPIs — text sizes shrink on mobile so 3-col layout
+            stays readable at 320px. Subtitle wraps to new line via flex-col. */}
         {totals && (
-          <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-[var(--dmoop-border-soft)]">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-4 pt-4 border-t border-[var(--dmoop-border-soft)]">
             <div className="text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">Intel scraped</p>
-              <p className="text-[22px] font-semibold text-[var(--dmoop-text-primary)] tracking-tight mt-0.5">{totals.intel_total.toLocaleString()}</p>
+              <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] leading-tight">Intel scraped</p>
+              <p className="text-[16px] sm:text-[22px] font-semibold text-[var(--dmoop-text-primary)] tracking-tight mt-0.5">{totals.intel_total.toLocaleString()}</p>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">Pending convert</p>
-              <p className="text-[22px] font-semibold text-amber-600 tracking-tight mt-0.5">{totals.intel_pending_conversion.toLocaleString()}</p>
+              <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] leading-tight">Pending convert</p>
+              <p className="text-[16px] sm:text-[22px] font-semibold text-amber-600 tracking-tight mt-0.5">{totals.intel_pending_conversion.toLocaleString()}</p>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">Training pairs</p>
-              <p className="text-[22px] font-semibold text-emerald-600 tracking-tight mt-0.5">{totals.training_pairs_total.toLocaleString()}</p>
+              <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] leading-tight">Training pairs</p>
+              <p className="text-[16px] sm:text-[22px] font-semibold text-emerald-600 tracking-tight mt-0.5">{totals.training_pairs_total.toLocaleString()}</p>
               {(totals.training_pairs_original ?? 0) > 0 && (
-                <p className="text-[10px] text-[var(--dmoop-text-tertiary)] mt-0.5">
-                  <span className="text-emerald-700 font-semibold">{(totals.training_pairs_original ?? 0).toLocaleString()}</span> original
+                <p className="text-[9px] sm:text-[10px] text-[var(--dmoop-text-tertiary)] mt-0.5 leading-tight">
+                  <span className="text-emerald-700 font-semibold">{(totals.training_pairs_original ?? 0).toLocaleString()}</span> orig
                   {(totals.training_pairs_evolved ?? 0) > 0 && (
-                    <> · <span className="text-violet-700 font-semibold">{(totals.training_pairs_evolved ?? 0).toLocaleString()}</span> evolved (4× boost)</>
+                    <> · <span className="text-violet-700 font-semibold">{(totals.training_pairs_evolved ?? 0).toLocaleString()}</span> evolved</>
                   )}
                 </p>
               )}
@@ -1170,7 +1173,8 @@ function UsersPanel({
           const primaryModel = u.models_used[0] ?? "—";
           return (
             <button key={u.id ?? "anon"} onClick={() => onOpen(u.id)}
-              className="w-full text-left grid sm:grid-cols-[2fr_1.4fr_1fr_1fr_1.2fr_0.8fr_24px] gap-3 px-4 sm:px-5 py-3 sm:py-3.5 border-b border-[var(--dmoop-border-soft)] last:border-0 hover:bg-[#faf6ef] transition-colors items-center">
+              className="w-full text-left flex flex-col sm:grid sm:grid-cols-[2fr_1.4fr_1fr_1fr_1.2fr_0.8fr_24px] gap-2.5 sm:gap-3 px-4 sm:px-5 py-3 sm:py-3.5 border-b border-[var(--dmoop-border-soft)] last:border-0 hover:bg-[#faf6ef] transition-colors sm:items-center">
+              {/* Row 1 on mobile (col 1 on desktop): avatar + email + chevron */}
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
                   u.is_anonymous ? "bg-slate-100" : "bg-[#fbf3ee]")}>
@@ -1183,12 +1187,57 @@ function UsersPanel({
                     {u.is_anonymous ? "Anonymous sessions" : (u.email ?? "—")}
                   </p>
                   <p className="text-[10.5px] text-[var(--dmoop-text-tertiary)] truncate">
-                    {u.is_anonymous ? "Unauthenticated users" : (u.id ? u.id.slice(0, 8) + "…" : "—")}
+                    {u.is_anonymous
+                      ? "Unauthenticated users"
+                      : (
+                        <>
+                          <span>{fmtTimeAgo(u.last_active)}</span>
+                          {u.signed_up && (
+                            <span className="sm:hidden">
+                              {" · joined "}
+                              {new Date(u.signed_up).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                            </span>
+                          )}
+                        </>
+                      )}
                   </p>
                 </div>
+                <ChevronRight size={14} className="text-[var(--dmoop-text-tertiary)] shrink-0 sm:hidden" />
               </div>
 
-              <div className="text-[11.5px]">
+              {/* Row 2 on mobile: condensed key metrics in one flex row */}
+              <div className="sm:hidden flex items-center gap-3 flex-wrap pl-10 text-[11px]">
+                <span className="font-mono font-semibold text-[var(--dmoop-text-primary)]">
+                  {u.prompts_7d}<span className="text-[var(--dmoop-text-tertiary)]">/{u.total_prompts}</span>
+                  <span className="text-[var(--dmoop-text-tertiary)] font-sans font-normal"> prompts</span>
+                </span>
+                {u.prompts_24h > 0 && (
+                  <span className="text-emerald-700 font-semibold">+{u.prompts_24h} today</span>
+                )}
+                {u.feedback_given > 0 && (
+                  <span className={cn("font-semibold",
+                    u.positive_rate >= 0.7 ? "text-emerald-700" : u.positive_rate >= 0.4 ? "text-amber-700" : "text-rose-700"
+                  )}>
+                    {Math.round(u.positive_rate * 100)}% 👍
+                  </span>
+                )}
+                {u.brand_docs > 0 && (
+                  <span className="inline-flex items-center gap-0.5 text-[var(--dmoop-text-secondary)]">
+                    <FileText size={10} /> {u.brand_docs}
+                  </span>
+                )}
+                {u.safety_incidents > 0 && (
+                  <span className="text-rose-700 font-semibold inline-flex items-center gap-0.5">
+                    <Shield size={10} /> {u.safety_incidents}
+                  </span>
+                )}
+                {intentLabel !== "—" && (
+                  <span className="text-[var(--dmoop-text-tertiary)] truncate max-w-[140px]">{intentLabel}</span>
+                )}
+              </div>
+
+              {/* Desktop-only cells from col 2 onward */}
+              <div className="hidden sm:block text-[11.5px]">
                 <p className="text-[var(--dmoop-text-primary)] font-medium">{fmtTimeAgo(u.last_active)}</p>
                 {u.signed_up && (
                   <p className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">
@@ -1197,7 +1246,7 @@ function UsersPanel({
                 )}
               </div>
 
-              <div className="text-right">
+              <div className="hidden sm:block text-right">
                 <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)] font-mono">
                   {u.prompts_7d}<span className="text-[var(--dmoop-text-tertiary)] text-[11px]"> / {u.total_prompts}</span>
                 </p>
@@ -1206,7 +1255,7 @@ function UsersPanel({
                 )}
               </div>
 
-              <div className="text-right">
+              <div className="hidden sm:block text-right">
                 {u.feedback_given > 0 ? (
                   <>
                     <p className="text-[12px] font-semibold text-[var(--dmoop-text-primary)]">{u.feedback_given} rated</p>
@@ -1221,12 +1270,12 @@ function UsersPanel({
                 )}
               </div>
 
-              <div className="min-w-0">
+              <div className="hidden sm:block min-w-0">
                 <p className="text-[11px] font-medium text-[var(--dmoop-text-primary)] truncate">{intentLabel}</p>
                 <p className="text-[10.5px] text-[var(--dmoop-text-tertiary)] truncate font-mono">{primaryModel}</p>
               </div>
 
-              <div className="text-right">
+              <div className="hidden sm:block text-right">
                 <p className="text-[11px]">
                   {u.brand_docs > 0 && (
                     <span className="inline-flex items-center gap-0.5 text-[var(--dmoop-text-secondary)]">

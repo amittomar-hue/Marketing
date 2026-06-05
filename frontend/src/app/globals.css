@@ -352,6 +352,16 @@ h1, h2, h3, h4, h5, h6 {
 .dmoop-md > :first-child { margin-top: 0; }
 .dmoop-md > :last-child  { margin-bottom: 0; }
 
+/* Hide scrollbars on horizontally-scrolling tab strips and similar.
+   Used by the admin dashboard tabs row on mobile. */
+.dmoop-no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.dmoop-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Long-form prose styles for /resources/[slug] reader pages */
 .resource-prose {
   color: var(--dmoop-text-primary);
