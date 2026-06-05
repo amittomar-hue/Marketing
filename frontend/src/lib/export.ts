@@ -217,7 +217,8 @@ async function exportPdf(content: string, filename: string): Promise<void> {
 }
 
 async function exportDocx(content: string, filename: string): Promise<void> {
-  const { Document, Packer, Paragraph, HeadingLevel, TextRun } = await import("docx");
+  const { Document, Packer, Paragraph, HeadingLevel, TextRun, LevelFormat, AlignmentType, convertInchesToTwip } =
+    await import("docx");
 
   const paragraphs: InstanceType<typeof Paragraph>[] = [];
   const lines = content.split(/\r?\n/);
@@ -244,7 +245,52 @@ async function exportDocx(content: string, filename: string): Promise<void> {
     else paragraphs.push(new Paragraph({ text: raw.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1").replace(/`([^`]+)`/g, "$1") }));
   }
 
-  const doc = new Document({ sections: [{ children: paragraphs }] });
+  // Numbering config MUST be declared at the Document level for any
+  // Paragraph that references it (via `numbering: { reference, level }`).
+  // Without this, Packer.toBlob() emits a malformed .docx that Word
+  // refuses to open and Office Online renders as a blank file — which
+  // is exactly what was happening for any assistant response with a
+  // numbered list ("1. …  2. …"). Bullet lists work without config.
+  const doc = new Document({
+    numbering: {
+      config: [
+        {
+          reference: "default-numbering",
+          levels: [
+            {
+              level: 0,
+              format: LevelFormat.DECIMAL,
+              text: "%1.",
+              alignment: AlignmentType.START,
+              style: {
+                paragraph: {
+                  indent: {
+                    left: convertInchesToTwip(0.5),
+                    hanging: convertInchesToTwip(0.25),
+                  },
+                },
+              },
+            },
+            {
+              level: 1,
+              format: LevelFormat.LOWER_LETTER,
+              text: "%2.",
+              alignment: AlignmentType.START,
+              style: {
+                paragraph: {
+                  indent: {
+                    left: convertInchesToTwip(1),
+                    hanging: convertInchesToTwip(0.25),
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    sections: [{ children: paragraphs }],
+  });
   const blob = await Packer.toBlob(doc);
   saveAs(blob, filename);
 }
