@@ -145,6 +145,8 @@ export default function ChatLayout() {
   };
 
   const showTour = () => {
+    localStorage.removeItem("dmoop_onboarded_v2");
+    // Wipe v1 too so the "Show tour again" path stays clean after the v2 rollout.
     localStorage.removeItem("dmoop_onboarded_v1");
     window.location.reload();
   };
