@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
+import { exaSearch, exaToTavily, startDateForRange } from "@/lib/exa";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -193,12 +194,18 @@ const SPARSE_ASSET_TYPES = new Set<AssetType>([
 // Each topic gets revisited ~3-4 times per month.
 const AUTO_ROTATE_SLICES = 9;
 
-// Diagnostic state: the FIRST Tavily failure per scrape run gets stashed
-// here so the route response can include the real error. Was silently
-// returning null on every failure, hiding 401/403/429/etc problems.
+// Diagnostic state: first failure per scrape run, per provider, gets
+// stashed here so the route response surfaces the real error from each
+// side instead of silently returning null. Resets at the start of every
+// run via the GET handler.
+const exaDiag: { status?: number; statusText?: string; body?: string; error?: string } = {};
 const tavilyDiag: { status?: number; statusText?: string; body?: string; error?: string } = {};
+// Per-run counter for which provider actually served each topic. The
+// route response includes these so we can see at a glance whether Exa
+// is healthy or if Tavily is silently absorbing all traffic.
+const providerCounts: { exa: number; tavily: number } = { exa: 0, tavily: 0 };
 
-async function tavilySearch(
+async function tavilyDirect(
   query: string,
   apiKey: string,
   opts: { days: number; topic: "news" | "general"; assetType: AssetType }
@@ -235,6 +242,48 @@ async function tavilySearch(
   }
 }
 
+// Dual-provider search: Exa primary (fresh quota, neural ranking),
+// Tavily fallback (only fires if Exa errors or returns zero results).
+// Both providers' first failure is captured into their diag objects so
+// the cron's JSON response shows exactly which side broke and how.
+async function tavilySearch(
+  query: string,
+  tavilyKey: string | undefined,
+  opts: { days: number; topic: "news" | "general"; assetType: AssetType }
+): Promise<TavilyResponse | null> {
+  const exaKey = process.env.EXA_API_KEY;
+  const maxResults = SPARSE_ASSET_TYPES.has(opts.assetType) ? 10 : 5;
+
+  // PRIMARY: Exa
+  if (exaKey) {
+    try {
+      const exa = await exaSearch(query, exaKey, {
+        numResults: maxResults,
+        startPublishedDate: startDateForRange(undefined, opts.days),
+        type: "auto",
+      });
+      if (exa.results.length > 0) {
+        providerCounts.exa += 1;
+        return exaToTavily(query, exa);
+      }
+      // Empty results — let Tavily try.
+      if (!exaDiag.body) exaDiag.body = "Exa returned 0 results";
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!exaDiag.error) exaDiag.error = msg;
+      // Parse "Exa error 429: ..." to surface the status code separately.
+      const m = msg.match(/Exa error (\d+):/);
+      if (m && !exaDiag.status) exaDiag.status = parseInt(m[1], 10);
+    }
+  }
+
+  // FALLBACK: Tavily
+  if (!tavilyKey) return null;
+  const result = await tavilyDirect(query, tavilyKey, opts);
+  if (result) providerCounts.tavily += 1;
+  return result;
+}
+
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   const isVercelCron = req.headers.get("x-vercel-cron") === "1";
@@ -243,7 +292,20 @@ export async function GET(req: NextRequest) {
   }
 
   const tavilyKey = process.env.TAVILY_API_KEY;
-  if (!tavilyKey) return NextResponse.json({ error: "TAVILY_API_KEY missing" }, { status: 503 });
+  const exaKey = process.env.EXA_API_KEY;
+  if (!exaKey && !tavilyKey) {
+    return NextResponse.json(
+      { error: "Both EXA_API_KEY and TAVILY_API_KEY missing — no search provider available" },
+      { status: 503 }
+    );
+  }
+
+  // Reset per-run diagnostic state so a previous run's failures don't
+  // leak into this run's response payload.
+  delete exaDiag.status;    delete exaDiag.statusText;    delete exaDiag.body;    delete exaDiag.error;
+  delete tavilyDiag.status; delete tavilyDiag.statusText; delete tavilyDiag.body; delete tavilyDiag.error;
+  providerCounts.exa = 0;
+  providerCounts.tavily = 0;
 
   const supa = getSupabase();
   if (!supa) return NextResponse.json({ error: "Supabase missing" }, { status: 503 });
@@ -344,6 +406,11 @@ export async function GET(req: NextRequest) {
     items_added: added,
     items_skipped: skipped,
     duration_ms: Date.now() - startedAt,
+    // Dual-provider visibility — at a glance: which provider served each
+    // topic, whether keys are set, and the FIRST failure per provider.
+    provider_counts: providerCounts,
+    exa_key_set: !!exaKey,
+    exa_first_failure: Object.keys(exaDiag).length ? exaDiag : null,
     tavily_key_set: !!tavilyKey,
     tavily_key_prefix: tavilyKey?.slice(0, 6) ?? null,
     tavily_first_failure: Object.keys(tavilyDiag).length ? tavilyDiag : null,
