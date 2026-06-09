@@ -204,6 +204,76 @@ const tavilyDiag: { status?: number; statusText?: string; body?: string; error?:
 // route response includes these so we can see at a glance whether Exa
 // is healthy or if Tavily is silently absorbing all traffic.
 const providerCounts: { exa: number; tavily: number } = { exa: 0, tavily: 0 };
+// Per-run counter for whether each successful Exa call came from the
+// authority-domain-filtered pass or the unrestricted fallback pass.
+// Ratio of authority:unrestricted is the quality signal — if most
+// topics fall back to unrestricted, the authority list is too narrow
+// for the current topic mix.
+const sourceQualityCounts: { authority: number; unrestricted: number } = { authority: 0, unrestricted: 0 };
+
+// ─────────────────────────────────────────────────────────────────
+// Authority-domain allow-list per asset_type. Drives the primary
+// Exa pass: when a topic asks for e.g. a `report`, only Gartner /
+// Forrester / McKinsey-tier publishers count. If that yields zero
+// results, the route falls back to an unrestricted Exa pass so the
+// corpus still grows. Asset types sourced from social platforms
+// (social_post, podcast, video, ad_campaign) are intentionally
+// absent — domain-gating those would zero them out.
+//
+// Pruning guidance: if you add a domain here, keep it to publishers
+// with editorial review or analyst credentials. Treat the list as a
+// quality signal, not a relevance one — broad coverage isn't the
+// goal; high per-article training-pair quality is.
+// ─────────────────────────────────────────────────────────────────
+const AUTHORITY_DOMAINS: Partial<Record<AssetType, string[]>> = {
+  report: [
+    "gartner.com", "forrester.com", "mckinsey.com", "bcg.com", "bain.com",
+    "deloitte.com", "accenture.com", "kpmg.com", "ey.com", "pwc.com",
+    "emarketer.com", "statista.com", "idc.com", "iab.com", "edelman.com",
+  ],
+  whitepaper: [
+    "gartner.com", "forrester.com", "mckinsey.com", "bcg.com", "bain.com",
+    "deloitte.com", "accenture.com", "hubspot.com", "salesforce.com",
+    "adobe.com", "oracle.com", "ibm.com", "microsoft.com",
+  ],
+  case_study: [
+    "hbr.org", "mitsloan.mit.edu", "knowledge.wharton.upenn.edu", "hbs.edu",
+    "mckinsey.com", "bcg.com", "deloitte.com",
+    "salesforce.com", "hubspot.com", "adobe.com", "marketo.com",
+    "drift.com", "intercom.com", "gong.io", "6sense.com", "demandbase.com",
+  ],
+  article: [
+    "hbr.org", "mitsloan.mit.edu", "knowledge.wharton.upenn.edu",
+    "adage.com", "marketingweek.com", "campaignlive.com", "marketingdive.com",
+    "wsj.com", "ft.com", "economist.com", "bloomberg.com", "businessinsider.com",
+    "techcrunch.com", "theverge.com", "wired.com",
+  ],
+  playbook: [
+    "hubspot.com", "salesforce.com", "marketo.com", "drift.com", "intercom.com",
+    "demandcurve.com", "reforge.com", "lennysnewsletter.com",
+    "firstround.com", "a16z.com", "openviewpartners.com",
+  ],
+  guide: [
+    "hubspot.com", "salesforce.com", "ahrefs.com", "moz.com", "semrush.com",
+    "backlinko.com", "searchengineland.com", "searchenginejournal.com",
+    "marketingprofs.com", "contentmarketinginstitute.com",
+  ],
+  ebook: [
+    "hubspot.com", "salesforce.com", "gartner.com", "forrester.com",
+    "marketo.com", "adobe.com", "oracle.com", "marketingprofs.com",
+  ],
+  newsletter: [
+    "lennysnewsletter.com", "morningbrew.com", "tldr.tech", "marketingbrew.com",
+    "theinformation.com", "axios.com", "stratechery.com",
+  ],
+  template: [
+    "hubspot.com", "salesforce.com", "marketo.com", "smartsheet.com",
+    "asana.com", "monday.com", "notion.so", "airtable.com",
+  ],
+  // Intentionally NOT gated — sourced from social platforms or hard
+  // to allow-list cleanly:
+  //   social_post, ad_campaign, podcast, video
+};
 
 async function tavilyDirect(
   query: string,
@@ -242,8 +312,12 @@ async function tavilyDirect(
   }
 }
 
-// Dual-provider search: Exa primary (fresh quota, neural ranking),
-// Tavily fallback (only fires if Exa errors or returns zero results).
+// Dual-provider search with quality-curation pass:
+//   1. Exa filtered to AUTHORITY_DOMAINS for this asset_type (Gartner,
+//      Forrester, HBR, McKinsey, etc) — highest signal training data.
+//   2. If pass 1 returns 0 results, Exa unrestricted — quality drops
+//      but corpus keeps growing.
+//   3. If Exa fails entirely, Tavily — last-resort fallback.
 // Both providers' first failure is captured into their diag objects so
 // the cron's JSON response shows exactly which side broke and how.
 async function tavilySearch(
@@ -253,21 +327,36 @@ async function tavilySearch(
 ): Promise<TavilyResponse | null> {
   const exaKey = process.env.EXA_API_KEY;
   const maxResults = SPARSE_ASSET_TYPES.has(opts.assetType) ? 10 : 5;
+  const authorityList = AUTHORITY_DOMAINS[opts.assetType];
 
-  // PRIMARY: Exa
+  // PRIMARY: Exa with authority-domain allow-list (if defined for this asset_type)
   if (exaKey) {
     try {
-      const exa = await exaSearch(query, exaKey, {
+      if (authorityList && authorityList.length > 0) {
+        const filtered = await exaSearch(query, exaKey, {
+          numResults: maxResults,
+          startPublishedDate: startDateForRange(undefined, opts.days),
+          type: "auto",
+          includeDomains: authorityList,
+        });
+        if (filtered.results.length > 0) {
+          providerCounts.exa += 1;
+          sourceQualityCounts.authority += 1;
+          return exaToTavily(query, filtered);
+        }
+        // Filtered pass returned nothing — try unrestricted before giving up.
+      }
+      const unrestricted = await exaSearch(query, exaKey, {
         numResults: maxResults,
         startPublishedDate: startDateForRange(undefined, opts.days),
         type: "auto",
       });
-      if (exa.results.length > 0) {
+      if (unrestricted.results.length > 0) {
         providerCounts.exa += 1;
-        return exaToTavily(query, exa);
+        sourceQualityCounts.unrestricted += 1;
+        return exaToTavily(query, unrestricted);
       }
-      // Empty results — let Tavily try.
-      if (!exaDiag.body) exaDiag.body = "Exa returned 0 results";
+      if (!exaDiag.body) exaDiag.body = "Exa returned 0 results (both filtered and unrestricted)";
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (!exaDiag.error) exaDiag.error = msg;
@@ -306,6 +395,8 @@ export async function GET(req: NextRequest) {
   delete tavilyDiag.status; delete tavilyDiag.statusText; delete tavilyDiag.body; delete tavilyDiag.error;
   providerCounts.exa = 0;
   providerCounts.tavily = 0;
+  sourceQualityCounts.authority = 0;
+  sourceQualityCounts.unrestricted = 0;
 
   const supa = getSupabase();
   if (!supa) return NextResponse.json({ error: "Supabase missing" }, { status: 503 });
@@ -409,6 +500,12 @@ export async function GET(req: NextRequest) {
     // Dual-provider visibility — at a glance: which provider served each
     // topic, whether keys are set, and the FIRST failure per provider.
     provider_counts: providerCounts,
+    // Quality-curation visibility — ratio of topics served by the
+    // authority-domain-filtered Exa pass vs the unrestricted fallback.
+    // Higher authority:unrestricted ratio = corpus skews to high-signal
+    // publishers. If unrestricted dominates, the AUTHORITY_DOMAINS list
+    // is too narrow for the topics being scraped that day.
+    source_quality_counts: sourceQualityCounts,
     exa_key_set: !!exaKey,
     exa_first_failure: Object.keys(exaDiag).length ? exaDiag : null,
     tavily_key_set: !!tavilyKey,

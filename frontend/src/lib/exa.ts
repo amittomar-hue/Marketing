@@ -35,6 +35,13 @@ export interface ExaSearchOptions {
   type?: "auto" | "neural" | "keyword";
   /** Max chars of article body to return per result (default 1500). */
   maxCharacters?: number;
+  /** Allow-list of source domains. When set, only results from these
+   *  domains are returned. Used by the scrape cron to bias the corpus
+   *  toward high-authority publishers (Gartner / Forrester / HBR / etc). */
+  includeDomains?: string[];
+  /** Block-list of source domains. Used to filter out known spam /
+   *  SEO-listicle mills. Lower priority than includeDomains. */
+  excludeDomains?: string[];
 }
 
 export async function exaSearch(
@@ -51,6 +58,8 @@ export async function exaSearch(
     contents: { text: { maxCharacters: opts.maxCharacters ?? 1500 } },
   };
   if (opts.startPublishedDate) body.startPublishedDate = opts.startPublishedDate;
+  if (opts.includeDomains && opts.includeDomains.length > 0) body.includeDomains = opts.includeDomains;
+  if (opts.excludeDomains && opts.excludeDomains.length > 0) body.excludeDomains = opts.excludeDomains;
 
   const res = await fetch("https://api.exa.ai/search", {
     method: "POST",
