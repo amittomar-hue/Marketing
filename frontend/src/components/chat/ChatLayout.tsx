@@ -9,6 +9,7 @@ import MessageThread from "./MessageThread";
 import InputBar from "./InputBar";
 import OnboardingTour from "./OnboardingTour";
 import PreviewDrawer from "./PreviewDrawer";
+import AgentSwitcher from "./AgentSwitcher";
 import { getModel } from "@/lib/models";
 import Image from "next/image";
 import {
@@ -203,6 +204,9 @@ export default function ChatLayout() {
                 </span>
               )}
             </div>
+            {/* Agent switcher — sits between the title and the right-side
+                actions. Hides itself when the user has no agents yet. */}
+            <AgentSwitcher />
           </div>
 
           <div className="flex items-center gap-1 shrink-0">

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useChatStore } from "@/lib/chat-store";
+import { useAgentStore } from "@/lib/agent-store";
 import { streamChat } from "@/lib/stream-chat";
 import { detectFormat, isConversionRequest, FORMAT_LABELS, type ExportFormat } from "@/lib/export";
 import { parseDocumentClient } from "@/lib/parse-document-client";
@@ -297,11 +298,15 @@ export default function InputBar() {
     try {
       const conv = useChatStore.getState().conversations.find((c) => c.id === convId);
       const history = conv?.messages.filter((m) => m.id !== asstId) ?? [];
+      // Resolve agent: conversation binding wins, else user-level selection.
+      const agentId =
+        conv?.agentId ?? useAgentStore.getState().selectedAgentId ?? null;
       const { text: final, interactionId } = await streamChat({
         messages: history,
         model: selectedModel,
         webSearchMode: webSearchForced,
         requestedFormat,
+        agentId,
         onToken: (acc) => updateMessage(convId!, asstId, { content: acc }),
       });
       updateMessage(convId, asstId, {

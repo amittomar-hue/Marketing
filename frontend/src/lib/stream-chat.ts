@@ -8,6 +8,9 @@ interface StreamArgs {
   /** If set, sent to the API so the system prompt is augmented to produce
    * output that converts cleanly to the requested format (e.g. table-first for xlsx/csv). */
   requestedFormat?: string;
+  /** Brand Agent the user wants this turn grounded against. When omitted
+   *  the server falls back to the user's default agent via the retrieve_brand_chunks RPC. */
+  agentId?: string | null;
   onToken: (acc: string) => void;
 }
 
@@ -23,12 +26,14 @@ export async function streamChat({
   model,
   webSearchMode = "auto",
   requestedFormat,
+  agentId,
   onToken,
 }: StreamArgs): Promise<StreamResult> {
   const payload = {
     model,
     web_search_mode: webSearchMode,
     requested_format: requestedFormat,
+    agent_id: agentId ?? null,
     messages: messages
       .filter((m) => m.content.trim().length > 0)
       .map((m) => ({ role: m.role, content: m.content })),

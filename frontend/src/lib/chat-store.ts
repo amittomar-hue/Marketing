@@ -30,6 +30,10 @@ export interface Conversation {
   messages: Message[];
   createdAt: Date | string;
   updatedAt: Date | string;
+  /** Brand Agent this conversation is grounded in. NULL = use the user's
+   *  default agent (legacy conversations + brand-new chats before the
+   *  user picks an agent). Server column is chat_conversations.agent_id. */
+  agentId?: string | null;
 }
 
 interface ChatState {
@@ -55,6 +59,10 @@ interface ChatState {
    *  edits an earlier prompt — the assistant reply (and any follow-ups) get
    *  removed so the new regenerated response can replace them. */
   truncateAfter: (conversationId: string, messageId: string) => void;
+  /** Bind / re-bind a conversation to a Brand Agent. Set to null to clear
+   *  the binding (which makes retrieval fall back to the user's default
+   *  agent in the chat route). */
+  setConversationAgent: (conversationId: string, agentId: string | null) => void;
   activeConversation: () => Conversation | null;
   clearAll: () => void;
   /** Replace in-memory conversations with the user's rows from Supabase.
@@ -120,6 +128,7 @@ async function syncConversationToServer(conversationId: string) {
       title: convo.title,
       model: convo.model,
       data: convo,
+      agent_id: convo.agentId ?? null,
       created_at: createdAtIso,
       updated_at: updatedAtIso,
     },
@@ -242,6 +251,17 @@ export const useChatStore = create<ChatState>()(
               updatedAt: new Date(),
             };
           }),
+        }));
+        scheduleSync(conversationId);
+      },
+
+      setConversationAgent: (conversationId, agentId) => {
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === conversationId
+              ? { ...c, agentId, updatedAt: new Date() }
+              : c
+          ),
         }));
         scheduleSync(conversationId);
       },

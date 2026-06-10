@@ -1,0 +1,329 @@
+"use client";
+
+// ─────────────────────────────────────────────────────────────────
+// /agents — Brand Agent management. Marketing agencies running
+// multiple clients use this page to create, rename, recolor, set
+// default, and delete Brand Agents. Each agent corresponds to one
+// silo of brand documents that the chat retrieves from when bound.
+// ─────────────────────────────────────────────────────────────────
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowLeft, Plus, Pencil, Trash2, Star, BookOpen, Check, X as XIcon } from "lucide-react";
+import { useAgentStore } from "@/lib/agent-store";
+import { cn } from "@/lib/utils";
+
+const COLOR_SWATCHES = [
+  "#c14a2a", "#d97706", "#65a30d", "#0d9488",
+  "#0284c7", "#7c3aed", "#db2777", "#475569",
+];
+
+export default function AgentsPage() {
+  const { agents, isLoading, refresh, upsert, remove } = useAgentStore();
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState(COLOR_SWATCHES[0]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const createAgent = async () => {
+    const name = newName.trim();
+    if (!name) return;
+    setBusy("__create");
+    try {
+      const res = await fetch("/api/brand/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name, color: newColor }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        upsert({ ...json.agent, doc_count: 0 });
+        setNewName("");
+        setNewColor(COLOR_SWATCHES[0]);
+        setCreating(false);
+      } else {
+        const j = await res.json().catch(() => ({}));
+        alert(j.error ?? "Could not create agent");
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const patchAgent = async (id: string, body: Record<string, unknown>) => {
+    setBusy(id);
+    try {
+      const res = await fetch(`/api/brand/agents/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const existing = agents.find((a) => a.id === id);
+        upsert({ ...json.agent, doc_count: existing?.doc_count ?? 0 });
+      } else {
+        const j = await res.json().catch(() => ({}));
+        alert(j.error ?? "Update failed");
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const deleteAgent = async (id: string) => {
+    if (!confirm("Delete this agent and all its brand documents? This can't be undone.")) return;
+    setBusy(id);
+    try {
+      const res = await fetch(`/api/brand/agents/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        remove(id);
+      } else {
+        const j = await res.json().catch(() => ({}));
+        alert(j.error ?? "Delete failed");
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const commitRename = async (id: string) => {
+    const name = editingName.trim();
+    if (!name) {
+      setEditingId(null);
+      return;
+    }
+    await patchAgent(id, { name });
+    setEditingId(null);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--dmoop-bg-app)" }}>
+      {/* Nav */}
+      <nav className="sticky top-0 z-30 border-b border-[var(--dmoop-border-soft)] backdrop-blur-xl bg-white/70">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
+          <Link href="/chat" className="flex items-center gap-2 text-[12.5px] sm:text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)]">
+            <ArrowLeft size={13} /> Back to chat
+          </Link>
+          <Image src="/dmoop-logo.png" alt="DMOOP" width={110} height={30} className="h-6 sm:h-7 w-auto" />
+          <Link href="/brand" className="text-[12.5px] sm:text-[13px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)]">
+            Brand Library →
+          </Link>
+        </div>
+      </nav>
+
+      <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 flex-1">
+        <div className="mb-6 sm:mb-8">
+          <p className="text-[10.5px] sm:text-[11px] font-bold tracking-[0.14em] text-[var(--dmoop-accent)] uppercase mb-2">
+            Brand Agents
+          </p>
+          <h1 className="text-[24px] sm:text-[32px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] mb-2">
+            One DMOOP, many brands.
+          </h1>
+          <p className="text-[13px] sm:text-[14px] text-[var(--dmoop-text-secondary)] max-w-2xl">
+            Create one Brand Agent per client. Upload their brand docs to that agent&apos;s library, and DMOOP will only retrieve from that silo when you&apos;re working in that thread.
+          </p>
+        </div>
+
+        {/* List + create */}
+        <div className="rounded-2xl overflow-hidden mb-4"
+          style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
+          <div className="px-4 sm:px-5 py-3 border-b border-[var(--dmoop-border-soft)] flex items-center justify-between">
+            <p className="text-[12.5px] font-semibold text-[var(--dmoop-text-primary)]">
+              {isLoading ? "Loading…" : `${agents.length} brand${agents.length === 1 ? "" : "s"}`}
+            </p>
+            {!creating && (
+              <button
+                onClick={() => setCreating(true)}
+                className="h-8 px-3 rounded-lg text-[12px] font-semibold dmoop-btn-primary flex items-center gap-1.5"
+              >
+                <Plus size={12} strokeWidth={2.5} /> New brand
+              </button>
+            )}
+          </div>
+
+          {creating && (
+            <div className="px-4 sm:px-5 py-3.5 border-b border-[var(--dmoop-border-soft)] bg-[#faf6ef]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-2">
+                Create a brand
+              </p>
+              <input
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value.slice(0, 60))}
+                placeholder="e.g. Acme Corp, Beta Inc, Gamma Co"
+                className="w-full text-[13.5px] font-medium bg-white border border-[var(--dmoop-border-soft)] focus:border-[var(--dmoop-accent)] rounded-lg px-3 py-2 mb-2.5 focus:outline-none"
+              />
+              <div className="flex items-center gap-1.5 mb-3">
+                {COLOR_SWATCHES.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setNewColor(c)}
+                    className={cn(
+                      "w-6 h-6 rounded-full transition-transform",
+                      newColor === c ? "ring-2 ring-offset-2 ring-[var(--dmoop-accent)] scale-110" : "hover:scale-110"
+                    )}
+                    style={{ background: c }}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => void createAgent()}
+                  disabled={!newName.trim() || busy === "__create"}
+                  className="h-9 px-4 rounded-lg dmoop-btn-primary text-[12.5px] font-semibold disabled:opacity-50"
+                >
+                  Create
+                </button>
+                <button
+                  onClick={() => {
+                    setCreating(false);
+                    setNewName("");
+                  }}
+                  className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-[var(--dmoop-text-secondary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {agents.length === 0 && !isLoading && !creating && (
+            <div className="px-4 sm:px-5 py-10 text-center text-[13px] text-[var(--dmoop-text-tertiary)]">
+              No agents yet. Click <strong>New brand</strong> to create your first.
+            </div>
+          )}
+
+          {agents.map((a) => {
+            const isEditing = editingId === a.id;
+            const isBusy = busy === a.id;
+            return (
+              <div
+                key={a.id}
+                className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-[var(--dmoop-border-soft)] last:border-0 flex items-center gap-3 hover:bg-[#faf6ef]/40"
+              >
+                {/* Color dot */}
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: `${a.color}20`, boxShadow: `inset 0 0 0 1px ${a.color}40` }}>
+                  <span className="w-3.5 h-3.5 rounded-full" style={{ background: a.color }} />
+                </div>
+
+                {/* Name + meta */}
+                <div className="flex-1 min-w-0">
+                  {isEditing ? (
+                    <input
+                      autoFocus
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value.slice(0, 60))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") void commitRename(a.id);
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                      onBlur={() => void commitRename(a.id)}
+                      className="w-full text-[14px] font-semibold bg-white border border-[var(--dmoop-accent)] rounded-md px-2 py-0.5 focus:outline-none"
+                    />
+                  ) : (
+                    <p className="text-[14px] font-semibold text-[var(--dmoop-text-primary)] truncate flex items-center gap-2">
+                      {a.name}
+                      {a.is_default && (
+                        <span className="text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-[#fbf3ee] text-[var(--dmoop-accent-rich)]">
+                          default
+                        </span>
+                      )}
+                    </p>
+                  )}
+                  <p className="text-[11px] text-[var(--dmoop-text-tertiary)] flex items-center gap-1.5">
+                    <BookOpen size={10} /> {a.doc_count} brand doc{a.doc_count === 1 ? "" : "s"}
+                  </p>
+                </div>
+
+                {/* Color picker on hover */}
+                <div className="flex items-center gap-0.5 mr-1">
+                  {COLOR_SWATCHES.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => void patchAgent(a.id, { color: c })}
+                      disabled={isBusy}
+                      title="Change color"
+                      className={cn(
+                        "w-4 h-4 rounded-full transition-transform",
+                        a.color === c ? "ring-2 ring-offset-1 ring-[var(--dmoop-text-tertiary)] scale-110" : "hover:scale-125"
+                      )}
+                      style={{ background: c }}
+                    />
+                  ))}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {!a.is_default && (
+                    <button
+                      onClick={() => void patchAgent(a.id, { is_default: true })}
+                      disabled={isBusy}
+                      title="Set as default"
+                      className="p-1.5 rounded-md text-[var(--dmoop-text-secondary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] disabled:opacity-50"
+                    >
+                      <Star size={13} />
+                    </button>
+                  )}
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={() => void commitRename(a.id)}
+                        className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50"
+                      >
+                        <Check size={13} />
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="p-1.5 rounded-md text-[var(--dmoop-text-secondary)] hover:bg-white"
+                      >
+                        <XIcon size={13} />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setEditingId(a.id);
+                        setEditingName(a.name);
+                      }}
+                      disabled={isBusy}
+                      title="Rename"
+                      className="p-1.5 rounded-md text-[var(--dmoop-text-secondary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] disabled:opacity-50"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => void deleteAgent(a.id)}
+                    disabled={isBusy || a.is_default || agents.length === 1}
+                    title={a.is_default ? "Set another agent as default before deleting" : "Delete"}
+                    className="p-1.5 rounded-md text-rose-500 hover:bg-rose-50 disabled:text-[var(--dmoop-text-tertiary)] disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="text-[11.5px] text-[var(--dmoop-text-tertiary)]">
+          Delete cascades the agent&apos;s brand documents. Conversations bound to a deleted agent fall back to your default.
+        </p>
+      </main>
+    </div>
+  );
+}

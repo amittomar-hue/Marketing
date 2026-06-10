@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowLeft, Upload, FileText, Trash2, Loader2, BookOpen, AlertCircle, CheckCircle2, Wand2, Check } from "lucide-react";
 import { DOC_TYPES } from "@/lib/brand";
 import { useBrandAgentName } from "@/lib/brand-agent-name";
+import { useAgentStore } from "@/lib/agent-store";
 import { parseDocumentClient } from "@/lib/parse-document-client";
 import { cn } from "@/lib/utils";
 
@@ -46,12 +47,25 @@ export default function BrandPage() {
     setTimeout(() => setSavedTick(false), 1500);
   };
 
+  // Brand Library is scoped to the currently-selected agent. When the
+  // user switches agents in the header dropdown, the doc list reloads
+  // to show only that agent's silo.
+  const selectedAgentId = useAgentStore((s) => s.selectedAgentId);
+  const refreshAgents = useAgentStore((s) => s.refresh);
+  const selectedAgent = useAgentStore((s) =>
+    s.agents.find((a) => a.id === s.selectedAgentId) ?? null
+  );
+
   const load = async () => {
-    const data = await fetch("/api/brand/documents").then((r) => r.json());
+    const url = selectedAgentId
+      ? `/api/brand/documents?agent_id=${encodeURIComponent(selectedAgentId)}`
+      : "/api/brand/documents";
+    const data = await fetch(url).then((r) => r.json());
     setList(data);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void refreshAgents(); }, [refreshAgents]);
+  useEffect(() => { load(); }, [selectedAgentId]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -86,12 +100,15 @@ export default function BrandPage() {
           text: parsed.text,
           doc_type: docType,
           pii_summary: parsed.pii ?? null,
+          agent_id: selectedAgentId,
         }),
       });
       const result = await uploadRes.json();
       if (!uploadRes.ok) throw new Error(result.error ?? "Upload failed");
 
       await load();
+      // Doc counts on agent chips might have changed — refresh.
+      void refreshAgents();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -128,7 +145,19 @@ export default function BrandPage() {
             <span className="text-[10px] font-bold tracking-[0.12em] text-[var(--dmoop-accent)] uppercase px-1.5 sm:px-2 py-0.5 rounded-md shrink-0" style={{ background: "rgba(193,74,42,0.1)" }}>
               Brand
             </span>
+            {selectedAgent && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-[11.5px] font-medium text-[var(--dmoop-text-secondary)] px-2 py-1 rounded-md bg-[#faf6ef] border border-[var(--dmoop-border-soft)] shrink-0">
+                <span className="w-2 h-2 rounded-full" style={{ background: selectedAgent.color }} />
+                Viewing <strong className="font-semibold text-[var(--dmoop-text-primary)]">{selectedAgent.name}</strong>
+              </span>
+            )}
           </div>
+          <Link
+            href="/agents"
+            className="text-[12.5px] font-medium text-[var(--dmoop-text-secondary)] hover:text-[var(--dmoop-text-primary)] shrink-0 flex items-center gap-1"
+          >
+            Manage agents →
+          </Link>
         </div>
       </header>
 
