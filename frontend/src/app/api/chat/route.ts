@@ -272,6 +272,11 @@ export async function POST(req: NextRequest) {
   const modelId: string = body.model ?? "dmoop-core";
   const sessionId: string | undefined = body.session_id;
   const webSearchMode: "auto" | "on" | "off" = body.web_search_mode ?? "auto";
+  // Multi-agent: optional agent_id pin from the client; when absent,
+  // retrieveBrandChunks falls back to the user's default agent via the
+  // RPC. Validated/scoped by the RPC against user_id so a malicious
+  // client can't read another user's chunks even with a guessed id.
+  const conversationAgentId: string | null = body.agent_id ?? null;
   const requestedFormat: ExportFormat | undefined =
     body.requested_format && body.requested_format in FORMAT_INSTRUCTIONS
       ? (body.requested_format as ExportFormat)
@@ -451,7 +456,7 @@ export async function POST(req: NextRequest) {
   if (userId) {
     try {
       const brandLimit = isTuned ? 3 : 4;
-      const brandChunks = await retrieveBrandChunks(userId, userQuery, brandLimit);
+      const brandChunks = await retrieveBrandChunks(userId, userQuery, brandLimit, conversationAgentId);
       brandContext = formatBrandContext(brandChunks);
       brandChunkCount = brandChunks.length;
       if (isTuned && brandContext.length > 4000) {

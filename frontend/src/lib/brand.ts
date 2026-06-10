@@ -47,13 +47,18 @@ export function chunkText(text: string, chunkSize = 1000, overlap = 150): string
 export async function retrieveBrandChunks(
   userId: string,
   query: string,
-  limit = 5
+  limit = 5,
+  agentId: string | null = null
 ): Promise<BrandChunk[]> {
   const supa = getSupabase();
   if (!supa || !query || query.length < 3) return [];
 
+  // p_agent_id NULL → RPC falls back to the user's default agent so
+  // legacy callers (and any conversation without an explicit agent
+  // binding) keep working without breaking.
   const { data, error } = await supa.rpc("retrieve_brand_chunks", {
     p_user_id: userId,
+    p_agent_id: agentId,
     p_query: query.slice(0, 500),
     p_limit: limit,
   });

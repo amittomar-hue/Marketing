@@ -4,7 +4,7 @@ import { getSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supa = await createSupabaseServerClient();
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -12,11 +12,20 @@ export async function GET() {
   const service = getSupabase();
   if (!service) return NextResponse.json({ error: "Supabase missing" }, { status: 503 });
 
-  const { data, error } = await service
+  // Optional ?agent_id=… scopes the response to one agent. Omitted →
+  // returns every doc the user owns across all agents (the
+  // unscoped view used by admin / cross-agent search UIs).
+  const url = req.nextUrl;
+  const agentId = url.searchParams.get("agent_id");
+
+  let query = service
     .from("brand_documents")
-    .select("id, filename, doc_type, total_chars, total_chunks, uploaded_at")
+    .select("id, filename, doc_type, total_chars, total_chunks, uploaded_at, agent_id")
     .eq("user_id", user.id)
     .order("uploaded_at", { ascending: false });
+  if (agentId) query = query.eq("agent_id", agentId);
+
+  const { data, error } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

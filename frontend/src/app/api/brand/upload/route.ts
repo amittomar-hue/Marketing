@@ -21,11 +21,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Bad request" }, { status: 400 });
 
-  const { filename, text, doc_type, pii_summary } = body as {
+  const { filename, text, doc_type, pii_summary, agent_id } = body as {
     filename: string;
     text: string;
     doc_type?: string;
     pii_summary?: { total: number; by_type: Record<string, number> } | null;
+    agent_id?: string | null;
   };
 
   if (!filename || !text) {
@@ -33,6 +34,46 @@ export async function POST(req: NextRequest) {
       { error: "filename and text are required" },
       { status: 400 }
     );
+  }
+
+  // Resolve effective agent_id: explicit if passed (and owned by user),
+  // else the user's default agent. Auto-create a default if the user
+  // has no agents yet — keeps the first-upload flow one-click.
+  let effectiveAgentId: string | null = null;
+  if (agent_id) {
+    const { data: owned } = await service
+      .from("brand_agents")
+      .select("id")
+      .eq("id", agent_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!owned) {
+      return NextResponse.json({ error: "Invalid agent_id" }, { status: 400 });
+    }
+    effectiveAgentId = owned.id;
+  } else {
+    const { data: def } = await service
+      .from("brand_agents")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_default", true)
+      .maybeSingle();
+    if (def) {
+      effectiveAgentId = def.id;
+    } else {
+      const { data: created, error: createErr } = await service
+        .from("brand_agents")
+        .insert({ user_id: user.id, name: "Default brand", is_default: true })
+        .select("id")
+        .single();
+      if (createErr || !created) {
+        return NextResponse.json(
+          { error: `Could not provision default agent: ${createErr?.message}` },
+          { status: 500 }
+        );
+      }
+      effectiveAgentId = created.id;
+    }
   }
 
   // Enforce quota
@@ -61,12 +102,13 @@ export async function POST(req: NextRequest) {
     .from("brand_documents")
     .insert({
       user_id: user.id,
+      agent_id: effectiveAgentId,
       filename: filename.slice(0, 240),
       doc_type: doc_type ?? "general",
       total_chars: cleanText.length,
       total_chunks: chunks.length,
     })
-    .select("id, filename, doc_type, total_chars, total_chunks, uploaded_at")
+    .select("id, filename, doc_type, total_chars, total_chunks, uploaded_at, agent_id")
     .single();
 
   if (docErr || !doc) {
@@ -76,6 +118,7 @@ export async function POST(req: NextRequest) {
   const rows = chunks.map((text, i) => ({
     doc_id: doc.id,
     user_id: user.id,
+    agent_id: effectiveAgentId,
     chunk_index: i,
     text,
     char_count: text.length,
