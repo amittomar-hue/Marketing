@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Upload, FileText, Trash2, Loader2, BookOpen, AlertCircle, CheckCircle2, Wand2, Check } from "lucide-react";
 import { DOC_TYPES } from "@/lib/brand";
-import { useBrandAgentName } from "@/lib/brand-agent-name";
 import { useAgentStore } from "@/lib/agent-store";
 import { parseDocumentClient } from "@/lib/parse-document-client";
 import { cn } from "@/lib/utils";
@@ -33,28 +32,92 @@ export default function BrandPage() {
   const [docType, setDocType] = useState<string>("brand_guidelines");
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [agentName, setAgentName] = useBrandAgentName();
   const [draftName, setDraftName] = useState<string>("");
   const [savedTick, setSavedTick] = useState(false);
   // Most recent PII redaction summary, surfaced as a one-shot banner on success
   const [lastPii, setLastPii] = useState<{ filename: string; total: number; by_type: Record<string, number> } | null>(null);
-
-  useEffect(() => { setDraftName(agentName); }, [agentName]);
-
-  const saveAgentName = () => {
-    setAgentName(draftName);
-    setSavedTick(true);
-    setTimeout(() => setSavedTick(false), 1500);
-  };
+  // Bulk-move state — selected doc IDs the user wants to re-home to a different agent.
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [moveMenuOpen, setMoveMenuOpen] = useState(false);
+  const [moving, setMoving] = useState(false);
 
   // Brand Library is scoped to the currently-selected agent. When the
   // user switches agents in the header dropdown, the doc list reloads
   // to show only that agent's silo.
   const selectedAgentId = useAgentStore((s) => s.selectedAgentId);
   const refreshAgents = useAgentStore((s) => s.refresh);
+  const upsertAgent = useAgentStore((s) => s.upsert);
+  const agents = useAgentStore((s) => s.agents);
   const selectedAgent = useAgentStore((s) =>
     s.agents.find((a) => a.id === s.selectedAgentId) ?? null
   );
+  const agentName = selectedAgent?.name ?? "Brand Agent";
+
+  // Keep draftName in sync with the currently-selected agent's name
+  // whenever the user switches agents in the header dropdown.
+  useEffect(() => { setDraftName(agentName); }, [agentName]);
+  // Clear selection whenever the active agent changes — selected IDs
+  // belong to a different library now.
+  useEffect(() => { setSelectedDocs(new Set()); }, [selectedAgentId]);
+
+  // PATCH the selected agent's name on the server. Replaces the old
+  // localStorage-only saveAgentName so renames sync across devices.
+  const saveAgentName = async () => {
+    if (!selectedAgent || !draftName.trim() || draftName === agentName) return;
+    const res = await fetch(`/api/brand/agents/${selectedAgent.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ name: draftName.trim() }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      upsertAgent({ ...json.agent, doc_count: selectedAgent.doc_count });
+      setSavedTick(true);
+      setTimeout(() => setSavedTick(false), 1500);
+    }
+  };
+
+  // Bulk move: re-home N selected docs to a different agent. Each PATCH
+  // is independent so partial failures show partial moves rather than
+  // a misleading all-or-nothing rollback. Refreshes doc counts after.
+  const moveSelectedTo = async (targetAgentId: string) => {
+    if (selectedDocs.size === 0) return;
+    setMoving(true);
+    setMoveMenuOpen(false);
+    try {
+      await Promise.all(
+        Array.from(selectedDocs).map((id) =>
+          fetch(`/api/brand/documents/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ agent_id: targetAgentId }),
+          })
+        )
+      );
+      setSelectedDocs(new Set());
+      await load();
+      void refreshAgents();
+    } finally {
+      setMoving(false);
+    }
+  };
+
+  const toggleDoc = (id: string) => {
+    setSelectedDocs((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (!list) return;
+    if (selectedDocs.size === list.documents.length) setSelectedDocs(new Set());
+    else setSelectedDocs(new Set(list.documents.map((d) => d.id)));
+  };
 
   const load = async () => {
     const url = selectedAgentId
@@ -301,11 +364,89 @@ export default function BrandPage() {
         {/* Document list */}
         <div className="rounded-2xl overflow-hidden"
           style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
-          <div className="px-5 py-3.5 border-b border-[var(--dmoop-border-soft)] flex items-center justify-between">
-            <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)]">Your brand library</p>
-            <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">
-              {list?.total_documents ?? 0} / 50 documents
-            </span>
+          <div className="px-5 py-3 border-b border-[var(--dmoop-border-soft)] flex items-center justify-between gap-2">
+            {selectedDocs.size > 0 ? (
+              <>
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={!!list && selectedDocs.size === list.documents.length}
+                    onChange={toggleAll}
+                    className="h-4 w-4 accent-[var(--dmoop-accent)] cursor-pointer"
+                  />
+                  <p className="text-[13px] font-semibold text-[var(--dmoop-text-primary)]">
+                    {selectedDocs.size} selected
+                  </p>
+                  <button
+                    onClick={() => setSelectedDocs(new Set())}
+                    className="text-[11.5px] font-medium text-[var(--dmoop-text-tertiary)] hover:text-[var(--dmoop-text-primary)] transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="relative">
+                  <button
+                    onClick={() => setMoveMenuOpen((o) => !o)}
+                    disabled={moving}
+                    className="h-8 px-3 rounded-lg text-[12px] font-semibold dmoop-btn-primary flex items-center gap-1.5 disabled:opacity-60"
+                  >
+                    {moving ? "Moving…" : "Move to…"}
+                  </button>
+                  {moveMenuOpen && (
+                    <div
+                      className="absolute right-0 top-full mt-1.5 w-[220px] max-w-[calc(100vw-2rem)] rounded-xl overflow-hidden z-30 dmoop-scale-in"
+                      style={{
+                        background: "var(--dmoop-gradient-card)",
+                        border: "1px solid var(--dmoop-border-soft)",
+                        boxShadow: "var(--dmoop-shadow-xl)",
+                      }}
+                    >
+                      <p className="px-3.5 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">
+                        Move {selectedDocs.size} doc{selectedDocs.size === 1 ? "" : "s"} to
+                      </p>
+                      {agents
+                        .filter((a) => a.id !== selectedAgentId)
+                        .map((a) => (
+                          <button
+                            key={a.id}
+                            onClick={() => void moveSelectedTo(a.id)}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-[#faf6ef] transition-colors text-left"
+                          >
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: a.color }} />
+                            <span className="text-[12.5px] font-medium text-[var(--dmoop-text-primary)] truncate flex-1">
+                              {a.name}
+                            </span>
+                            <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">{a.doc_count}</span>
+                          </button>
+                        ))}
+                      {agents.filter((a) => a.id !== selectedAgentId).length === 0 && (
+                        <p className="px-3.5 py-3 text-[11.5px] text-[var(--dmoop-text-tertiary)] text-center">
+                          No other agents to move to. Create one in <Link href="/agents" className="text-[var(--dmoop-accent)] underline">Manage agents</Link>.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2.5">
+                  {!empty && list && (
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      onChange={toggleAll}
+                      title="Select all"
+                      className="h-4 w-4 accent-[var(--dmoop-accent)] cursor-pointer"
+                    />
+                  )}
+                  <p className="text-[13.5px] font-semibold text-[var(--dmoop-text-primary)]">Your brand library</p>
+                </div>
+                <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">
+                  {list?.total_documents ?? 0} / 50 documents
+                </span>
+              </>
+            )}
           </div>
           {empty ? (
             <div className="px-5 py-12 text-center">
@@ -320,8 +461,18 @@ export default function BrandPage() {
           ) : (
             list?.documents.map((d) => {
               const typeLabel = DOC_TYPES.find((t) => t.value === d.doc_type)?.label ?? d.doc_type;
+              const isSelected = selectedDocs.has(d.id);
               return (
-                <div key={d.id} className="px-5 py-3.5 border-b border-[var(--dmoop-border-soft)] last:border-0 flex items-center gap-3">
+                <div key={d.id} className={cn(
+                  "px-5 py-3.5 border-b border-[var(--dmoop-border-soft)] last:border-0 flex items-center gap-3 transition-colors",
+                  isSelected ? "bg-[#fbf3ee]" : ""
+                )}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleDoc(d.id)}
+                    className="h-4 w-4 accent-[var(--dmoop-accent)] cursor-pointer shrink-0"
+                  />
                   <div className="w-9 h-9 rounded-lg bg-[#fbf3ee] flex items-center justify-center shrink-0">
                     <FileText size={15} className="text-[var(--dmoop-accent)]" />
                   </div>

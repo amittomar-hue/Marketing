@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useChatStore } from "@/lib/chat-store";
-import { useBrandAgentName } from "@/lib/brand-agent-name";
+import { useAgentStore } from "@/lib/agent-store";
 import {
   BookOpen, ChevronDown, Upload, AlertCircle,
   Megaphone, Mail, Share2, Newspaper, LayoutTemplate,
@@ -154,7 +154,16 @@ export default function BrandAgent({ onInsert }: { onInsert: (prompt: string) =>
   const [docs, setDocs] = useState<BrandDoc[] | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const setWebSearchMode = useChatStore((s) => s.setWebSearchMode);
-  const [agentName] = useBrandAgentName();
+  // Read the effective agent name from the active conversation's bound
+  // agent, falling back to the user-level selected agent, then the
+  // default-flagged one. Mirrors AgentSwitcher's resolution order so
+  // the chat input bar shows the same name as the header chip.
+  const agentName = useAgentStore((s) => {
+    const conv = useChatStore.getState().activeConversation();
+    const effectiveId =
+      conv?.agentId ?? s.selectedAgentId ?? s.agents.find((a) => a.is_default)?.id ?? null;
+    return s.agents.find((a) => a.id === effectiveId)?.name ?? "Brand Agent";
+  });
 
   useEffect(() => {
     const close = (e: MouseEvent) => {

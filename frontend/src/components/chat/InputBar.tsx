@@ -9,7 +9,6 @@ import { parseDocumentClient } from "@/lib/parse-document-client";
 import Link from "next/link";
 import ModelSelector from "./ModelSelector";
 import BrandAgent from "./BrandAgent";
-import { useBrandAgentName } from "@/lib/brand-agent-name";
 import { Paperclip, ArrowUp, Globe, Hammer, X, FileText, Mic, BookOpen, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,7 +56,14 @@ export default function InputBar() {
     webSearchForced, setWebSearchMode,
     pendingAttachment, setPendingAttachment,
   } = useChatStore();
-  const [agentName] = useBrandAgentName();
+  // Effective agent name: conversation binding → selected → default-flagged.
+  // Same resolution as AgentSwitcher so chat input and header stay aligned.
+  const agentName = useAgentStore((s) => {
+    const conv = useChatStore.getState().activeConversation();
+    const effectiveId =
+      conv?.agentId ?? s.selectedAgentId ?? s.agents.find((a) => a.is_default)?.id ?? null;
+    return s.agents.find((a) => a.id === effectiveId)?.name ?? "Brand Agent";
+  });
 
   useEffect(() => {
     if (taRef.current) {
