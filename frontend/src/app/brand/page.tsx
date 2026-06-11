@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Upload, FileText, Trash2, Loader2, BookOpen, AlertCircle, CheckCircle2, Wand2, Check } from "lucide-react";
-import { DOC_TYPES } from "@/lib/brand";
+import { DOC_TYPES, classifyDocType } from "@/lib/brand";
 import { useAgentStore } from "@/lib/agent-store";
 import AgentSwitcher from "@/components/chat/AgentSwitcher";
 import { parseDocumentClient } from "@/lib/parse-document-client";
@@ -30,7 +30,13 @@ export default function BrandPage() {
   const [list, setList] = useState<DocList | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<string>("");
-  const [docType, setDocType] = useState<string>("brand_guidelines");
+  // "auto" = let classifyDocType pick from filename + content after parse.
+  // The dropdown defaults to Auto; user can pin a specific type to force
+  // every subsequent upload to use that label.
+  const [docType, setDocType] = useState<string>("auto");
+  // The type the classifier picked for the most recent upload — surfaced
+  // as a "Auto-detected as X" chip so the user sees what happened.
+  const [lastDetectedType, setLastDetectedType] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [draftName, setDraftName] = useState<string>("");
@@ -152,6 +158,15 @@ export default function BrandPage() {
         setLastPii(null);
       }
 
+      // Resolve doc_type: if user left the picker on "auto", run the
+      // classifier against the parsed text + filename; otherwise honor
+      // their explicit pick. classifyDocType returns "general" when
+      // signals are ambiguous, so the worst case stays safe.
+      const resolvedDocType =
+        docType === "auto" ? classifyDocType(file.name, parsed.text) : docType;
+      if (docType === "auto") setLastDetectedType(resolvedDocType);
+      else setLastDetectedType(null);
+
       // Step 2: Send redacted text to /api/brand/upload
       setProgress(piiTotal > 0
         ? `Indexing into brand library (${piiTotal} PII items redacted locally)…`
@@ -162,7 +177,7 @@ export default function BrandPage() {
         body: JSON.stringify({
           filename: file.name,
           text: parsed.text,
-          doc_type: docType,
+          doc_type: resolvedDocType,
           pii_summary: parsed.pii ?? null,
           agent_id: selectedAgentId,
         }),
@@ -291,13 +306,25 @@ export default function BrandPage() {
           style={{ background: "var(--dmoop-gradient-card)", border: "1px solid var(--dmoop-border-soft)", boxShadow: "var(--dmoop-shadow-md)" }}>
           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
             <div className="flex-1">
-              <label className="block text-[11.5px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-1.5">
-                Document type
+              <label className="flex items-center justify-between text-[11.5px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-1.5">
+                <span>Document type</span>
+                {lastDetectedType && docType === "auto" && (
+                  <span className="inline-flex items-center gap-1 text-[10px] normal-case tracking-normal font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                    <Check size={9} strokeWidth={3} />
+                    {DOC_TYPES.find((d) => d.value === lastDetectedType)?.label ?? lastDetectedType}
+                  </span>
+                )}
               </label>
               <select value={docType} onChange={(e) => setDocType(e.target.value)}
                 className="w-full h-10 px-3 rounded-lg text-[13px] bg-white border border-[var(--dmoop-border-soft)] focus:outline-none focus:border-[var(--dmoop-accent)] focus:ring-4 focus:ring-[var(--dmoop-accent)]/10">
+                <option value="auto">✨ Auto-detect (recommended)</option>
                 {DOC_TYPES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
               </select>
+              <p className="text-[10.5px] text-[var(--dmoop-text-tertiary)] mt-1">
+                {docType === "auto"
+                  ? "DMOOP scans filename + content to pick the right category."
+                  : "Pinned — every upload uses this label until you change it."}
+              </p>
             </div>
             <div className="flex-1 sm:flex-[1.2]">
               <label className="block text-[11.5px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-1.5">

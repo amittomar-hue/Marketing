@@ -99,3 +99,80 @@ export const DOC_TYPES = [
   { value: "company_story",    label: "Company story / about" },
   { value: "general",          label: "Other / general" },
 ];
+
+// ─────────────────────────────────────────────────────────────────
+// Auto-classifier for the upload flow on /brand. Runs entirely in the
+// browser after parseDocumentClient extracts the text. Scores each
+// DOC_TYPES value against a small dictionary of filename + content
+// keywords (filename hits weighted 3× since filenames carry intent)
+// and returns the top scorer, falling back to "general" on a tie or
+// zero matches. Conservative on purpose — when in doubt, defer to
+// the user; the dropdown stays available as an override.
+// ─────────────────────────────────────────────────────────────────
+
+const TYPE_SIGNALS: Record<string, { filenamePatterns: RegExp[]; contentKeywords: string[] }> = {
+  brand_guidelines: {
+    filenamePatterns: [/\bbrand[-_\s]?(book|guide|guideline|kit)/i, /\bidentity\b/i, /\bguidelines?\b/i],
+    contentKeywords: ["brand guidelines", "logo usage", "color palette", "brand book", "visual identity", "brand standards", "primary color", "typography"],
+  },
+  style_guide: {
+    filenamePatterns: [/\b(style|voice|tone)[-_\s]?guide/i, /\bstyleguide\b/i, /\btov\b/i],
+    contentKeywords: ["tone of voice", "we sound like", "we don't sound like", "voice and tone", "writing style", "vocabulary", "avoid these words", "preferred terms"],
+  },
+  product_info: {
+    filenamePatterns: [/\bdatasheet\b/i, /\bspec(s|sheet)\b/i, /\bproduct[-_\s]?(info|sheet|overview|brief)/i, /\bfeatures?\b/i],
+    contentKeywords: ["product overview", "key features", "specifications", "technical specs", "supported formats", "system requirements", "feature list", "capabilities"],
+  },
+  messaging: {
+    filenamePatterns: [/\bmessag(ing|e)\b/i, /\bvalue[-_\s]?prop/i, /\b(narrative|story)[-_\s]?framework/i],
+    contentKeywords: ["value proposition", "key messages", "messaging framework", "core message", "elevator pitch", "tagline", "proof points", "messaging pillars"],
+  },
+  personas: {
+    filenamePatterns: [/\bpersona/i, /\bicp\b/i, /\bbuyer[-_\s]?(profile|persona)/i, /\baudience\b/i],
+    contentKeywords: ["target customer", "buyer persona", "ideal customer profile", "demographics", "job title", "pain points", "decision maker", "user persona"],
+  },
+  case_study: {
+    filenamePatterns: [/\bcase[-_\s]?stud/i, /\bsuccess[-_\s]?story/i, /\bcustomer[-_\s]?story/i, /\bcampaign\b/i, /\btestimonial/i],
+    contentKeywords: ["challenge", "the solution", "results", "outcome", "before and after", "customer success", "increased by", "% improvement", "case study", "the customer"],
+  },
+  sales_playbook: {
+    filenamePatterns: [/\bplaybook\b/i, /\bsales[-_\s]?(deck|enablement|script)/i, /\boutreach\b/i, /\bcadence\b/i],
+    contentKeywords: ["sales playbook", "qualification framework", "objection handling", "discovery questions", "next steps", "outreach sequence", "call script", "BANT", "MEDDIC"],
+  },
+  positioning: {
+    filenamePatterns: [/\bpositioning\b/i, /\bcompetit/i, /\bvs[-_\s]?(competitor|alternative)/i, /\bdifferentia/i],
+    contentKeywords: ["competitive positioning", "vs competitor", "differentiation", "unlike alternatives", "category leader", "market positioning", "competitive advantage", "our edge"],
+  },
+  company_story: {
+    filenamePatterns: [/\babout[-_\s]?(us|company)/i, /\bcompany[-_\s]?(story|history|overview)/i, /\bmanifesto\b/i, /\bmission\b/i],
+    contentKeywords: ["our mission", "our vision", "founded in", "company history", "our story", "we believe", "our values", "why we exist", "our purpose"],
+  },
+};
+
+/** Classify a brand document into one of the DOC_TYPES values based on
+ *  filename + content signals. Returns "general" if no signal scores
+ *  above zero, or if multiple types tie. */
+export function classifyDocType(filename: string, text: string): string {
+  const name = filename.toLowerCase();
+  // Limit content scan to the first 8K chars — enough signal for any
+  // real brand doc, keeps the regex pass under 1ms for huge files.
+  const head = text.slice(0, 8000).toLowerCase();
+
+  const scores: { type: string; score: number }[] = [];
+  for (const [type, signals] of Object.entries(TYPE_SIGNALS)) {
+    let score = 0;
+    for (const pattern of signals.filenamePatterns) {
+      if (pattern.test(name)) score += 3; // filename hits weighted higher
+    }
+    for (const kw of signals.contentKeywords) {
+      if (head.includes(kw)) score += 1;
+    }
+    if (score > 0) scores.push({ type, score });
+  }
+
+  if (scores.length === 0) return "general";
+  scores.sort((a, b) => b.score - a.score);
+  // Tie at the top → defer to user, return general
+  if (scores.length > 1 && scores[0].score === scores[1].score) return "general";
+  return scores[0].type;
+}
