@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Plus, Pencil, Trash2, Star, BookOpen, Check, X as XIcon } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Star, BookOpen, Check, X as XIcon, Sparkles, ChevronDown, RefreshCw } from "lucide-react";
 import { useAgentStore } from "@/lib/agent-store";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,34 @@ export default function AgentsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [refreshingProfile, setRefreshingProfile] = useState<string | null>(null);
+
+  const refreshProfile = async (id: string) => {
+    setRefreshingProfile(id);
+    try {
+      const res = await fetch(`/api/brand/agents/${id}/refresh-profile`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const existing = agents.find((a) => a.id === id);
+        if (existing) {
+          upsert({
+            ...existing,
+            voice_profile: json.profile,
+            voice_profile_updated_at: new Date().toISOString(),
+          });
+        }
+      } else {
+        const j = await res.json().catch(() => ({}));
+        alert(j.error ?? "Could not refresh profile");
+      }
+    } finally {
+      setRefreshingProfile(null);
+    }
+  };
 
   useEffect(() => {
     void refresh();
@@ -209,10 +237,13 @@ export default function AgentsPage() {
           {agents.map((a) => {
             const isEditing = editingId === a.id;
             const isBusy = busy === a.id;
+            const isExpanded = expandedId === a.id;
+            const isRefreshing = refreshingProfile === a.id;
+            const hasProfile = !!a.voice_profile;
             return (
+              <div key={a.id} className="border-b border-[var(--dmoop-border-soft)] last:border-0">
               <div
-                key={a.id}
-                className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-[var(--dmoop-border-soft)] last:border-0 flex items-center gap-3 hover:bg-[#faf6ef]/40"
+                className="px-4 sm:px-5 py-3 sm:py-3.5 flex items-center gap-3 hover:bg-[#faf6ef]/40"
               >
                 {/* Color dot */}
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -242,10 +273,21 @@ export default function AgentsPage() {
                           default
                         </span>
                       )}
+                      {hasProfile && (
+                        <span className="text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700 inline-flex items-center gap-0.5">
+                          <Sparkles size={9} /> voice trained
+                        </span>
+                      )}
                     </p>
                   )}
                   <p className="text-[11px] text-[var(--dmoop-text-tertiary)] flex items-center gap-1.5">
                     <BookOpen size={10} /> {a.doc_count} brand doc{a.doc_count === 1 ? "" : "s"}
+                    {hasProfile && a.voice_profile_updated_at && (
+                      <>
+                        <span>·</span>
+                        <span>voice extracted {new Date(a.voice_profile_updated_at).toLocaleDateString()}</span>
+                      </>
+                    )}
                   </p>
                 </div>
 
@@ -314,7 +356,121 @@ export default function AgentsPage() {
                   >
                     <Trash2 size={13} />
                   </button>
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : a.id)}
+                    title={isExpanded ? "Collapse" : "Show brand voice profile"}
+                    className="p-1.5 rounded-md text-[var(--dmoop-text-secondary)] hover:bg-white hover:shadow-[var(--dmoop-shadow-sm)] transition-transform"
+                    style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                  >
+                    <ChevronDown size={13} />
+                  </button>
                 </div>
+              </div>
+
+              {/* Brand Voice Profile expanded panel */}
+              {isExpanded && (
+                <div className="px-4 sm:px-5 pb-4 pt-1 bg-[#faf6ef]/30">
+                  <div className="rounded-xl bg-white border border-[var(--dmoop-border-soft)] p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
+                          <Sparkles size={12} className="text-violet-600" strokeWidth={2.4} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[12px] font-semibold text-[var(--dmoop-text-primary)]">
+                            Brand Voice Profile
+                          </p>
+                          <p className="text-[10.5px] text-[var(--dmoop-text-tertiary)] mt-0.5">
+                            Auto-extracted by DMOOP from this agent&apos;s brand library — injected into every chat turn alongside per-query brand chunks.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => void refreshProfile(a.id)}
+                        disabled={isRefreshing || a.doc_count === 0}
+                        title={a.doc_count === 0 ? "Upload a brand doc first" : "Re-run extractor"}
+                        className="h-8 px-2.5 rounded-lg text-[11.5px] font-semibold flex items-center gap-1.5 shrink-0 bg-white border border-[var(--dmoop-border-soft)] hover:bg-[#fbf3ee] disabled:opacity-50 disabled:hover:bg-white"
+                      >
+                        <RefreshCw size={11} className={cn(isRefreshing && "animate-spin")} />
+                        {isRefreshing ? "Extracting…" : "Re-extract"}
+                      </button>
+                    </div>
+
+                    {!hasProfile && (
+                      <div className="text-center py-6">
+                        <p className="text-[12px] text-[var(--dmoop-text-tertiary)]">
+                          {a.doc_count === 0
+                            ? "No brand docs uploaded yet — the profile builds itself the moment you upload your first doc."
+                            : "Profile not yet extracted. Click Re-extract above to build it from your existing docs."}
+                        </p>
+                      </div>
+                    )}
+
+                    {hasProfile && a.voice_profile && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <ProfileField label="Tone">
+                          <div className="flex flex-wrap gap-1">
+                            {a.voice_profile.tone_descriptors.map((t) => (
+                              <span key={t} className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-violet-50 text-violet-700">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        </ProfileField>
+                        <ProfileField label="Audience">
+                          <p className="text-[12px] text-[var(--dmoop-text-primary)] leading-snug">
+                            {a.voice_profile.audience}
+                          </p>
+                        </ProfileField>
+                        <ProfileField label="What the brand stands for">
+                          <ul className="space-y-0.5">
+                            {a.voice_profile.value_props.map((v) => (
+                              <li key={v} className="text-[11.5px] text-[var(--dmoop-text-primary)] leading-snug flex items-start gap-1.5">
+                                <span className="text-[var(--dmoop-accent)] mt-0.5">▸</span>
+                                <span>{v}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </ProfileField>
+                        <ProfileField label="Writing style">
+                          <p className="text-[11.5px] text-[var(--dmoop-text-primary)] leading-snug">
+                            {a.voice_profile.writing_style}
+                          </p>
+                        </ProfileField>
+                        <ProfileField label="Preferred vocabulary">
+                          <div className="flex flex-wrap gap-1">
+                            {a.voice_profile.preferred_terms.map((t) => (
+                              <span key={t} className="text-[11px] font-medium px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        </ProfileField>
+                        <ProfileField label="Avoid">
+                          <div className="flex flex-wrap gap-1">
+                            {a.voice_profile.avoid_terms.map((t) => (
+                              <span key={t} className="text-[11px] font-medium px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 line-through">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        </ProfileField>
+                        <div className="sm:col-span-2 text-[10.5px] text-[var(--dmoop-text-tertiary)] flex flex-wrap items-center gap-x-2 gap-y-0.5 pt-2 border-t border-[var(--dmoop-border-soft)]">
+                          <span>extracted from {a.voice_profile.doc_count} doc{a.voice_profile.doc_count === 1 ? "" : "s"}</span>
+                          <span>·</span>
+                          <span>{(a.voice_profile.extracted_from_chars / 1000).toFixed(1)}K chars analysed</span>
+                          {a.voice_profile_updated_at && (
+                            <>
+                              <span>·</span>
+                              <span>{new Date(a.voice_profile_updated_at).toLocaleString()}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               </div>
             );
           })}
@@ -322,8 +478,18 @@ export default function AgentsPage() {
 
         <p className="text-[11.5px] text-[var(--dmoop-text-tertiary)]">
           Delete cascades the agent&apos;s brand documents. Conversations bound to a deleted agent fall back to your default.
+          The Brand Voice Profile re-extracts automatically on every upload — or use Re-extract above to refresh on demand.
         </p>
       </main>
+    </div>
+  );
+}
+
+function ProfileField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--dmoop-text-tertiary)] mb-1">{label}</p>
+      {children}
     </div>
   );
 }

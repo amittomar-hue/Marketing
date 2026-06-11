@@ -13,6 +13,8 @@ import { hfStreamGenerate, isFineTunedModelConfigured } from "@/lib/huggingface"
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getLatestIntel, formatIntelAsContext } from "@/lib/intel";
 import { retrieveBrandChunks, formatBrandContext } from "@/lib/brand";
+import { formatVoiceProfileForContext, type VoiceProfile } from "@/lib/voice-profile";
+import { getSupabase } from "@/lib/supabase";
 import { retrieveTrainingPairs, formatTrainingPairsAsContext } from "@/lib/training-pairs";
 import { extractUrlsFromText, scrapeSite, formatScrapeAsContext } from "@/lib/web-scraper";
 import {
@@ -467,6 +469,34 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Brand Voice Profile: pull the agent's structured voice profile
+  // and inject as a permanent system-prompt addendum. Unlike brand
+  // chunks (per-query similarity retrieval), the voice profile applies
+  // to EVERY answer for this agent — tone / audience / preferred vocab
+  // shape the response even when no individual brand doc matches the
+  // user query. Resolution mirrors retrieveBrandChunks: explicit agent
+  // first, else user's default agent. Cheap — one indexed SELECT.
+  let voiceProfileContext = "";
+  if (userId) {
+    try {
+      const service = getSupabase();
+      if (service) {
+        let q = service
+          .from("brand_agents")
+          .select("voice_profile")
+          .eq("user_id", userId);
+        q = conversationAgentId
+          ? q.eq("id", conversationAgentId)
+          : q.eq("is_default", true);
+        const { data: agentRow } = await q.maybeSingle();
+        const profile = (agentRow?.voice_profile as VoiceProfile | null) ?? null;
+        voiceProfileContext = formatVoiceProfileForContext(profile);
+      }
+    } catch (err) {
+      console.error("voice profile fetch failed:", err);
+    }
+  }
+
   const groq = new OpenAI({
     apiKey: groqKey,
     baseURL: "https://api.groq.com/openai/v1",
@@ -504,6 +534,13 @@ export async function POST(req: NextRequest) {
   // knowledge base. Brand / examples / intel are supporting context.
   if (isTuned && trainingPairsContext) {
     groqMessages.push({ role: "system", content: trainingPairsContext });
+  }
+
+  // Brand Voice Profile — applies on every answer regardless of retrieval.
+  // Pushed BEFORE brandContext so the model anchors on voice first, then
+  // adapts that voice to whatever specific brand chunks were retrieved.
+  if (voiceProfileContext) {
+    groqMessages.push({ role: "system", content: voiceProfileContext });
   }
 
   // Brand context — authoritative for the user's brand voice / products

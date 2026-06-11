@@ -14,6 +14,7 @@
 // ─────────────────────────────────────────────────────────────────
 
 import { create } from "zustand";
+import type { VoiceProfile } from "./voice-profile";
 
 export interface BrandAgent {
   id: string;
@@ -23,6 +24,11 @@ export interface BrandAgent {
   doc_count: number;
   created_at?: string;
   updated_at?: string;
+  /** Structured brand voice — extracted from this agent's uploaded brand
+   *  docs by a Groq 70B pass after every upload (and on manual refresh
+   *  via the agents page). NULL = never extracted / new agent. */
+  voice_profile?: VoiceProfile | null;
+  voice_profile_updated_at?: string | null;
 }
 
 interface AgentState {

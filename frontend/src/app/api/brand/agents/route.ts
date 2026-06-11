@@ -39,7 +39,7 @@ export async function GET() {
 
   const { data: agents, error } = await supa
     .from("brand_agents")
-    .select("id, name, color, is_default, created_at, updated_at")
+    .select("id, name, color, is_default, created_at, updated_at, voice_profile, voice_profile_updated_at")
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

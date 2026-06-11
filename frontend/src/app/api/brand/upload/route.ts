@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabase } from "@/lib/supabase";
 import { chunkText } from "@/lib/brand";
 import { logSafetyIncident } from "@/lib/safety";
+import { refreshVoiceProfile } from "@/lib/voice-profile";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -149,5 +150,25 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ ok: true, doc });
+  // Brand Voice Profile refresh — re-extract the agent's voice from
+  // its full library now that this new doc has landed. Runs INLINE
+  // because the upload is already a 5-10s flow with progress UI; an
+  // extra ~3s call to Groq's 70B model adds rounding-error latency
+  // and avoids a separate background queue. If extraction fails for
+  // any reason (Groq quota, malformed JSON, transient timeout), the
+  // upload still returns 200 — the chat path simply uses whatever
+  // profile was last persisted, falling back to brand chunks alone
+  // when no profile exists yet. Never blocks an upload from succeeding.
+  let voiceProfileRefreshed = false;
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey && effectiveAgentId) {
+    try {
+      const profile = await refreshVoiceProfile(service, effectiveAgentId, groqKey);
+      voiceProfileRefreshed = !!profile;
+    } catch (e) {
+      console.error("voice profile refresh failed:", e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  return NextResponse.json({ ok: true, doc, voice_profile_refreshed: voiceProfileRefreshed });
 }
