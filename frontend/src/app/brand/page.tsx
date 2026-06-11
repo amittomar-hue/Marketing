@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowLeft, Upload, FileText, Trash2, Loader2, BookOpen, AlertCircle, CheckCircle2, Wand2, Check } from "lucide-react";
 import { DOC_TYPES } from "@/lib/brand";
 import { useAgentStore } from "@/lib/agent-store";
+import AgentSwitcher from "@/components/chat/AgentSwitcher";
 import { parseDocumentClient } from "@/lib/parse-document-client";
 import { cn } from "@/lib/utils";
 
@@ -231,12 +232,18 @@ export default function BrandPage() {
             style={{ background: "var(--dmoop-gradient-accent)", boxShadow: "var(--dmoop-shadow-accent)" }}>
             <BookOpen size={18} className="text-white" />
           </div>
-          <div className="flex-1">
-            <h1 className="text-[24px] sm:text-[28px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] leading-tight">
-              Brand Library
-            </h1>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="text-[24px] sm:text-[28px] font-semibold tracking-tight text-[var(--dmoop-text-primary)] leading-tight">
+                Brand Library
+              </h1>
+              {/* In-page agent switcher — users can re-scope the library
+                  without bouncing through /chat. Same dropdown component
+                  the chat header uses, so state stays consistent. */}
+              <AgentSwitcher />
+            </div>
             <p className="text-[13px] sm:text-[14px] text-[var(--dmoop-text-secondary)] mt-1">
-              Upload your brand guidelines, style guides, product info, past campaigns, or personas. DMOOP will use them as authoritative context in every response.
+              Upload your brand guidelines, style guides, product info, past campaigns, or personas. DMOOP will use them as authoritative context in every response — scoped to the agent shown above.
             </p>
           </div>
         </div>
