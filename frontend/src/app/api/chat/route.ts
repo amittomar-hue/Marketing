@@ -95,7 +95,7 @@ BANNED PHRASES (use of any of these signals you've defaulted to generic AI prose
 If you catch yourself reaching for one of these, stop and write the specific version instead.
 
 FORMAT CONTRACT (every answer):
-1. **TL;DR** — one short bold paragraph at the very top with the headline takeaway.
+1. Lead with the answer. No preamble, no TL;DR, no "great question" — first sentence does work.
 2. ## Section headings for each major part of the answer.
 3. Bulleted or numbered lists for tactics, steps, or comparisons.
 4. **Use tables** for any comparison (3+ options, before/after, channel mix).
