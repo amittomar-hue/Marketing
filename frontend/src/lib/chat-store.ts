@@ -281,7 +281,23 @@ export const useChatStore = create<ChatState>()(
       // device beats preserving silo'd browser history.
       // ─────────────────────────────────────────────────────────
       hydrateFromServer: async (userId: string) => {
-        set({ userId, isHydrating: true, conversations: [], activeId: null });
+        // Preserve activeId if it's the same user being re-hydrated —
+        // otherwise tabbing away from DMOOP wipes the active conversation
+        // every time INITIAL_SESSION / TOKEN_REFRESHED fires. ChatLayout's
+        // listener already guards against calling this on transient
+        // events, but if some other caller does, this keeps the active
+        // chat visible while the server fetch is in flight.
+        const prev = get();
+        const sameUser = prev.userId === userId;
+        const prevActiveId = sameUser ? prev.activeId : null;
+        const prevConvos = sameUser ? prev.conversations : [];
+
+        set({
+          userId,
+          isHydrating: true,
+          conversations: prevConvos,
+          activeId: prevActiveId,
+        });
 
         const sb = createSupabaseBrowserClient();
         const { data, error } = await sb
@@ -299,7 +315,19 @@ export const useChatStore = create<ChatState>()(
           .map((row) => row.data as Conversation)
           .filter(Boolean);
 
-        set({ conversations: serverConvos, isHydrating: false });
+        // If the previously-active conversation still exists on the
+        // server side, keep it active; otherwise null it out so the
+        // sidebar can pick something fresh.
+        const stillActive =
+          prevActiveId && serverConvos.some((c) => c.id === prevActiveId)
+            ? prevActiveId
+            : null;
+
+        set({
+          conversations: serverConvos,
+          activeId: stillActive,
+          isHydrating: false,
+        });
       },
 
       unbind: () => {

@@ -49,13 +49,42 @@ export default function ChatLayout() {
 
     sb.auth.getUser().then(({ data: { user } }) => {
       if (cancelled) return;
-      if (user) void hydrateFromServer(user.id);
+      if (user) {
+        const current = useChatStore.getState().userId;
+        if (current !== user.id) void hydrateFromServer(user.id);
+      }
     });
 
-    const { data: sub } = sb.auth.onAuthStateChange((_evt, session) => {
+    // Supabase fires onAuthStateChange on FOUR distinct kinds of events:
+    //   INITIAL_SESSION   — on subscribe + whenever the tab regains focus
+    //                       and the client re-checks the session
+    //   SIGNED_IN         — actual sign-in transition
+    //   SIGNED_OUT        — actual sign-out transition
+    //   TOKEN_REFRESHED   — background JWT refresh (happens every ~hour
+    //                       AND whenever the tab regains focus if the
+    //                       session is close to expiry)
+    //   USER_UPDATED      — user metadata change
+    //   PASSWORD_RECOVERY — password-reset flow
+    //
+    // Treating every event as a sign-in (the old code) meant tabbing away
+    // from DMOOP and coming back wiped the user's active conversation —
+    // hydrateFromServer resets activeId so the chat appeared "closed"
+    // every time INITIAL_SESSION or TOKEN_REFRESHED fired on tab focus.
+    // Only re-hydrate when the bound user actually changes (different
+    // user signed in), and only unbind on a real SIGNED_OUT.
+    const { data: sub } = sb.auth.onAuthStateChange((evt, session) => {
       if (cancelled) return;
-      if (session?.user) void hydrateFromServer(session.user.id);
-      else unbind();
+      if (evt === "SIGNED_OUT") {
+        unbind();
+        return;
+      }
+      if (evt === "SIGNED_IN" && session?.user) {
+        const current = useChatStore.getState().userId;
+        if (current !== session.user.id) void hydrateFromServer(session.user.id);
+      }
+      // INITIAL_SESSION / TOKEN_REFRESHED / USER_UPDATED → no-op
+      // (the getUser() above already handled the initial hydrate, and
+      // ongoing token refreshes don't change which user is bound).
     });
 
     return () => {
