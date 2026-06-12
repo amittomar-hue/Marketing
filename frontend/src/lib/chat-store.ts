@@ -14,7 +14,14 @@ export interface Message {
   isStreaming?: boolean;
   interactionId?: string;
   userRating?: 1 | -1 | null;
+  /** Legacy single-attachment field — preserved on existing messages,
+   *  not written on new sends. Multi-file uploads use attachmentNames. */
   attachmentName?: string;
+  /** Multi-file attachment names (e.g. ["a.pdf", "b.docx"]) for messages
+   *  that bundled more than one file. Display layer renders both this
+   *  and the legacy attachmentName field, so old conversations don't
+   *  lose their attachment chips after this rollout. */
+  attachmentNames?: string[];
   /** If the user asked for a specific file format (pdf/docx/xlsx/pptx/csv/json/md/txt/html), it's stored here so the assistant message can show a Download button. */
   requestedFormat?: string;
   /** The verbatim text used to derive the filename when downloading. */
@@ -41,14 +48,25 @@ interface ChatState {
   activeId: string | null;
   selectedModel: ModelId;
   webSearchForced: "auto" | "on" | "off";
-  pendingAttachment: { name: string; content: string } | null;
+  /** All files the user has attached but not yet sent. Replaces the
+   *  single pendingAttachment from the pre-multi-file era. Lives only
+   *  in-memory (not in the persist partialize list) so it resets on
+   *  page reload — staging area only. */
+  pendingAttachments: Array<{ name: string; content: string }>;
   /** Auth user the store is currently bound to. null = signed out / not yet hydrated. */
   userId: string | null;
   /** True while the initial server fetch is in flight (sidebar shows a skeleton). */
   isHydrating: boolean;
   setModel: (model: ModelId) => void;
   setWebSearchMode: (mode: "auto" | "on" | "off") => void;
-  setPendingAttachment: (att: { name: string; content: string } | null) => void;
+  /** Append a single attachment to the staged list (called once per
+   *  file when the user selects multiple files at once, or one at a
+   *  time across separate clicks). De-dupes by filename. */
+  addPendingAttachment: (att: { name: string; content: string }) => void;
+  /** Remove a single staged attachment by filename. */
+  removePendingAttachment: (name: string) => void;
+  /** Clear every staged attachment — fires after a successful send. */
+  clearPendingAttachments: () => void;
   newConversation: () => string;
   deleteConversation: (id: string) => void;
   renameConversation: (id: string, title: string) => void;
@@ -158,13 +176,25 @@ export const useChatStore = create<ChatState>()(
       activeId: null,
       selectedModel: DEFAULT_MODEL,
       webSearchForced: "auto",
-      pendingAttachment: null,
+      pendingAttachments: [],
       userId: null,
       isHydrating: false,
 
       setModel: (model) => set({ selectedModel: model }),
       setWebSearchMode: (mode) => set({ webSearchForced: mode }),
-      setPendingAttachment: (att) => set({ pendingAttachment: att }),
+      addPendingAttachment: (att) =>
+        set((s) => ({
+          // De-dupe by filename — reattaching the same file is a no-op
+          // rather than landing the user with two identical chips.
+          pendingAttachments: s.pendingAttachments.some((a) => a.name === att.name)
+            ? s.pendingAttachments
+            : [...s.pendingAttachments, att],
+        })),
+      removePendingAttachment: (name) =>
+        set((s) => ({
+          pendingAttachments: s.pendingAttachments.filter((a) => a.name !== name),
+        })),
+      clearPendingAttachments: () => set({ pendingAttachments: [] }),
 
       newConversation: () => {
         const id = uid();

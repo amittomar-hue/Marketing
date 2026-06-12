@@ -54,7 +54,7 @@ export default function InputBar() {
   const {
     activeId, newConversation, addMessage, updateMessage, selectedModel,
     webSearchForced, setWebSearchMode,
-    pendingAttachment, setPendingAttachment,
+    pendingAttachments, addPendingAttachment, removePendingAttachment, clearPendingAttachments,
   } = useChatStore();
   // Effective agent name: conversation binding → selected → default-flagged.
   // Same resolution as AgentSwitcher so chat input and header stay aligned.
@@ -202,27 +202,46 @@ export default function InputBar() {
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 50 * 1024 * 1024) {
-      alert("File too large. Max 50MB.");
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    const oversize = files.find((f) => f.size > 50 * 1024 * 1024);
+    if (oversize) {
+      alert(`"${oversize.name}" is too large. Max 50MB per file.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+
     setParsingFile(true);
     try {
-      // Parse client-side: bypasses Vercel's 4.5MB request body limit (413)
-      // and keeps the binary on the user's machine — only extracted text travels.
-      const result = await parseDocumentClient(file);
-      if (!result.ok) {
-        alert(result.error);
-        return;
+      // Parse all selected files in parallel client-side. Bypasses
+      // Vercel's 4.5MB request body limit (413) per file and keeps the
+      // binaries on the user's machine — only extracted text travels.
+      const results = await Promise.all(
+        files.map(async (file) => {
+          try {
+            const result = await parseDocumentClient(file);
+            return { file, result };
+          } catch (err) {
+            return {
+              file,
+              result: { ok: false as const, error: err instanceof Error ? err.message : String(err) },
+            };
+          }
+        })
+      );
+
+      const failed: string[] = [];
+      for (const { file, result } of results) {
+        if (!result.ok) {
+          failed.push(`${file.name}: ${result.error}`);
+          continue;
+        }
+        addPendingAttachment({ name: file.name, content: result.text });
       }
-      setPendingAttachment({
-        name: file.name,
-        content: result.text,
-      });
-    } catch (err) {
-      alert("Parse failed: " + (err instanceof Error ? err.message : String(err)));
+      if (failed.length > 0) {
+        alert(`Some files failed to parse:\n\n${failed.join("\n")}`);
+      }
     } finally {
       setParsingFile(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -231,7 +250,7 @@ export default function InputBar() {
 
   const send = async () => {
     const text = value.trim();
-    if (!text && !pendingAttachment) return;
+    if (!text && pendingAttachments.length === 0) return;
 
     // Stop any in-progress voice recognition
     if (listening && recognitionRef.current) {
@@ -245,10 +264,19 @@ export default function InputBar() {
     let convId = activeId;
     if (!convId) convId = newConversation();
 
-    // Compose the user message — include attachment as a prefix if present
-    const userContent = pendingAttachment
-      ? `[Attached: ${pendingAttachment.name}]\n${pendingAttachment.content}\n\n---\n\n${text}`
-      : text;
+    // Compose the user message — prefix all attachments, one block per
+    // file separated by a horizontal rule, then the user's typed text
+    // at the end. Format mirrors the previous single-file behaviour so
+    // the LLM treats each attachment as an authoritative source.
+    const attachmentBlocks = pendingAttachments
+      .map((a) => `[Attached: ${a.name}]\n${a.content}`)
+      .join("\n\n---\n\n");
+    const userContent =
+      pendingAttachments.length > 0
+        ? `${attachmentBlocks}\n\n---\n\n${text}`
+        : text;
+    const attachmentNamesForMessage =
+      pendingAttachments.length > 0 ? pendingAttachments.map((a) => a.name) : undefined;
 
     // Detect requested output format (pdf/docx/xlsx/pptx/csv/json/md/txt/html)
     const requestedFormat = detectFormat(text) ?? undefined;
@@ -265,10 +293,10 @@ export default function InputBar() {
         addMessage(convId, {
           role: "user",
           content: userContent,
-          attachmentName: pendingAttachment?.name,
+          attachmentNames: attachmentNamesForMessage,
         });
         setValue("");
-        setPendingAttachment(null);
+        clearPendingAttachments();
         const label = FORMAT_LABELS[requestedFormat as ExportFormat] ?? requestedFormat.toUpperCase();
         addMessage(convId, {
           role: "assistant",
@@ -286,11 +314,11 @@ export default function InputBar() {
     addMessage(convId, {
       role: "user",
       content: userContent,
-      attachmentName: pendingAttachment?.name,
+      attachmentNames: attachmentNamesForMessage,
     });
     setValue("");
-    const attachmentForThisMessage = pendingAttachment;
-    setPendingAttachment(null);
+    const attachmentsForThisMessage = pendingAttachments;
+    clearPendingAttachments();
 
     const asstId = addMessage(convId, {
       role: "assistant",
@@ -327,7 +355,7 @@ export default function InputBar() {
         isStreaming: false,
       });
     }
-    void attachmentForThisMessage;
+    void attachmentsForThisMessage;
   };
 
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -337,7 +365,7 @@ export default function InputBar() {
     }
   };
 
-  const hasValue = value.trim().length > 0 || pendingAttachment !== null;
+  const hasValue = value.trim().length > 0 || pendingAttachments.length > 0;
 
   const cycleWebSearch = () => {
     setWebSearchMode(
@@ -354,20 +382,45 @@ export default function InputBar() {
 
   return (
     <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 pb-3 pt-1">
-      {/* Pending attachment chip */}
-      {pendingAttachment && (
-        <div className="mb-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[var(--dmoop-border-soft)] shadow-[var(--dmoop-shadow-xs)] text-[12.5px]">
-          <FileText size={12} className="text-[var(--dmoop-accent)] shrink-0" />
-          <span className="font-medium text-[var(--dmoop-text-primary)] truncate flex-1">
-            {pendingAttachment.name}
-          </span>
-          <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)]">
-            {(pendingAttachment.content.length / 1024).toFixed(1)}KB
-          </span>
-          <button onClick={() => setPendingAttachment(null)}
-            className="p-0.5 rounded-md hover:bg-[#f0ede8] transition-colors">
-            <X size={12} className="text-[var(--dmoop-text-secondary)]" />
-          </button>
+      {/* Pending attachment chips — one row per file. Each has its own
+          X to remove individually so you can drop a wrong file without
+          losing the rest. */}
+      {pendingAttachments.length > 0 && (
+        <div className="mb-2 space-y-1.5">
+          {pendingAttachments.length > 1 && (
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">
+                {pendingAttachments.length} files attached
+              </p>
+              <button
+                onClick={clearPendingAttachments}
+                className="text-[10.5px] font-medium text-[var(--dmoop-text-tertiary)] hover:text-[var(--dmoop-text-primary)] transition-colors"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+          {pendingAttachments.map((a) => (
+            <div
+              key={a.name}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[var(--dmoop-border-soft)] shadow-[var(--dmoop-shadow-xs)] text-[12.5px]"
+            >
+              <FileText size={12} className="text-[var(--dmoop-accent)] shrink-0" />
+              <span className="font-medium text-[var(--dmoop-text-primary)] truncate flex-1">
+                {a.name}
+              </span>
+              <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)] shrink-0">
+                {(a.content.length / 1024).toFixed(1)}KB
+              </span>
+              <button
+                onClick={() => removePendingAttachment(a.name)}
+                className="p-0.5 rounded-md hover:bg-[#f0ede8] transition-colors shrink-0"
+                title={`Remove ${a.name}`}
+              >
+                <X size={12} className="text-[var(--dmoop-text-secondary)]" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -401,6 +454,7 @@ export default function InputBar() {
             <input
               ref={fileInputRef}
               type="file"
+              multiple
               accept=".pdf,.docx,.xlsx,.xls,.pptx,.txt,.md,.csv,.tsv,.json,.log,.html,.htm,.xml,.yml,.yaml,.rtf"
               onChange={handleFileSelect}
               className="hidden"
@@ -411,10 +465,10 @@ export default function InputBar() {
               disabled={parsingFile}
               className={cn(
                 "p-1.5 sm:p-2 rounded-lg text-[var(--dmoop-text-secondary)] transition-all duration-150 hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)] active:scale-95 shrink-0",
-                pendingAttachment && "text-[var(--dmoop-accent)] bg-[#fbf3ee]",
+                pendingAttachments.length > 0 && "text-[var(--dmoop-accent)] bg-[#fbf3ee]",
                 parsingFile && "opacity-60 cursor-wait"
               )}
-              title="Attach PDF, Word, Excel, PowerPoint, or text (max 10MB)"
+              title="Attach one or more files — PDF, Word, Excel, PowerPoint, text (max 50MB each)"
             >
               {parsingFile ? (
                 <span className="block w-3.5 h-3.5 border-2 border-[var(--dmoop-accent)] border-t-transparent rounded-full animate-spin" />
