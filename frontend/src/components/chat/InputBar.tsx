@@ -552,12 +552,14 @@ export default function InputBar() {
         />
 
         <div className="flex items-center justify-between px-2 sm:px-3 pb-3 pt-1.5 gap-1.5 sm:gap-2 min-w-0">
-          {/* Left controls — horizontally scrollable on overflow so the
-              row never wraps regardless of how many toggles are visible.
-              Each button is shrink-0 + whitespace-nowrap so text can't
-              break mid-label like "Search · Off" did before. Scrollbar
-              hidden via dmoop-no-scrollbar utility. */}
-          <div className="flex items-center gap-0.5 sm:gap-1 min-w-0 flex-1 overflow-x-auto dmoop-no-scrollbar">
+          {/* Left controls — buttons are shrink-0 + whitespace-nowrap so
+              they keep their natural width and can't wrap text mid-label.
+              No overflow-x: that gotcha-clips the y-axis too per CSS spec
+              and hides absolute-positioned dropdowns (the Images style
+              picker, Language picker) above the row. min-w-0 + flex-1
+              lets the row share width with the right-side group without
+              expanding past it. */}
+          <div className="flex items-center gap-0.5 sm:gap-1 min-w-0 flex-1">
             {/* Attach */}
             <input
               ref={fileInputRef}
