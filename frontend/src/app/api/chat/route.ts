@@ -155,6 +155,10 @@ VISUAL STYLE — PROFESSIONAL PHOTOGRAPHY OF REAL PEOPLE, NEVER 3D RENDER OR ILL
 - Composition still matters — name the scene, the camera angle (close-up portrait, mid-shot, over-the-shoulder, wide environmental), lighting (golden hour, soft window light, overcast diffused), mood. Generic descriptions ("a businessman", "a happy team") produce stock-photo slop. Specific scenes ("Candid portrait of a Black woman software engineer in her 30s at a sunlit standing desk, mid-laugh, glasses, casual button-up, plants behind her, shallow depth of field, shot on Canon R5, 50mm") produce something usable.
 - Diversity is the default — across responses with multiple images, vary gender presentation, ethnicity, age (range 25-55 unless context demands otherwise), and body type. Do not default to white middle-aged men.
 
+NO TEXT INSIDE THE IMAGE — Flux can't render legible text, so any attempt produces garbled glyphs, repeated word fragments, and made-up letters. Two rules:
+1. Do NOT put the asset's headline, hook, tagline, slogan, CTA copy, or any quoted marketing language inside the image prompt. The image is the SCENE behind the copy, not a poster of the copy. If your asset hook is "Hiring is broken — let's fix it," the image describes a recruiter at a desk reviewing candidate profiles, NOT a graphic with those words on it.
+2. Affirmatively describe what the scene contains INSTEAD of text — clean walls, plain backgrounds, blurred bokeh, natural office props (plants, laptops, coffee). Never describe signs, posters, billboards, whiteboards covered in writing, book covers, t-shirt prints, business cards, slide decks, or anything else that would tempt the model to render letters.
+
 URL STRUCTURE — the prompt query parameter must contain the FULL description AS A SINGLE URL-ENCODED STRING, including the subject + setting + style modifiers + camera modifiers all together. Width / height / seed are SEPARATE query params that come AFTER the closing & of the prompt value. There are NEVER style modifiers, camera modifiers, or anything else outside the prompt= value. URL-encode spaces as %20, commas as %2C, & as %26 inside the prompt value so the link parses cleanly.
 WRONG: \`![alt](/api/imagegen?prompt=A%20person%20at%20a%20desk&width=1024&height=1024&seed=42professional photography, Canon R5, 50mm)\` ← modifiers dumped after seed, unencoded, breaks the URL.
 CORRECT: \`![alt](/api/imagegen?prompt=A%20person%20at%20a%20desk%2C%20professional%20photography%2C%20Canon%20EOS%20R5%2C%2050mm%20lens%2C%20natural%20lighting%2C%20shallow%20depth%20of%20field%2C%20magazine%20editorial%20quality&width=1024&height=1024&seed=42)\` ← every modifier inside the prompt value, URL-encoded; query params follow cleanly.
@@ -670,7 +674,9 @@ SUBJECTS as 3D characters with simplified features (not photorealistic people).
 BANNED words: photo, photograph, photorealistic, candid portrait, real people, Canon EOS R5, 50mm lens, magazine editorial.
 Aesthetic target: Stripe / Linear / modern SaaS brand illustration.
 
-RELEVANCE — image subject MUST relate to the marketing asset content. If the asset is a fintech CFO cold email, the image must depict B2B office / boardroom / professional contexts — NOT tourist scenes, NOT landscapes, NOT unrelated portraits. If you can't link the image subject to the asset's audience or topic in one sentence, you're picking the wrong subject.`,
+RELEVANCE — image subject MUST relate to the marketing asset content. If the asset is a fintech CFO cold email, the image must depict B2B office / boardroom / professional contexts — NOT tourist scenes, NOT landscapes, NOT unrelated portraits. If you can't link the image subject to the asset's audience or topic in one sentence, you're picking the wrong subject.
+
+NO TEXT IN THE IMAGE — same rule as the baseline contract. Do NOT put the asset's headline, hook, tagline, slogan, CTA, or quoted copy inside the image prompt. The image is the SCENE behind the copy, not a poster of the copy. Affirmatively describe clean walls, plain backgrounds, blurred bokeh, natural office props instead. Flux on Cloudflare cannot render legible text — every attempt produces garbled letters, repeated word fragments, and broken glyphs (e.g. "Hiıring is broken. Let's a fix it. Let's ia fix it." for a "hiring is broken" hook). Describe the SCENE, never the LETTERS.`,
     });
   } else if (imageStyle === "illustration") {
     groqMessages.push({
@@ -697,7 +703,9 @@ SUBJECTS as simplified illustrated figures (not photorealistic people, not 3D-re
 BANNED words: photo, photograph, photorealistic, Canon EOS R5, 50mm lens, 3D, octane render, cinema 4d.
 Aesthetic target: Mailchimp / Slack / Notion brand illustration.
 
-RELEVANCE — image subject MUST relate to the marketing asset content. If the asset is a fintech CFO cold email, the image must depict B2B office / boardroom / professional contexts — NOT tourist scenes, NOT landscapes, NOT unrelated portraits. If you can't link the image subject to the asset's audience or topic in one sentence, you're picking the wrong subject.`,
+RELEVANCE — image subject MUST relate to the marketing asset content. If the asset is a fintech CFO cold email, the image must depict B2B office / boardroom / professional contexts — NOT tourist scenes, NOT landscapes, NOT unrelated portraits. If you can't link the image subject to the asset's audience or topic in one sentence, you're picking the wrong subject.
+
+NO TEXT IN THE IMAGE — same rule as the baseline contract. Do NOT put the asset's headline, hook, tagline, slogan, CTA, or quoted copy inside the image prompt. The image is the SCENE behind the copy, not a poster of the copy. Affirmatively describe clean walls, plain backgrounds, blurred bokeh, natural office props instead. Flux on Cloudflare cannot render legible text — every attempt produces garbled letters, repeated word fragments, and broken glyphs (e.g. "Hiıring is broken. Let's a fix it. Let's ia fix it." for a "hiring is broken" hook). Describe the SCENE, never the LETTERS.`,
     });
   }
   // imageStyle === "photo" → no override needed, the baseline contract is photo by default.
