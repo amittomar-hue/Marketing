@@ -154,6 +154,12 @@ VISUAL STYLE — PROFESSIONAL PHOTOGRAPHY OF REAL PEOPLE, NEVER 3D RENDER OR ILL
 - Settings should be plausible modern workplaces: airy offices with glass walls, sunlit home workstations, urban cafes with laptops, casual co-working spaces, conference rooms with natural light. Avoid generic stock-photo backgrounds; name the place.
 - Composition still matters — name the scene, the camera angle (close-up portrait, mid-shot, over-the-shoulder, wide environmental), lighting (golden hour, soft window light, overcast diffused), mood. Generic descriptions ("a businessman", "a happy team") produce stock-photo slop. Specific scenes ("Candid portrait of a Black woman software engineer in her 30s at a sunlit standing desk, mid-laugh, glasses, casual button-up, plants behind her, shallow depth of field, shot on Canon R5, 50mm") produce something usable.
 - Diversity is the default — across responses with multiple images, vary gender presentation, ethnicity, age (range 25-55 unless context demands otherwise), and body type. Do not default to white middle-aged men.
+
+URL STRUCTURE — the prompt query parameter must contain the FULL description AS A SINGLE URL-ENCODED STRING, including the subject + setting + style modifiers + camera modifiers all together. Width / height / seed are SEPARATE query params that come AFTER the closing & of the prompt value. There are NEVER style modifiers, camera modifiers, or anything else outside the prompt= value. URL-encode spaces as %20, commas as %2C, & as %26 inside the prompt value so the link parses cleanly.
+WRONG: \`![alt](/api/imagegen?prompt=A%20person%20at%20a%20desk&width=1024&height=1024&seed=42professional photography, Canon R5, 50mm)\` ← modifiers dumped after seed, unencoded, breaks the URL.
+CORRECT: \`![alt](/api/imagegen?prompt=A%20person%20at%20a%20desk%2C%20professional%20photography%2C%20Canon%20EOS%20R5%2C%2050mm%20lens%2C%20natural%20lighting%2C%20shallow%20depth%20of%20field%2C%20magazine%20editorial%20quality&width=1024&height=1024&seed=42)\` ← every modifier inside the prompt value, URL-encoded; query params follow cleanly.
+
+RELEVANCE — the image subject MUST relate to the marketing asset's content. If the asset is a fintech CFO cold email, depict B2B office / boardroom / financial professional contexts — NOT tourist scenes, NOT landscapes, NOT unrelated portraits. If you can't link the image subject to the asset's audience or topic in one sentence, you're picking the wrong subject. Re-read what you just wrote before composing the image prompt.
 - URL-encode the description (spaces become %20, commas become %2C, etc.) so the link works.
 - Width 1024 height 1024 for square social (LinkedIn, Instagram); 768×1344 for vertical (TikTok, Reels, Stories); 1344×768 for hero / landscape. Both must be multiples of 64 and the proxy clamps to a safe range.
 - Vary the seed (any small integer 1-9999) per image in the same response so 5 posts don't all return the same generated image.
@@ -642,12 +648,56 @@ export async function POST(req: NextRequest) {
   } else if (imageStyle === "3d") {
     groqMessages.push({
       role: "system",
-      content: `VISUAL STYLE OVERRIDE for this turn: Replace the "professional photography" style trailer in VISUAL CREATIVE CONTRACT with stylized 3D render style. Every image's description trailer must now end with: "stylized 3D render, octane render, cinema 4d, soft global illumination, smooth matte surfaces, vivid color palette, depth of field, modern brand illustration, no text, no logos, no watermark". Subjects depicted as 3D characters with simplified features (not photorealistic people). BANNED words for THIS turn: photo, photograph, photorealistic, candid portrait, real people, Canon EOS R5, 50mm lens, magazine editorial. Aesthetic target: Stripe / Linear / modern SaaS brand illustration.`,
+      content: `VISUAL STYLE OVERRIDE for this turn: 3D render style.
+
+URL STRUCTURE (read carefully — this is where the previous turn went wrong):
+The prompt query parameter must contain the FULL description AS A SINGLE URL-ENCODED STRING, including both the subject description AND the style modifiers. ALL style modifiers go INSIDE the prompt= value, before the closing & that separates it from width/height/seed. There are NO style modifiers anywhere else in the URL.
+
+Build the description as one sentence, then URL-encode the ENTIRE thing (spaces → %20, commas → %2C, & → %26), then put it as the value of prompt=. Width, height, and seed are SEPARATE query params and come AFTER the closing & of the prompt value.
+
+WRONG (do not do this):
+\`![alt](/api/imagegen?prompt=Subject%20description&width=1024&height=1024&seed=42stylized 3D render, octane render...)\`
+   ↑ style modifiers dumped after seed, unencoded, breaks the URL completely
+
+CORRECT (copy this shape exactly):
+\`![3D scene of a B2B SaaS founder](/api/imagegen?prompt=Stylized%203D%20character%20of%20a%20B2B%20SaaS%20founder%20at%20a%20glowing%20desk%2C%20cinema%204d%2C%20octane%20render%2C%20soft%20global%20illumination%2C%20smooth%20matte%20surfaces%2C%20vivid%20color%20palette%2C%20depth%20of%20field%2C%20modern%20brand%20illustration%2C%20no%20text%2C%20no%20logos%2C%20no%20watermark&width=1024&height=1024&seed=42)\`
+   ↑ EVERYTHING (subject + style modifiers) is one URL-encoded string inside prompt=, then &width=, &height=, &seed= follow
+
+STYLE MODIFIERS TO INCLUDE (URL-encoded, comma-separated, inside the prompt value):
+stylized 3D render, octane render, cinema 4d, soft global illumination, smooth matte surfaces, vivid color palette, depth of field, modern brand illustration, no text, no logos, no watermark
+
+SUBJECTS as 3D characters with simplified features (not photorealistic people).
+BANNED words: photo, photograph, photorealistic, candid portrait, real people, Canon EOS R5, 50mm lens, magazine editorial.
+Aesthetic target: Stripe / Linear / modern SaaS brand illustration.
+
+RELEVANCE — image subject MUST relate to the marketing asset content. If the asset is a fintech CFO cold email, the image must depict B2B office / boardroom / professional contexts — NOT tourist scenes, NOT landscapes, NOT unrelated portraits. If you can't link the image subject to the asset's audience or topic in one sentence, you're picking the wrong subject.`,
     });
   } else if (imageStyle === "illustration") {
     groqMessages.push({
       role: "system",
-      content: `VISUAL STYLE OVERRIDE for this turn: Replace the "professional photography" style trailer in VISUAL CREATIVE CONTRACT with flat 2D modern brand illustration. Every image's description trailer must now end with: "flat 2D illustration, modern brand illustration, vibrant geometric shapes, bold flat colors, clean linework, minimalist composition, vector aesthetic, no gradients, no text, no logos, no watermark". Subjects depicted as simplified illustrated figures (not photorealistic people, not 3D-rendered). BANNED words for THIS turn: photo, photograph, photorealistic, Canon EOS R5, 50mm lens, 3D, octane render, cinema 4d. Aesthetic target: Mailchimp / Slack / Notion brand illustration.`,
+      content: `VISUAL STYLE OVERRIDE for this turn: Flat 2D illustration style.
+
+URL STRUCTURE (read carefully — this is where the previous turn went wrong):
+The prompt query parameter must contain the FULL description AS A SINGLE URL-ENCODED STRING, including both the subject description AND the style modifiers. ALL style modifiers go INSIDE the prompt= value, before the closing & that separates it from width/height/seed. There are NO style modifiers anywhere else in the URL.
+
+Build the description as one sentence, then URL-encode the ENTIRE thing (spaces → %20, commas → %2C, & → %26), then put it as the value of prompt=. Width, height, and seed are SEPARATE query params and come AFTER the closing & of the prompt value.
+
+WRONG (do not do this):
+\`![alt](/api/imagegen?prompt=Subject%20description&width=1024&height=1024&seed=42flat 2D illustration, bold colors...)\`
+   ↑ style modifiers dumped after seed, unencoded, breaks the URL completely
+
+CORRECT (copy this shape exactly):
+\`![Illustration of a remote team](/api/imagegen?prompt=Flat%202D%20illustration%20of%20a%20diverse%20remote%20team%20collaborating%20across%20a%20stylised%20world%20map%2C%20modern%20brand%20illustration%2C%20vibrant%20geometric%20shapes%2C%20bold%20flat%20colors%2C%20clean%20linework%2C%20minimalist%20composition%2C%20vector%20aesthetic%2C%20no%20gradients%2C%20no%20text%2C%20no%20logos%2C%20no%20watermark&width=1024&height=1024&seed=42)\`
+   ↑ EVERYTHING (subject + style modifiers) is one URL-encoded string inside prompt=, then &width=, &height=, &seed= follow
+
+STYLE MODIFIERS TO INCLUDE (URL-encoded, comma-separated, inside the prompt value):
+flat 2D illustration, modern brand illustration, vibrant geometric shapes, bold flat colors, clean linework, minimalist composition, vector aesthetic, no gradients, no text, no logos, no watermark
+
+SUBJECTS as simplified illustrated figures (not photorealistic people, not 3D-rendered).
+BANNED words: photo, photograph, photorealistic, Canon EOS R5, 50mm lens, 3D, octane render, cinema 4d.
+Aesthetic target: Mailchimp / Slack / Notion brand illustration.
+
+RELEVANCE — image subject MUST relate to the marketing asset content. If the asset is a fintech CFO cold email, the image must depict B2B office / boardroom / professional contexts — NOT tourist scenes, NOT landscapes, NOT unrelated portraits. If you can't link the image subject to the asset's audience or topic in one sentence, you're picking the wrong subject.`,
     });
   }
   // imageStyle === "photo" → no override needed, the baseline contract is photo by default.
