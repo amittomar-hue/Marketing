@@ -5,6 +5,19 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { ModelId, DEFAULT_MODEL } from "./models";
 import { createSupabaseBrowserClient } from "./supabase-browser";
 
+export interface ResearchTraceStep {
+  kind: "intent" | "web_search" | "brand_voice" | "training_pairs";
+  label: string;
+  status: "started" | "done";
+  result?: string;
+}
+
+export interface ResearchTrace {
+  /** One-line distilled intent (what the user really wants), produced by the planner. */
+  intent: string;
+  steps: ResearchTraceStep[];
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant";
@@ -22,6 +35,12 @@ export interface Message {
    *  and the legacy attachmentName field, so old conversations don't
    *  lose their attachment chips after this rollout. */
   attachmentNames?: string[];
+  /** "Think like a human" research trace — populated by the planner +
+   *  executor pass that runs BEFORE the main answer model. Shown above
+   *  the answer body as a visible thinking block. Only present on
+   *  assistant messages. Each step's status flips started → done as
+   *  the executor runs them in order. */
+  researchTrace?: ResearchTrace;
   /** If the user asked for a specific file format (pdf/docx/xlsx/pptx/csv/json/md/txt/html), it's stored here so the assistant message can show a Download button. */
   requestedFormat?: string;
   /** The verbatim text used to derive the filename when downloading. */

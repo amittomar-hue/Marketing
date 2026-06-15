@@ -399,18 +399,23 @@ export default function InputBar() {
       // Resolve agent: conversation binding wins, else user-level selection.
       const agentId =
         conv?.agentId ?? useAgentStore.getState().selectedAgentId ?? null;
-      const { text: final, interactionId } = await streamChat({
+      const { text: final, interactionId, researchTrace } = await streamChat({
         messages: history,
         model: selectedModel,
         webSearchMode: webSearchForced,
         requestedFormat,
         agentId,
         onToken: (acc) => updateMessage(convId!, asstId, { content: acc }),
+        // Live-updates the visible thinking trace on the assistant
+        // message as the planner emits research markers. The Message
+        // component renders this above the answer body.
+        onResearch: (trace) => updateMessage(convId!, asstId, { researchTrace: trace }),
       });
       updateMessage(convId, asstId, {
         content: final,
         isStreaming: false,
         interactionId: interactionId ?? undefined,
+        researchTrace: researchTrace ?? undefined,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";

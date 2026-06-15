@@ -15,6 +15,14 @@ import { getLatestIntel, formatIntelAsContext } from "@/lib/intel";
 import { retrieveBrandChunks, formatBrandContext } from "@/lib/brand";
 import { formatVoiceProfileForContext, type VoiceProfile } from "@/lib/voice-profile";
 import { getSupabase } from "@/lib/supabase";
+import {
+  planResearch,
+  encodeIntentMarker,
+  encodeStepMarker,
+  RESEARCH_DONE_MARKER,
+  type ResearchStep,
+} from "@/lib/research-planner";
+import { tavilySearch as researchSearch, formatTavilyForContext as formatResearchForContext } from "@/lib/tavily";
 import { retrieveTrainingPairs, formatTrainingPairsAsContext } from "@/lib/training-pairs";
 import { extractUrlsFromText, scrapeSite, formatScrapeAsContext } from "@/lib/web-scraper";
 import {
@@ -697,6 +705,109 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        // ───────────────────────────────────────────────────────────
+        // "Think like a human" phase. Before the main answer model
+        // runs, a planner pass (Groq 8B) reads the user's prompt and
+        // produces a structured research plan: a distilled intent
+        // sentence + 2-4 steps. We stream the plan to the client as
+        // research markers (parsed by stream-chat.ts) so the user sees
+        // a live "Researching..." trace; web_search steps are then
+        // executed in parallel and their findings appended to
+        // groqMessages as additional system context before the main
+        // answer model gets called below. brand_voice / training_pairs
+        // steps are confirmation labels — the actual context for those
+        // is already injected via voiceProfileContext + trainingPairsContext.
+        // ───────────────────────────────────────────────────────────
+        try {
+          const recentContext = messages
+            .slice(-4)
+            .map((m) => `${m.role.toUpperCase()}: ${m.content.slice(0, 300)}`)
+            .join("\n");
+          const plan = await planResearch(userQuery, recentContext, groqKey);
+
+          controller.enqueue(encoder.encode(encodeIntentMarker(plan.intent)));
+
+          const webSteps = plan.steps.filter(
+            (s): s is ResearchStep & { query: string } => s.kind === "web_search" && !!s.query
+          );
+          const otherSteps = plan.steps.filter((s) => s.kind !== "web_search");
+
+          // Emit "started" markers for ALL web searches up-front so the
+          // user sees the full plan stack immediately, then run them in
+          // parallel and emit "done" as each settles.
+          for (const s of webSteps) {
+            controller.enqueue(encoder.encode(encodeStepMarker(s, "started")));
+          }
+          const webPromises = webSteps.map((s) =>
+            researchSearch(s.query).catch(() => null)
+          );
+          const webResults = await Promise.all(webPromises);
+
+          let combinedResearch = "";
+          for (let i = 0; i < webSteps.length; i++) {
+            const step = webSteps[i];
+            const result = webResults[i];
+            const sources = result
+              ? Array.from(
+                  new Set(
+                    result.results
+                      .slice(0, 5)
+                      .map((r) => {
+                        try { return new URL(r.url).hostname.replace(/^www\./, ""); }
+                        catch { return null; }
+                      })
+                      .filter((h): h is string => !!h)
+                  )
+                ).join(", ")
+              : "no results";
+            controller.enqueue(
+              encoder.encode(encodeStepMarker({ ...step, result: sources }, "done"))
+            );
+            if (result) combinedResearch += formatResearchForContext(result) + "\n\n";
+          }
+
+          for (const step of otherSteps) {
+            controller.enqueue(encoder.encode(encodeStepMarker(step, "started")));
+            const result =
+              step.kind === "brand_voice"
+                ? voiceProfileContext
+                  ? "voice profile loaded"
+                  : "no voice profile yet"
+                : trainingPairsContext
+                ? "found relevant pairs"
+                : "no close matches";
+            controller.enqueue(
+              encoder.encode(encodeStepMarker({ ...step, result }, "done"))
+            );
+          }
+
+          controller.enqueue(encoder.encode(RESEARCH_DONE_MARKER));
+
+          // Inject the parallel web findings into the message list as
+          // additional system context — gets consumed by the main answer
+          // model alongside the existing brand / training / live-web context.
+          if (combinedResearch) {
+            groqMessages.push({
+              role: "system",
+              content: `RESEARCH FINDINGS (from the planner pass — cite inline as [n] and include in the final ## Sources block):\n${combinedResearch}`,
+            });
+          }
+          // Also nudge the model toward the planner's distilled intent so
+          // it doesn't drift off-target on long or vague prompts.
+          if (plan.intent) {
+            groqMessages.push({
+              role: "system",
+              content: `USER INTENT (planner distilled): ${plan.intent}`,
+            });
+          }
+        } catch (e) {
+          // Planner failed → close the research phase so the client
+          // stops waiting and stream the answer normally. UX loss
+          // (no visible thinking trace) but the chat still works.
+          console.warn("research phase failed:", e instanceof Error ? e.message : String(e));
+          controller.enqueue(encoder.encode(RESEARCH_DONE_MARKER));
+        }
+
         if (useFineTuned) {
           // Build a chat-templated prompt for the fine-tuned model
           const promptParts: string[] = [];

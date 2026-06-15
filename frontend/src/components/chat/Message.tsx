@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Message as MessageType, useChatStore } from "@/lib/chat-store";
+import { Message as MessageType, ResearchTrace, useChatStore } from "@/lib/chat-store";
 import { getModel } from "@/lib/models";
 import { submitFeedback, streamChat } from "@/lib/stream-chat";
 import { downloadAs, FORMAT_LABELS, type ExportFormat } from "@/lib/export";
 import Image from "next/image";
-import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Check, Download, Pencil } from "lucide-react";
+import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Check, Download, Pencil, ChevronDown, Loader2, Globe, BookOpen, Database, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Markdown from "./Markdown";
 
@@ -291,6 +291,17 @@ export default function Message({ message }: { message: MessageType }) {
           )}
         </div>
 
+        {/* "Think like a human" research trace — rendered above the
+            answer body. Streams in live during the planner + executor
+            phase, then stays as a collapsible record on the persisted
+            message. */}
+        {message.researchTrace && message.researchTrace.steps.length > 0 && (
+          <ResearchTraceView
+            trace={message.researchTrace}
+            stillStreamingAnswer={!!message.isStreaming && !message.content}
+          />
+        )}
+
         <div className="text-[14px] sm:text-[15px] text-[var(--dmoop-text-primary)] break-words">
           <Markdown content={message.content} />
           {message.isStreaming && message.content && (
@@ -405,3 +416,98 @@ function ActionButton({
     </button>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Visible "thinking" trace rendered above each assistant message
+// body when the planner produced a research plan. Shows the distilled
+// intent as a header, then each step as a one-line row that flips
+// from spinner → checkmark as the executor completes it. Collapsible
+// once the answer body has finished streaming so old messages aren't
+// dominated by the trace.
+// ─────────────────────────────────────────────────────────────────
+function ResearchTraceView({
+  trace,
+  stillStreamingAnswer,
+}: {
+  trace: ResearchTrace;
+  stillStreamingAnswer: boolean;
+}) {
+  const allDone = trace.steps.every((s) => s.status === "done");
+  // Auto-expand while research is in flight or the answer hasn't started;
+  // once the answer streams, collapse by default but stay clickable.
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    if (allDone && !stillStreamingAnswer) setOpen(false);
+  }, [allDone, stillStreamingAnswer]);
+
+  const iconForKind = (kind: string) => {
+    switch (kind) {
+      case "web_search": return Globe;
+      case "brand_voice": return BookOpen;
+      case "training_pairs": return Database;
+      default: return Target;
+    }
+  };
+
+  return (
+    <div className="mb-3 rounded-xl border border-[var(--dmoop-border-soft)] bg-[#faf6ef]/60 overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#faf6ef] transition-colors"
+      >
+        <span className="w-5 h-5 rounded-md bg-[var(--dmoop-accent)]/10 flex items-center justify-center shrink-0">
+          {allDone ? (
+            <Check size={11} className="text-[var(--dmoop-accent)]" strokeWidth={2.6} />
+          ) : (
+            <Loader2 size={11} className="text-[var(--dmoop-accent)] animate-spin" strokeWidth={2.4} />
+          )}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10.5px] font-bold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">
+            {allDone ? "Researched" : "Researching…"}
+          </p>
+          <p className="text-[12.5px] font-medium text-[var(--dmoop-text-primary)] truncate">
+            {trace.intent || "Thinking through this prompt"}
+          </p>
+        </div>
+        <ChevronDown
+          size={13}
+          className="text-[var(--dmoop-text-tertiary)] shrink-0 transition-transform"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+        />
+      </button>
+      {open && (
+        <ul className="border-t border-[var(--dmoop-border-soft)] divide-y divide-[var(--dmoop-border-soft)]">
+          {trace.steps.map((step, i) => {
+            const Icon = iconForKind(step.kind);
+            return (
+              <li key={`${step.kind}-${i}`} className="flex items-start gap-2.5 px-3 py-2">
+                <span className="w-5 h-5 rounded-md bg-white border border-[var(--dmoop-border-soft)] flex items-center justify-center shrink-0 mt-0.5">
+                  <Icon size={11} className="text-[var(--dmoop-text-secondary)]" strokeWidth={2.2} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] text-[var(--dmoop-text-primary)] leading-snug">
+                    {step.label}
+                  </p>
+                  {step.status === "done" && step.result && (
+                    <p className="text-[10.5px] text-[var(--dmoop-text-tertiary)] mt-0.5 truncate">
+                      {step.result}
+                    </p>
+                  )}
+                </div>
+                <span className="shrink-0 mt-1">
+                  {step.status === "done" ? (
+                    <Check size={11} className="text-emerald-600" strokeWidth={2.6} />
+                  ) : (
+                    <Loader2 size={11} className="text-[var(--dmoop-accent)] animate-spin" strokeWidth={2.4} />
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
