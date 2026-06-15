@@ -9,7 +9,7 @@ import { parseDocumentClient } from "@/lib/parse-document-client";
 import Link from "next/link";
 import ModelSelector from "./ModelSelector";
 import BrandAgent from "./BrandAgent";
-import { Paperclip, ArrowUp, Globe, Hammer, X, FileText, Mic, BookOpen, ChevronRight } from "lucide-react";
+import { Paperclip, ArrowUp, Globe, Hammer, X, FileText, Mic, BookOpen, ChevronRight, Image as ImageIcon, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Web Speech API types (minimal shim — TypeScript doesn't ship them globally)
@@ -48,12 +48,18 @@ export default function InputBar() {
   const [value, setValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  // Style picker dropdown for the Images control. Independent from
+  // toolsOpen so opening one closes the other naturally on outside-click.
+  const [imageStyleOpen, setImageStyleOpen] = useState(false);
+  const imageStyleRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
   const {
     activeId, newConversation, addMessage, updateMessage, selectedModel,
     webSearchForced, setWebSearchMode,
+    imageMode, setImageMode,
+    imageStyle, setImageStyle,
     pendingAttachments, addPendingAttachment, removePendingAttachment, clearPendingAttachments,
   } = useChatStore();
   // Effective agent name: conversation binding → selected → default-flagged.
@@ -75,6 +81,7 @@ export default function InputBar() {
   useEffect(() => {
     const close = (e: MouseEvent) => {
       if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) setToolsOpen(false);
+      if (imageStyleRef.current && !imageStyleRef.current.contains(e.target as Node)) setImageStyleOpen(false);
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
@@ -405,6 +412,8 @@ export default function InputBar() {
         webSearchMode: webSearchForced,
         requestedFormat,
         agentId,
+        imageMode,
+        imageStyle,
         onToken: (acc) => updateMessage(convId!, asstId, { content: acc }),
         // Live-updates the visible thinking trace on the assistant
         // message as the planner emits research markers. The Message
@@ -597,6 +606,93 @@ export default function InputBar() {
                 Search{webSearchForced === "on" ? " · On" : webSearchForced === "off" ? " · Off" : ""}
               </span>
             </button>
+
+            {/* Images toggle + style picker — controls whether the chat
+                embeds AI-generated images and which visual style. Single
+                pill with the icon (click = on/off toggle) and a chevron
+                (click = open style dropdown) sharing one button row. */}
+            <div ref={imageStyleRef} className="relative flex items-stretch">
+              <button
+                type="button"
+                onClick={() => setImageMode(imageMode === "on" ? "off" : "on")}
+                className={cn(
+                  "flex items-center gap-1.5 pl-2 pr-1.5 sm:pl-2.5 sm:pr-1.5 py-1.5 rounded-l-lg text-[13px] transition-all duration-150 active:scale-95",
+                  imageMode === "on"
+                    ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200"
+                    : "bg-gray-50 text-gray-500 ring-1 ring-gray-200"
+                )}
+                title={
+                  imageMode === "on"
+                    ? `Images: On · style ${imageStyle === "3d" ? "3D" : imageStyle === "illustration" ? "Illustration" : "Photo"}`
+                    : "Images: Off (text only)"
+                }
+              >
+                <ImageIcon size={13} strokeWidth={2} />
+                <span className="font-medium hidden sm:inline">
+                  Images{imageMode === "off" ? " · Off" : ""}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageStyleOpen((o) => !o)}
+                disabled={imageMode === "off"}
+                className={cn(
+                  "flex items-center px-1 sm:px-1.5 py-1.5 rounded-r-lg text-[13px] transition-all duration-150 active:scale-95 -ml-px border-l border-transparent",
+                  imageMode === "on"
+                    ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200 border-l-violet-200/60 hover:bg-violet-100"
+                    : "bg-gray-50 text-gray-400 ring-1 ring-gray-200 cursor-not-allowed"
+                )}
+                title="Pick visual style"
+              >
+                <ChevronDown size={12} strokeWidth={2.4} />
+              </button>
+              {imageStyleOpen && imageMode === "on" && (
+                <div
+                  className="absolute bottom-full mb-1.5 left-0 w-[180px] rounded-xl overflow-hidden z-30 dmoop-scale-in"
+                  style={{
+                    background: "var(--dmoop-gradient-card)",
+                    border: "1px solid var(--dmoop-border-soft)",
+                    boxShadow: "var(--dmoop-shadow-xl)",
+                  }}
+                >
+                  <p className="px-3 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">
+                    Visual style
+                  </p>
+                  {[
+                    { value: "photo" as const, label: "Photo", desc: "Real people, magazine quality" },
+                    { value: "3d" as const, label: "3D render", desc: "Stripe / Linear aesthetic" },
+                    { value: "illustration" as const, label: "Illustration", desc: "Mailchimp / Slack vibe" },
+                  ].map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => {
+                        setImageStyle(s.value);
+                        setImageStyleOpen(false);
+                      }}
+                      className={cn(
+                        "w-full flex flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors",
+                        imageStyle === s.value
+                          ? "bg-[#fbf3ee]"
+                          : "hover:bg-[#faf6ef]"
+                      )}
+                    >
+                      <span className="text-[12.5px] font-semibold text-[var(--dmoop-text-primary)] flex items-center gap-1.5 w-full">
+                        {s.label}
+                        {imageStyle === s.value && (
+                          <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-[var(--dmoop-accent)]">
+                            active
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)] leading-snug">
+                        {s.desc}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Brand Agent — assets grounded in user's uploaded docs */}
             <BrandAgent onInsert={(prompt) => {

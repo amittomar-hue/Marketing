@@ -11,6 +11,11 @@ interface StreamArgs {
   /** Brand Agent the user wants this turn grounded against. When omitted
    *  the server falls back to the user's default agent via the retrieve_brand_chunks RPC. */
   agentId?: string | null;
+  /** Image generation mode for this turn. "on" → include inline AI-generated
+   *  images in visual creative responses. "off" → text-only output. */
+  imageMode?: "on" | "off";
+  /** Visual style for inline-generated images: "photo" | "3d" | "illustration". */
+  imageStyle?: "photo" | "3d" | "illustration";
   /** Streamed each time the assistant emits text tokens (the body of the answer,
    *  AFTER the research trace has finished). Receives the accumulated content. */
   onToken: (acc: string) => void;
@@ -117,6 +122,8 @@ export async function streamChat({
   webSearchMode = "auto",
   requestedFormat,
   agentId,
+  imageMode = "on",
+  imageStyle = "photo",
   onToken,
   onResearch,
 }: StreamArgs): Promise<StreamResult> {
@@ -125,6 +132,8 @@ export async function streamChat({
     web_search_mode: webSearchMode,
     requested_format: requestedFormat,
     agent_id: agentId ?? null,
+    image_mode: imageMode,
+    image_style: imageStyle,
     messages: messages
       .filter((m) => m.content.trim().length > 0)
       .map((m) => ({ role: m.role, content: m.content })),

@@ -328,6 +328,16 @@ export async function POST(req: NextRequest) {
   // RPC. Validated/scoped by the RPC against user_id so a malicious
   // client can't read another user's chunks even with a guessed id.
   const conversationAgentId: string | null = body.agent_id ?? null;
+  // Image generation controls — surfaced as toggle + style picker in the
+  // InputBar. When mode === "off" we append a system override telling
+  // the model to skip the VISUAL CREATIVE CONTRACT entirely; when style
+  // differs from the prompt's baked-in "photo" default we append a
+  // style override block redirecting the modifier trailer.
+  const imageMode: "on" | "off" = body.image_mode === "off" ? "off" : "on";
+  const imageStyle: "photo" | "3d" | "illustration" =
+    body.image_style === "3d" ? "3d" :
+    body.image_style === "illustration" ? "illustration" :
+    "photo";
   const requestedFormat: ExportFormat | undefined =
     body.requested_format && body.requested_format in FORMAT_INSTRUCTIONS
       ? (body.requested_format as ExportFormat)
@@ -615,6 +625,32 @@ export async function POST(req: NextRequest) {
   if (webContext) {
     groqMessages.push({ role: "system", content: webContext });
   }
+
+  // ── User-controlled image generation overrides ──────────────────
+  // The system prompt's VISUAL CREATIVE CONTRACT bakes in the default
+  // ("photo" style, images ON). When the user flips the toggle off in
+  // the InputBar, or picks 3D / Illustration from the style picker,
+  // these system messages override the baseline for THIS turn only.
+  // Pushed AFTER all context messages so they're the most recent
+  // instructions the model sees — late-binding rules win in practice.
+  if (imageMode === "off") {
+    groqMessages.push({
+      role: "system",
+      content:
+        "IMAGE OVERRIDE for this turn: Image generation is DISABLED. Do NOT emit any ![](...) markdown image tags, do NOT include /api/imagegen URLs, do NOT describe images you would have generated. Text-only response. The VISUAL CREATIVE CONTRACT is suspended for this turn.",
+    });
+  } else if (imageStyle === "3d") {
+    groqMessages.push({
+      role: "system",
+      content: `VISUAL STYLE OVERRIDE for this turn: Replace the "professional photography" style trailer in VISUAL CREATIVE CONTRACT with stylized 3D render style. Every image's description trailer must now end with: "stylized 3D render, octane render, cinema 4d, soft global illumination, smooth matte surfaces, vivid color palette, depth of field, modern brand illustration, no text, no logos, no watermark". Subjects depicted as 3D characters with simplified features (not photorealistic people). BANNED words for THIS turn: photo, photograph, photorealistic, candid portrait, real people, Canon EOS R5, 50mm lens, magazine editorial. Aesthetic target: Stripe / Linear / modern SaaS brand illustration.`,
+    });
+  } else if (imageStyle === "illustration") {
+    groqMessages.push({
+      role: "system",
+      content: `VISUAL STYLE OVERRIDE for this turn: Replace the "professional photography" style trailer in VISUAL CREATIVE CONTRACT with flat 2D modern brand illustration. Every image's description trailer must now end with: "flat 2D illustration, modern brand illustration, vibrant geometric shapes, bold flat colors, clean linework, minimalist composition, vector aesthetic, no gradients, no text, no logos, no watermark". Subjects depicted as simplified illustrated figures (not photorealistic people, not 3D-rendered). BANNED words for THIS turn: photo, photograph, photorealistic, Canon EOS R5, 50mm lens, 3D, octane render, cinema 4d. Aesthetic target: Mailchimp / Slack / Notion brand illustration.`,
+    });
+  }
+  // imageStyle === "photo" → no override needed, the baseline contract is photo by default.
 
   // ── Conversation history ─────────────────────────────────────
   // For Tuned: bound history aggressively. Past user turns can contain large

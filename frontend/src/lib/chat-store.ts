@@ -67,6 +67,18 @@ interface ChatState {
   activeId: string | null;
   selectedModel: ModelId;
   webSearchForced: "auto" | "on" | "off";
+  /** Image generation: "on" → embed AI-generated images inline in visual
+   *  creative responses. "off" → text-only output, skip the image step.
+   *  Default "on" so visual asks (social posts, ads) get visuals by default
+   *  while quick iteration ("shorter", "in US English") doesn't pay the
+   *  ~5s image latency. Persisted so the toggle survives reloads. */
+  imageMode: "on" | "off";
+  /** Visual style applied to inline-generated images. Picker exposes the
+   *  three styles the system prompt knows how to render distinctively:
+   *  "photo" = professional photography of real people (the new default),
+   *  "3d" = stylized 3D render (Stripe/Linear aesthetic), "illustration" =
+   *  flat 2D modern brand illustration (Mailchimp/Slack aesthetic). */
+  imageStyle: "photo" | "3d" | "illustration";
   /** All files the user has attached but not yet sent. Replaces the
    *  single pendingAttachment from the pre-multi-file era. Lives only
    *  in-memory (not in the persist partialize list) so it resets on
@@ -78,6 +90,8 @@ interface ChatState {
   isHydrating: boolean;
   setModel: (model: ModelId) => void;
   setWebSearchMode: (mode: "auto" | "on" | "off") => void;
+  setImageMode: (mode: "on" | "off") => void;
+  setImageStyle: (style: "photo" | "3d" | "illustration") => void;
   /** Append a single attachment to the staged list (called once per
    *  file when the user selects multiple files at once, or one at a
    *  time across separate clicks). De-dupes by filename. */
@@ -195,12 +209,16 @@ export const useChatStore = create<ChatState>()(
       activeId: null,
       selectedModel: DEFAULT_MODEL,
       webSearchForced: "auto",
+      imageMode: "on",
+      imageStyle: "photo",
       pendingAttachments: [],
       userId: null,
       isHydrating: false,
 
       setModel: (model) => set({ selectedModel: model }),
       setWebSearchMode: (mode) => set({ webSearchForced: mode }),
+      setImageMode: (mode) => set({ imageMode: mode }),
+      setImageStyle: (style) => set({ imageStyle: style }),
       addPendingAttachment: (att) =>
         set((s) => ({
           // De-dupe by filename — reattaching the same file is a no-op
@@ -391,6 +409,8 @@ export const useChatStore = create<ChatState>()(
         activeId: state.activeId,
         selectedModel: state.selectedModel,
         webSearchForced: state.webSearchForced,
+        imageMode: state.imageMode,
+        imageStyle: state.imageStyle,
       }),
       version: 1,
     }
