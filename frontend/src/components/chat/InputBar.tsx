@@ -592,9 +592,9 @@ export default function InputBar() {
               className={cn(
                 "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95 shrink-0 whitespace-nowrap",
                 webSearchForced === "on"
-                  ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
+                  ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
                   : webSearchForced === "off"
-                  ? "bg-gray-50 text-gray-500 ring-1 ring-gray-200"
+                  ? "text-[var(--dmoop-text-tertiary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-secondary)]"
                   : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
               )}
               title={
@@ -620,8 +620,8 @@ export default function InputBar() {
                 className={cn(
                   "flex items-center gap-1.5 pl-2 pr-1.5 sm:pl-2.5 sm:pr-1.5 py-1.5 rounded-l-lg text-[13px] transition-all duration-150 active:scale-95 shrink-0 whitespace-nowrap",
                   imageMode === "on"
-                    ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200"
-                    : "bg-gray-50 text-gray-500 ring-1 ring-gray-200"
+                    ? "bg-violet-50 text-violet-700 hover:bg-violet-100"
+                    : "text-[var(--dmoop-text-tertiary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-secondary)]"
                 )}
                 title={
                   imageMode === "on"
@@ -639,10 +639,10 @@ export default function InputBar() {
                 onClick={() => setImageStyleOpen((o) => !o)}
                 disabled={imageMode === "off"}
                 className={cn(
-                  "flex items-center px-1 sm:px-1.5 py-1.5 rounded-r-lg text-[13px] transition-all duration-150 active:scale-95 -ml-px border-l border-transparent shrink-0 whitespace-nowrap",
+                  "flex items-center px-1 sm:px-1.5 py-1.5 rounded-r-lg text-[13px] transition-all duration-150 active:scale-95 -ml-px shrink-0 whitespace-nowrap",
                   imageMode === "on"
-                    ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200 border-l-violet-200/60 hover:bg-violet-100"
-                    : "bg-gray-50 text-gray-400 ring-1 ring-gray-200 cursor-not-allowed"
+                    ? "bg-violet-50 text-violet-700 hover:bg-violet-100 border-l border-violet-200/70"
+                    : "text-[var(--dmoop-text-tertiary)]/50 cursor-not-allowed"
                 )}
                 title="Pick visual style"
               >
@@ -707,7 +707,7 @@ export default function InputBar() {
                 className={cn(
                   "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95 shrink-0 whitespace-nowrap",
                   outputLanguage !== "auto"
-                    ? "bg-amber-50 text-amber-800 ring-1 ring-amber-200"
+                    ? "bg-amber-50 text-amber-800 hover:bg-amber-100"
                     : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
                 )}
                 title={
