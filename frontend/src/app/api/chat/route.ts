@@ -125,8 +125,9 @@ CREATIVE-vs-REPORTING CONTRACT — this is critical, do not miss it:
 - Example of RIGHT: user asks "give me 5 viral social posts" → you write 5 ready-to-publish social posts, each with: hook, body, CTA, suggested platform, optional asset note. Use what you read in research findings to inform the angle, format, and what's working — but the output is YOUR original copy, not their copy.
 - If the user explicitly asks for a roundup / trend report / "what's trending" / "what's working in the market", THEN summarize what others are doing. Otherwise, default to producing the asset.
 
-VISUAL CREATIVE CONTRACT — when producing social posts, ads, landing-page hero copy, or any asset where a visual would normally accompany the copy, INCLUDE a generated image inline using Pollinations (free, no API key needed):
-- Format: \`![Short alt describing the visual](https://image.pollinations.ai/prompt/{URL-ENCODED detailed visual description}?width=1080&height=1080&nologo=true&seed={small integer for variety})\`
+VISUAL CREATIVE CONTRACT — when producing social posts, ads, landing-page hero copy, or any asset where a visual would normally accompany the copy, INCLUDE a generated image inline using DMOOP's image proxy:
+- Format: \`![Short alt describing the visual](/api/imagegen?prompt={URL-ENCODED detailed visual description}&width=1024&height=1024&seed={small integer for variety})\`
+- The endpoint is /api/imagegen — a RELATIVE URL on this site, NOT pollinations.ai or any external host. Do NOT use https://image.pollinations.ai/ — it has been paywalled and will not load.
 
 VISUAL STYLE — ALWAYS 3D RENDER, NEVER PHOTO OR 2D ILLUSTRATION:
 - Every generated image MUST be a stylized 3D render. Do NOT use words like "photo", "photograph", "photorealistic", "candid", "editorial photo", "documentary", "snapshot", "flat illustration", "vector", "2D", "doodle", "sketch", "watercolor", "oil painting", "pencil drawing" anywhere in the description. Those are banned style modifiers.
@@ -134,7 +135,7 @@ VISUAL STYLE — ALWAYS 3D RENDER, NEVER PHOTO OR 2D ILLUSTRATION:
 - Subjects should be rendered as 3D figures / objects (not real people) — when depicting people, write them as "stylized 3D character" with simplified facial features. Example correct opening: "Stylized 3D character of a B2B SaaS founder at a glowing laptop, isometric desk scene, floating UI cards around them, soft global illumination, cinema 4d, octane render, vivid color palette".
 - Composition still matters — name the scene, the camera angle, lighting, mood. Generic descriptions ("a businessman", "a happy team") produce slop even in 3D. Specific scenes ("Stylized 3D isometric scene of a remote team scattered across a glowing world map, floating laptops, soft volumetric light, cinema 4d, octane render, blue and amber palette") produce something usable.
 - URL-encode the description (spaces become %20, commas become %2C, etc.) so the link works.
-- Width 1080 height 1080 for square social (LinkedIn, Instagram); 1080×1920 for vertical (TikTok, Reels, Stories); 1920×1080 for hero / landscape.
+- Width 1024 height 1024 for square social (LinkedIn, Instagram); 768×1344 for vertical (TikTok, Reels, Stories); 1344×768 for hero / landscape. Both must be multiples of 64 and the proxy clamps to a safe range.
 - Vary the seed (any small integer 1-9999) per image in the same response so 5 posts don't all return the same generated image.
 - ONE image per asset is enough — don't over-stack. The image is paired with the copy, not replacing it.
 - Skip the image only for assets where it doesn't apply (cold emails without an attachment, plain copy snippets, single-line taglines).`;
