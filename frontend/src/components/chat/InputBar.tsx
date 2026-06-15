@@ -6,10 +6,9 @@ import { useAgentStore } from "@/lib/agent-store";
 import { streamChat } from "@/lib/stream-chat";
 import { detectFormat, isConversionRequest, FORMAT_LABELS, type ExportFormat } from "@/lib/export";
 import { parseDocumentClient } from "@/lib/parse-document-client";
-import Link from "next/link";
 import ModelSelector from "./ModelSelector";
 import BrandAgent from "./BrandAgent";
-import { Paperclip, ArrowUp, Globe, Hammer, X, FileText, Mic, BookOpen, ChevronRight, Image as ImageIcon, ChevronDown, Languages as LanguagesIcon } from "lucide-react";
+import { Paperclip, ArrowUp, Globe, X, FileText, Mic, Image as ImageIcon, ChevronDown, Languages as LanguagesIcon } from "lucide-react";
 import { SUPPORTED_LANGUAGES, getLanguage } from "@/lib/languages";
 import { cn } from "@/lib/utils";
 
@@ -34,23 +33,10 @@ interface SpeechRecognitionLike {
 }
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
-const TOOL_PRESETS = [
-  { label: "SEO audit", prompt: "Audit my landing page for SEO and give me a prioritized list of 10 specific fixes with expected impact." },
-  { label: "Write ad copy", prompt: "Write 3 Google Ads variants for [PRODUCT] targeting [AUDIENCE]." },
-  { label: "Email sequence", prompt: "Draft a 5-email product launch sequence for [PRODUCT]." },
-  { label: "Competitor teardown", prompt: "Analyze [COMPETITOR] and suggest 3 counter-positioning angles." },
-  { label: "Buyer signal analysis", prompt: "Score these leads by buying intent and recommend next actions: [LEADS]" },
-  { label: "Brand voice score", prompt: "Score this copy against my brand voice (confident, data-driven): [COPY]" },
-  { label: "GTM plan", prompt: "Build a 90-day GTM plan for launching into [MARKET]." },
-  { label: "ABM playbook", prompt: "Design an ABM playbook for tier-1 accounts in [INDUSTRY]." },
-];
-
 export default function InputBar() {
   const [value, setValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(false);
-  // Style picker dropdown for the Images control. Independent from
-  // toolsOpen so opening one closes the other naturally on outside-click.
+  // Style picker dropdown for the Images control.
   const [imageStyleOpen, setImageStyleOpen] = useState(false);
   const imageStyleRef = useRef<HTMLDivElement>(null);
   // Output-language picker (Auto + 13 supported languages).
@@ -58,7 +44,6 @@ export default function InputBar() {
   const languageRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const toolsRef = useRef<HTMLDivElement>(null);
   const {
     activeId, newConversation, addMessage, updateMessage, selectedModel,
     webSearchForced, setWebSearchMode,
@@ -85,7 +70,6 @@ export default function InputBar() {
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
-      if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) setToolsOpen(false);
       if (imageStyleRef.current && !imageStyleRef.current.contains(e.target as Node)) setImageStyleOpen(false);
       if (languageRef.current && !languageRef.current.contains(e.target as Node)) setLanguageOpen(false);
     };
@@ -471,12 +455,6 @@ export default function InputBar() {
     );
   };
 
-  const insertToolPrompt = (prompt: string) => {
-    setValue((v) => (v ? v + "\n\n" + prompt : prompt));
-    setToolsOpen(false);
-    setTimeout(() => taRef.current?.focus(), 50);
-  };
-
   return (
     <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 pb-3 pt-1">
       {/* Voice diagnostic — shows when the recognizer is listening but
@@ -797,79 +775,6 @@ export default function InputBar() {
               setTimeout(() => taRef.current?.focus(), 50);
             }} />
 
-            {/* Tools picker */}
-            <div ref={toolsRef} className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => setToolsOpen((o) => !o)}
-                className={cn(
-                  "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95 shrink-0 whitespace-nowrap",
-                  toolsOpen
-                    ? "bg-[#f5f1ea] text-[var(--dmoop-text-primary)]"
-                    : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
-                )}
-                title="Quick capability picker"
-              >
-                <Hammer size={13} strokeWidth={2} />
-                <span className="font-medium hidden sm:inline">Tools</span>
-              </button>
-
-              {toolsOpen && (
-                <>
-                  {/* Mobile backdrop */}
-                  <div className="sm:hidden fixed inset-0 bg-black/30 z-40 dmoop-fade-in" onClick={() => setToolsOpen(false)} />
-                <div
-                  className={cn(
-                    "rounded-2xl sm:rounded-xl overflow-hidden z-50 dmoop-scale-in",
-                    "fixed left-3 right-3 bottom-[110px] max-h-[70vh] overflow-y-auto dmoop-scroll",
-                    "sm:absolute sm:inset-auto sm:bottom-full sm:left-0 sm:mb-2 sm:w-[280px] sm:max-h-none sm:overflow-visible"
-                  )}
-                  style={{
-                    background: "var(--dmoop-gradient-card)",
-                    border: "1px solid var(--dmoop-border-soft)",
-                    boxShadow: "var(--dmoop-shadow-xl)",
-                  }}
-                >
-                  {/* Brand agent quick-link at the top of Tools */}
-                  <Link
-                    href="/brand"
-                    onClick={() => setToolsOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-[#fbf3ee] transition-colors border-b border-[var(--dmoop-border-soft)]"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-[#fbf3ee] flex items-center justify-center shrink-0">
-                      <BookOpen size={13} className="text-[var(--dmoop-accent)]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12.5px] font-semibold text-[var(--dmoop-text-primary)] truncate">
-                        {agentName}
-                      </p>
-                      <p className="text-[10.5px] text-[var(--dmoop-text-secondary)] truncate">
-                        Generate assets from your brand library
-                      </p>
-                    </div>
-                    <ChevronRight size={12} className="text-[var(--dmoop-text-tertiary)] shrink-0" />
-                  </Link>
-
-                  <div className="px-3 pt-2.5 pb-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">
-                      Quick prompts
-                    </p>
-                  </div>
-                  <div className="max-h-[300px] overflow-y-auto dmoop-scroll">
-                    {TOOL_PRESETS.map((p) => (
-                      <button
-                        key={p.label}
-                        onClick={() => insertToolPrompt(p.prompt)}
-                        className="w-full text-left px-3 py-2 hover:bg-[#f5f1ea] transition-colors text-[12.5px] text-[var(--dmoop-text-primary)] font-medium"
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                </>
-              )}
-            </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
