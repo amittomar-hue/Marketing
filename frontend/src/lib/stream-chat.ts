@@ -16,6 +16,9 @@ interface StreamArgs {
   imageMode?: "on" | "off";
   /** Visual style for inline-generated images: "photo" | "3d" | "illustration". */
   imageStyle?: "photo" | "3d" | "illustration";
+  /** Output language as BCP-47 code ("en", "es", "pt-BR", etc.) or "auto"
+   *  to match the user's input language per the LANGUAGE CONTRACT. */
+  outputLanguage?: string;
   /** Streamed each time the assistant emits text tokens (the body of the answer,
    *  AFTER the research trace has finished). Receives the accumulated content. */
   onToken: (acc: string) => void;
@@ -124,6 +127,7 @@ export async function streamChat({
   agentId,
   imageMode = "on",
   imageStyle = "photo",
+  outputLanguage = "auto",
   onToken,
   onResearch,
 }: StreamArgs): Promise<StreamResult> {
@@ -134,6 +138,7 @@ export async function streamChat({
     agent_id: agentId ?? null,
     image_mode: imageMode,
     image_style: imageStyle,
+    output_language: outputLanguage,
     messages: messages
       .filter((m) => m.content.trim().length > 0)
       .map((m) => ({ role: m.role, content: m.content })),

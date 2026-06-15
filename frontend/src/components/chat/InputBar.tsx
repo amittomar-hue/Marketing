@@ -9,7 +9,8 @@ import { parseDocumentClient } from "@/lib/parse-document-client";
 import Link from "next/link";
 import ModelSelector from "./ModelSelector";
 import BrandAgent from "./BrandAgent";
-import { Paperclip, ArrowUp, Globe, Hammer, X, FileText, Mic, BookOpen, ChevronRight, Image as ImageIcon, ChevronDown } from "lucide-react";
+import { Paperclip, ArrowUp, Globe, Hammer, X, FileText, Mic, BookOpen, ChevronRight, Image as ImageIcon, ChevronDown, Languages as LanguagesIcon } from "lucide-react";
+import { SUPPORTED_LANGUAGES, getLanguage } from "@/lib/languages";
 import { cn } from "@/lib/utils";
 
 // Web Speech API types (minimal shim — TypeScript doesn't ship them globally)
@@ -52,6 +53,9 @@ export default function InputBar() {
   // toolsOpen so opening one closes the other naturally on outside-click.
   const [imageStyleOpen, setImageStyleOpen] = useState(false);
   const imageStyleRef = useRef<HTMLDivElement>(null);
+  // Output-language picker (Auto + 13 supported languages).
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const languageRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
@@ -60,6 +64,7 @@ export default function InputBar() {
     webSearchForced, setWebSearchMode,
     imageMode, setImageMode,
     imageStyle, setImageStyle,
+    outputLanguage, setOutputLanguage,
     pendingAttachments, addPendingAttachment, removePendingAttachment, clearPendingAttachments,
   } = useChatStore();
   // Effective agent name: conversation binding → selected → default-flagged.
@@ -82,6 +87,7 @@ export default function InputBar() {
     const close = (e: MouseEvent) => {
       if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) setToolsOpen(false);
       if (imageStyleRef.current && !imageStyleRef.current.contains(e.target as Node)) setImageStyleOpen(false);
+      if (languageRef.current && !languageRef.current.contains(e.target as Node)) setLanguageOpen(false);
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
@@ -133,7 +139,11 @@ export default function InputBar() {
     const recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = "en-US";
+    // Initial language — gets overridden at toggleVoice time with the
+    // user's current outputLanguage selection (or the browser locale
+    // when outputLanguage is "auto"). Default here is a safe fallback
+    // for users whose browser locale isn't available.
+    recognition.lang = typeof navigator !== "undefined" ? navigator.language || "en-US" : "en-US";
 
     recognition.onresult = (event) => {
       let interim = "";
@@ -258,6 +268,14 @@ export default function InputBar() {
     restartAttemptsRef.current = 0;
     lastSuccessfulSpeechRef.current = Date.now();
     wantListeningRef.current = true;
+    // Sync recognition.lang with the picker each time the user toggles
+    // voice on — they might have changed languages since the last
+    // recording session. Auto → browser locale; explicit code → the
+    // BCP-47 region-tagged voice code from SUPPORTED_LANGUAGES.
+    const targetLang = outputLanguage === "auto"
+      ? (typeof navigator !== "undefined" ? navigator.language || "en-US" : "en-US")
+      : getLanguage(outputLanguage).voice;
+    recognitionRef.current.lang = targetLang;
     try {
       recognitionRef.current.start();
       setListening(true);
@@ -414,6 +432,7 @@ export default function InputBar() {
         agentId,
         imageMode,
         imageStyle,
+        outputLanguage,
         onToken: (acc) => updateMessage(convId!, asstId, { content: acc }),
         // Live-updates the visible thinking trace on the assistant
         // message as the planner emits research markers. The Message
@@ -688,6 +707,79 @@ export default function InputBar() {
                       <span className="text-[10.5px] text-[var(--dmoop-text-tertiary)] leading-snug">
                         {s.desc}
                       </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Language picker — sets the response output language.
+                Auto = follow the user's input language. Explicit picks
+                force the model to respond in that language regardless
+                of what the user typed. Also drives Web Speech recognition.lang. */}
+            <div ref={languageRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setLanguageOpen((o) => !o)}
+                className={cn(
+                  "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95",
+                  outputLanguage !== "auto"
+                    ? "bg-amber-50 text-amber-800 ring-1 ring-amber-200"
+                    : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
+                )}
+                title={
+                  outputLanguage === "auto"
+                    ? "Output language: Auto (match input)"
+                    : `Output language: ${getLanguage(outputLanguage).name} (${getLanguage(outputLanguage).nativeName})`
+                }
+              >
+                <LanguagesIcon size={13} strokeWidth={2} />
+                <span className="font-medium hidden sm:inline">
+                  {outputLanguage === "auto" ? "Auto" : getLanguage(outputLanguage).code.toUpperCase()}
+                </span>
+              </button>
+              {languageOpen && (
+                <div
+                  className="absolute bottom-full mb-1.5 left-0 w-[240px] max-h-[380px] overflow-y-auto rounded-xl z-30 dmoop-scale-in dmoop-scroll"
+                  style={{
+                    background: "var(--dmoop-gradient-card)",
+                    border: "1px solid var(--dmoop-border-soft)",
+                    boxShadow: "var(--dmoop-shadow-xl)",
+                  }}
+                >
+                  <p className="sticky top-0 px-3 pt-2.5 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]"
+                    style={{ background: "var(--dmoop-gradient-card)" }}>
+                    Respond in
+                  </p>
+                  {SUPPORTED_LANGUAGES.map((l) => (
+                    <button
+                      key={l.code}
+                      type="button"
+                      onClick={() => {
+                        setOutputLanguage(l.code);
+                        setLanguageOpen(false);
+                      }}
+                      className={cn(
+                        "w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors",
+                        outputLanguage === l.code
+                          ? "bg-[#fbf3ee]"
+                          : "hover:bg-[#faf6ef]"
+                      )}
+                    >
+                      <span className="text-[15px] leading-none shrink-0">{l.flag}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12.5px] font-semibold text-[var(--dmoop-text-primary)] leading-tight truncate">
+                          {l.name}
+                        </p>
+                        <p className="text-[10.5px] text-[var(--dmoop-text-tertiary)] leading-tight truncate">
+                          {l.nativeName}
+                        </p>
+                      </div>
+                      {outputLanguage === l.code && (
+                        <span className="text-[9.5px] font-bold uppercase tracking-wider text-[var(--dmoop-accent)] shrink-0">
+                          on
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>

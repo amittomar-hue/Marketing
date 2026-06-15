@@ -79,6 +79,15 @@ interface ChatState {
    *  "3d" = stylized 3D render (Stripe/Linear aesthetic), "illustration" =
    *  flat 2D modern brand illustration (Mailchimp/Slack aesthetic). */
   imageStyle: "photo" | "3d" | "illustration";
+  /** Output language — "auto" means follow the language of the user's
+   *  most recent message (per the LANGUAGE CONTRACT in the system prompt).
+   *  Explicit BCP-47 codes ("es", "fr", "hi", "pt-BR", etc.) force the
+   *  model to respond in that language regardless of what the user typed.
+   *  Useful for marketing agencies producing creative for global markets
+   *  ("draft this LinkedIn post in Brazilian Portuguese"). Also drives the
+   *  Web Speech API's recognition.lang so voice input works in the chosen
+   *  language. */
+  outputLanguage: string;
   /** All files the user has attached but not yet sent. Replaces the
    *  single pendingAttachment from the pre-multi-file era. Lives only
    *  in-memory (not in the persist partialize list) so it resets on
@@ -92,6 +101,7 @@ interface ChatState {
   setWebSearchMode: (mode: "auto" | "on" | "off") => void;
   setImageMode: (mode: "on" | "off") => void;
   setImageStyle: (style: "photo" | "3d" | "illustration") => void;
+  setOutputLanguage: (lang: string) => void;
   /** Append a single attachment to the staged list (called once per
    *  file when the user selects multiple files at once, or one at a
    *  time across separate clicks). De-dupes by filename. */
@@ -211,6 +221,7 @@ export const useChatStore = create<ChatState>()(
       webSearchForced: "auto",
       imageMode: "on",
       imageStyle: "photo",
+      outputLanguage: "auto",
       pendingAttachments: [],
       userId: null,
       isHydrating: false,
@@ -219,6 +230,7 @@ export const useChatStore = create<ChatState>()(
       setWebSearchMode: (mode) => set({ webSearchForced: mode }),
       setImageMode: (mode) => set({ imageMode: mode }),
       setImageStyle: (style) => set({ imageStyle: style }),
+      setOutputLanguage: (lang) => set({ outputLanguage: lang }),
       addPendingAttachment: (att) =>
         set((s) => ({
           // De-dupe by filename — reattaching the same file is a no-op
@@ -411,6 +423,7 @@ export const useChatStore = create<ChatState>()(
         webSearchForced: state.webSearchForced,
         imageMode: state.imageMode,
         imageStyle: state.imageStyle,
+        outputLanguage: state.outputLanguage,
       }),
       version: 1,
     }

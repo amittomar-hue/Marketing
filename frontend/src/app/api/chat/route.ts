@@ -10,6 +10,7 @@ import {
   formatNegativePatternsAsContext,
 } from "@/lib/learning";
 import { hfStreamGenerate, isFineTunedModelConfigured } from "@/lib/huggingface";
+import { SUPPORTED_LANGUAGES, getLanguage } from "@/lib/languages";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getLatestIntel, formatIntelAsContext } from "@/lib/intel";
 import { retrieveBrandChunks, formatBrandContext } from "@/lib/brand";
@@ -113,6 +114,13 @@ FORMAT CONTRACT (every answer):
 6. Use > blockquotes for verbatim quotes from sources.
 7. End with **## Next 3 actions** — three specific things the user should do this week, in order.
 8. If web search / training pairs / intel context was provided, end with **## Sources** listing each [n] → URL.
+
+LANGUAGE CONTRACT:
+- Respond in the SAME language the user wrote their most recent message in. If they wrote in Spanish, respond in Spanish. If French, French. If Hindi, Hindi. Match script (Devanagari for Hindi, Hanzi for Chinese, etc.) and formality register from their phrasing.
+- If the user mid-thread switches languages, follow the LATEST message — not the conversation average.
+- Only default to English when the language is genuinely ambiguous (single word, code snippet, numbers only). When in doubt, look at the longer messages earlier in the thread.
+- "Sources" labels, "Next 3 actions" headings, and other FORMAT CONTRACT structural tokens get translated too — "## Próximas 3 acciones" in Spanish, "## 接下来的3个步骤" in Chinese, etc. Do NOT leave English headings sitting inside otherwise-translated copy.
+- Image prompts to /api/imagegen STAY IN ENGLISH regardless of the user's language — Flux Schnell is English-tuned and produces worse results on non-English prompts. The alt text in the markdown ![alt](...) tag should match the user's language; only the URL-encoded prompt= value stays English.
 
 FRESHNESS CONTRACT:
 - "Latest" / "best" / "current" / "trending" → cite sources with dates. If a tactic was hot in 2022 but stale in 2026, say so.
@@ -348,6 +356,17 @@ export async function POST(req: NextRequest) {
     body.image_style === "3d" ? "3d" :
     body.image_style === "illustration" ? "illustration" :
     "photo";
+  // Output language: "auto" means "match the user's most recent message"
+  // (LANGUAGE CONTRACT in the system prompt handles this). Anything else
+  // gets resolved to a human-readable name via SUPPORTED_LANGUAGES and an
+  // override system message tells the model to force-respond in that
+  // language. BCP-47 codes ("en", "es", "pt-BR", "zh-CN", etc.) are the
+  // single source of truth for both the picker UI and the Web Speech API.
+  const requestedLanguage =
+    typeof body.output_language === "string" ? body.output_language.trim() : "auto";
+  const outputLanguage = SUPPORTED_LANGUAGES.some((l) => l.code === requestedLanguage)
+    ? requestedLanguage
+    : "auto";
   const requestedFormat: ExportFormat | undefined =
     body.requested_format && body.requested_format in FORMAT_INSTRUCTIONS
       ? (body.requested_format as ExportFormat)
@@ -709,6 +728,22 @@ NO TEXT IN THE IMAGE — same rule as the baseline contract. Do NOT put the asse
     });
   }
   // imageStyle === "photo" → no override needed, the baseline contract is photo by default.
+
+  // ── User-controlled output language override ─────────────────────
+  // The LANGUAGE CONTRACT in the system prompt tells the model to
+  // auto-match the user's input language. When the user explicitly
+  // picks a target language in the InputBar picker, we override that
+  // auto-match with a hard force: ALWAYS respond in this language,
+  // regardless of what the user typed in. Useful for marketing
+  // agencies who type briefs in English but need the asset output
+  // in Brazilian Portuguese, Spanish, Hindi, etc.
+  if (outputLanguage !== "auto") {
+    const lang = getLanguage(outputLanguage);
+    groqMessages.push({
+      role: "system",
+      content: `LANGUAGE OVERRIDE for this turn: Respond ENTIRELY in ${lang.name} (${lang.nativeName}). This overrides the LANGUAGE CONTRACT's auto-match rule — even if the user typed in English (or any other language), the response, headings, lists, "Next 3 actions" section, "Sources" section, and every word of the asset must be in ${lang.name}. Use the appropriate script (Devanagari for Hindi, Hanzi for Chinese, Hangul for Korean, Arabic script for Arabic, etc.) and natural register for ${lang.name} speakers. The ONLY exception is the image prompt= value inside /api/imagegen URLs — that stays English because Flux Schnell is English-tuned. The image's alt text is in ${lang.name}.`,
+    });
+  }
 
   // ── Conversation history ─────────────────────────────────────
   // For Tuned: bound history aggressively. Past user turns can contain large
