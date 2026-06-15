@@ -88,6 +88,11 @@ interface ChatState {
    *  Web Speech API's recognition.lang so voice input works in the chosen
    *  language. */
   outputLanguage: string;
+  /** True once the user has either picked a language manually OR the
+   *  first-load auto-detection has tried to map navigator.language. Lets
+   *  us run the browser-language detection exactly once per browser
+   *  instead of overriding the user's explicit "Auto" choice every load. */
+  languageInitialized: boolean;
   /** All files the user has attached but not yet sent. Replaces the
    *  single pendingAttachment from the pre-multi-file era. Lives only
    *  in-memory (not in the persist partialize list) so it resets on
@@ -102,6 +107,11 @@ interface ChatState {
   setImageMode: (mode: "on" | "off") => void;
   setImageStyle: (style: "photo" | "3d" | "illustration") => void;
   setOutputLanguage: (lang: string) => void;
+  /** Called by ChatLayout's first-mount effect to flip the
+   *  languageInitialized flag without changing outputLanguage — used when
+   *  the browser-language detection produced no match and we still want
+   *  to stop retrying on subsequent loads. */
+  markLanguageInitialized: () => void;
   /** Append a single attachment to the staged list (called once per
    *  file when the user selects multiple files at once, or one at a
    *  time across separate clicks). De-dupes by filename. */
@@ -222,6 +232,7 @@ export const useChatStore = create<ChatState>()(
       imageMode: "on",
       imageStyle: "photo",
       outputLanguage: "auto",
+      languageInitialized: false,
       pendingAttachments: [],
       userId: null,
       isHydrating: false,
@@ -230,7 +241,8 @@ export const useChatStore = create<ChatState>()(
       setWebSearchMode: (mode) => set({ webSearchForced: mode }),
       setImageMode: (mode) => set({ imageMode: mode }),
       setImageStyle: (style) => set({ imageStyle: style }),
-      setOutputLanguage: (lang) => set({ outputLanguage: lang }),
+      setOutputLanguage: (lang) => set({ outputLanguage: lang, languageInitialized: true }),
+      markLanguageInitialized: () => set({ languageInitialized: true }),
       addPendingAttachment: (att) =>
         set((s) => ({
           // De-dupe by filename — reattaching the same file is a no-op
@@ -424,6 +436,7 @@ export const useChatStore = create<ChatState>()(
         imageMode: state.imageMode,
         imageStyle: state.imageStyle,
         outputLanguage: state.outputLanguage,
+        languageInitialized: state.languageInitialized,
       }),
       version: 1,
     }

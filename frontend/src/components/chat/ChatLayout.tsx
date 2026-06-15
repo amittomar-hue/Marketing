@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useChatStore } from "@/lib/chat-store";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { detectBrowserLanguage } from "@/lib/languages";
 import Sidebar from "./Sidebar";
 import WelcomeScreen from "./WelcomeScreen";
 import MessageThread from "./MessageThread";
@@ -92,6 +93,29 @@ export default function ChatLayout() {
       sub.subscription.unsubscribe();
     };
   }, [hydrateFromServer, unbind]);
+
+  // First-load browser-language detection. Runs once per browser instance
+  // — the languageInitialized flag is persisted to localStorage so a user
+  // who explicitly picked "Auto" doesn't get auto-overridden on every page
+  // load. Server-safe: navigator.language is only read inside the effect,
+  // which never runs during SSR. Maps the BCP-47 browser tag (e.g.
+  // "hi-IN", "pt-BR", "es-MX") to a SUPPORTED_LANGUAGES code via exact-
+  // then-base-tag matching; falls back to leaving outputLanguage as "auto"
+  // (and marking initialized) when the browser is in an unsupported
+  // language so the LANGUAGE CONTRACT's auto-match behavior still applies.
+  useEffect(() => {
+    const state = useChatStore.getState();
+    if (state.languageInitialized) return;
+    const detected = detectBrowserLanguage(
+      typeof navigator !== "undefined" ? navigator.language : undefined
+    );
+    if (detected !== "auto") {
+      state.setOutputLanguage(detected);
+    } else {
+      state.markLanguageInitialized();
+    }
+  }, []);
+
   const current = getModel(selectedModel);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);

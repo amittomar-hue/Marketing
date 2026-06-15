@@ -53,3 +53,23 @@ export const SUPPORTED_LANGUAGES: Language[] = [
 export function getLanguage(code: string): Language {
   return SUPPORTED_LANGUAGES.find((l) => l.code === code) ?? AUTO_LANGUAGE;
 }
+
+/** Match a navigator.language BCP-47 string (e.g. "en-US", "pt-BR", "hi-IN")
+ *  to a SUPPORTED_LANGUAGES code. Tries exact match first (covers pt-BR,
+ *  zh-CN), then falls back to the base language tag (covers en-US → "en",
+ *  es-MX → "es", hi-IN → "hi", fr-CA → "fr"). Returns "auto" when no match
+ *  found so the LANGUAGE CONTRACT's auto-match behavior still applies for
+ *  users whose browser is in a language DMOOP doesn't support yet. */
+export function detectBrowserLanguage(navigatorLang: string | undefined): string {
+  if (!navigatorLang) return "auto";
+  // 1. Exact BCP-47 match (pt-BR, zh-CN currently)
+  if (SUPPORTED_LANGUAGES.some((l) => l.code === navigatorLang)) {
+    return navigatorLang;
+  }
+  // 2. Base language tag — en-US → "en", es-MX → "es", hi-IN → "hi", etc.
+  const baseLang = navigatorLang.split("-")[0].toLowerCase();
+  if (SUPPORTED_LANGUAGES.some((l) => l.code === baseLang)) {
+    return baseLang;
+  }
+  return "auto";
+}
