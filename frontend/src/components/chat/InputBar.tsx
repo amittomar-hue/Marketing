@@ -93,6 +93,25 @@ export default function InputBar() {
   // Track recent restart attempts so we don't loop infinitely on real errors
   const restartAttemptsRef = useRef<number>(0);
   const lastSuccessfulSpeechRef = useRef<number>(0);
+  // Diagnostic surface: most-recent error code (e.g. "no-speech", "not-allowed")
+  // plus a "we haven't heard you" flag so the UI can show an inline warning
+  // when the recognizer is open but nothing is reaching the transcript.
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceSilent, setVoiceSilent] = useState(false);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const armSilenceTimer = () => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    setVoiceSilent(false);
+    silenceTimerRef.current = setTimeout(() => {
+      if (wantListeningRef.current) setVoiceSilent(true);
+    }, 8000);
+  };
+  const clearSilenceTimer = () => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    silenceTimerRef.current = null;
+    setVoiceSilent(false);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -125,6 +144,12 @@ export default function InputBar() {
           : trimmed;
         lastSuccessfulSpeechRef.current = Date.now();
         restartAttemptsRef.current = 0; // reset on any real speech
+      }
+      // Any onresult activity (even interim) means audio is reaching the
+      // recognizer — reset the silence indicator and re-arm the timer.
+      if (finalAddition || interim) {
+        armSilenceTimer();
+        setVoiceError(null);
       }
       const combined = interim
         ? `${baseValueRef.current} ${interim.trim()}`.trim()
@@ -159,16 +184,18 @@ export default function InputBar() {
     };
 
     recognition.onerror = (e) => {
-      // "no-speech" and "aborted" are normal during pauses — let onend handle restart
+      // Always surface the latest error code in the UI — even for
+      // "normal" ones like no-speech/aborted, because if those repeat
+      // back-to-back the user IS speaking but audio isn't being picked up.
+      setVoiceError(e.error);
       if (e.error === "no-speech" || e.error === "aborted") return;
-      // "not-allowed" / "audio-capture" / "service-not-allowed" → mic blocked
       if (e.error === "not-allowed" || e.error === "audio-capture" || e.error === "service-not-allowed") {
         wantListeningRef.current = false;
         setListening(false);
+        clearSilenceTimer();
         alert(`Microphone error: ${e.error}. Allow microphone access in your browser settings.`);
         return;
       }
-      // Other errors — log but let onend's auto-restart try again
       console.warn("speech recognition error:", e.error);
     };
 
@@ -179,25 +206,61 @@ export default function InputBar() {
     };
   }, []);
 
-  const toggleVoice = () => {
+  const toggleVoice = async () => {
     if (!recognitionRef.current) return;
     if (listening) {
       wantListeningRef.current = false;
       try { recognitionRef.current.stop(); } catch {}
       setListening(false);
-    } else {
-      baseValueRef.current = value.trim();
-      restartAttemptsRef.current = 0;
-      lastSuccessfulSpeechRef.current = Date.now();
-      wantListeningRef.current = true;
-      try {
-        recognitionRef.current.start();
-        setListening(true);
-        setTimeout(() => taRef.current?.focus(), 50);
-      } catch {
-        wantListeningRef.current = false;
-        setListening(false);
+      clearSilenceTimer();
+      return;
+    }
+
+    // Pre-check mic permission via getUserMedia. The Web Speech API
+    // silently fails ("records but no text appears") when the system
+    // mic is muted or no audio device is active — getUserMedia surfaces
+    // those problems with explicit error names (NotFoundError, NotAllowedError,
+    // NotReadableError) before we hand off to the recognizer. We close
+    // the resulting stream immediately; the recognizer opens its own.
+    setVoiceError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+    } catch (err) {
+      const name = err instanceof Error ? err.name : String(err);
+      setVoiceError(name);
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        alert(
+          "Microphone access is blocked. Click the mic icon in your browser's address bar to allow it, then try again."
+        );
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        alert(
+          "No microphone detected. Connect a mic or check your system's input device settings."
+        );
+      } else if (name === "NotReadableError") {
+        alert(
+          "Microphone is in use by another app. Close other apps using the mic (Teams, Zoom, Meet) and try again."
+        );
+      } else {
+        alert(`Microphone error: ${name}`);
       }
+      return;
+    }
+
+    baseValueRef.current = value.trim();
+    restartAttemptsRef.current = 0;
+    lastSuccessfulSpeechRef.current = Date.now();
+    wantListeningRef.current = true;
+    try {
+      recognitionRef.current.start();
+      setListening(true);
+      armSilenceTimer();
+      setTimeout(() => taRef.current?.focus(), 50);
+    } catch (err) {
+      wantListeningRef.current = false;
+      setListening(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      setVoiceError(msg);
     }
   };
 
@@ -257,6 +320,7 @@ export default function InputBar() {
       wantListeningRef.current = false;
       try { recognitionRef.current.stop(); } catch {}
       setListening(false);
+      clearSilenceTimer();
     }
     baseValueRef.current = "";
     restartAttemptsRef.current = 0;
@@ -382,6 +446,34 @@ export default function InputBar() {
 
   return (
     <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 pb-3 pt-1">
+      {/* Voice diagnostic — shows when the recognizer is listening but
+          no audio is reaching it for 8+ seconds, or when an error fired.
+          Surfaces the actual error code so users can self-diagnose. */}
+      {(voiceSilent || voiceError) && listening && (
+        <div className="mb-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-[12px]">
+          <Mic size={12} className="text-amber-600 shrink-0" />
+          <p className="text-[var(--dmoop-text-primary)] flex-1 leading-snug">
+            {voiceError === "no-speech" || voiceSilent ? (
+              <>
+                <strong>We can&apos;t hear you.</strong> Check your system mic isn&apos;t muted and that the right input device is selected.
+              </>
+            ) : voiceError === "not-allowed" ? (
+              <>
+                <strong>Mic blocked.</strong> Allow mic access in the address bar lock icon.
+              </>
+            ) : voiceError === "audio-capture" ? (
+              <>
+                <strong>No mic detected.</strong> Connect a microphone and retry.
+              </>
+            ) : voiceError ? (
+              <>
+                Speech recognition error: <code className="font-mono text-[11px] bg-white/60 px-1 rounded">{voiceError}</code>
+              </>
+            ) : null}
+          </p>
+        </div>
+      )}
+
       {/* Pending attachment chips — one row per file. Each has its own
           X to remove individually so you can drop a wrong file without
           losing the rest. */}
