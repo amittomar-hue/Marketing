@@ -747,7 +747,7 @@ export async function POST(req: NextRequest) {
           for (let i = 0; i < webSteps.length; i++) {
             const step = webSteps[i];
             const result = webResults[i];
-            const sources = result
+            const hosts = result
               ? Array.from(
                   new Set(
                     result.results
@@ -758,8 +758,11 @@ export async function POST(req: NextRequest) {
                       })
                       .filter((h): h is string => !!h)
                   )
-                ).join(", ")
-              : "no results";
+                )
+              : [];
+            const sources = hosts.length > 0
+              ? `read ${hosts.join(", ")}`
+              : "nothing fresh on this one";
             controller.enqueue(
               encoder.encode(encodeStepMarker({ ...step, result: sources }, "done"))
             );
@@ -771,11 +774,11 @@ export async function POST(req: NextRequest) {
             const result =
               step.kind === "brand_voice"
                 ? voiceProfileContext
-                  ? "voice profile loaded"
-                  : "no voice profile yet"
+                  ? "got their voice — on-tone going in"
+                  : "no brand voice on file yet — using a general tone"
                 : trainingPairsContext
-                ? "found relevant pairs"
-                : "no close matches";
+                ? "found a few past wins to lean on"
+                : "nothing close in the corpus — fresh angle this one";
             controller.enqueue(
               encoder.encode(encodeStepMarker({ ...step, result }, "done"))
             );

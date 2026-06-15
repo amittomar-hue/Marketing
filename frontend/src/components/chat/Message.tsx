@@ -464,10 +464,10 @@ function ResearchTraceView({
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-[10.5px] font-bold uppercase tracking-wider text-[var(--dmoop-text-tertiary)]">
-            {allDone ? "Researched" : "Researching…"}
+            {allDone ? "Thought it through" : "Thinking…"}
           </p>
-          <p className="text-[12.5px] font-medium text-[var(--dmoop-text-primary)] truncate">
-            {trace.intent || "Thinking through this prompt"}
+          <p className="text-[12.5px] font-medium text-[var(--dmoop-text-primary)] truncate italic">
+            {trace.intent || "Letting me think this one through"}
           </p>
         </div>
         <ChevronDown
