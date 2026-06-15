@@ -45,7 +45,7 @@ async function callCloudflare(
   width: number,
   height: number,
   seed: number
-): Promise<{ ok: boolean; status: number; bytes?: Uint8Array; error?: string }> {
+): Promise<{ ok: boolean; status: number; bytes?: ArrayBuffer; error?: string }> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const token = process.env.CLOUDFLARE_API_TOKEN;
   if (!accountId || !token) {
@@ -85,7 +85,8 @@ async function callCloudflare(
       error: json?.errors?.[0]?.message ?? "Cloudflare returned no image field",
     };
   }
-  return { ok: true, status: 200, bytes: new Uint8Array(Buffer.from(b64, "base64")) };
+  const buf = Buffer.from(b64, "base64");
+  return { ok: true, status: 200, bytes: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) };
 }
 
 export async function GET(req: NextRequest) {
