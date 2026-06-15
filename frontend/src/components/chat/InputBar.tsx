@@ -573,8 +573,13 @@ export default function InputBar() {
           className="w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] text-[var(--dmoop-text-primary)] placeholder:text-[var(--dmoop-text-tertiary)] focus:outline-none leading-relaxed"
         />
 
-        <div className="flex items-center justify-between px-2 sm:px-3 pb-3 pt-1.5 gap-1.5 sm:gap-2">
-          <div className="flex items-center gap-0.5 sm:gap-1 min-w-0 flex-1">
+        <div className="flex items-center justify-between px-2 sm:px-3 pb-3 pt-1.5 gap-1.5 sm:gap-2 min-w-0">
+          {/* Left controls — horizontally scrollable on overflow so the
+              row never wraps regardless of how many toggles are visible.
+              Each button is shrink-0 + whitespace-nowrap so text can't
+              break mid-label like "Search · Off" did before. Scrollbar
+              hidden via dmoop-no-scrollbar utility. */}
+          <div className="flex items-center gap-0.5 sm:gap-1 min-w-0 flex-1 overflow-x-auto dmoop-no-scrollbar">
             {/* Attach */}
             <input
               ref={fileInputRef}
@@ -607,7 +612,7 @@ export default function InputBar() {
               type="button"
               onClick={cycleWebSearch}
               className={cn(
-                "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95",
+                "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95 shrink-0 whitespace-nowrap",
                 webSearchForced === "on"
                   ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
                   : webSearchForced === "off"
@@ -630,12 +635,12 @@ export default function InputBar() {
                 embeds AI-generated images and which visual style. Single
                 pill with the icon (click = on/off toggle) and a chevron
                 (click = open style dropdown) sharing one button row. */}
-            <div ref={imageStyleRef} className="relative flex items-stretch">
+            <div ref={imageStyleRef} className="relative flex items-stretch shrink-0">
               <button
                 type="button"
                 onClick={() => setImageMode(imageMode === "on" ? "off" : "on")}
                 className={cn(
-                  "flex items-center gap-1.5 pl-2 pr-1.5 sm:pl-2.5 sm:pr-1.5 py-1.5 rounded-l-lg text-[13px] transition-all duration-150 active:scale-95",
+                  "flex items-center gap-1.5 pl-2 pr-1.5 sm:pl-2.5 sm:pr-1.5 py-1.5 rounded-l-lg text-[13px] transition-all duration-150 active:scale-95 shrink-0 whitespace-nowrap",
                   imageMode === "on"
                     ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200"
                     : "bg-gray-50 text-gray-500 ring-1 ring-gray-200"
@@ -656,7 +661,7 @@ export default function InputBar() {
                 onClick={() => setImageStyleOpen((o) => !o)}
                 disabled={imageMode === "off"}
                 className={cn(
-                  "flex items-center px-1 sm:px-1.5 py-1.5 rounded-r-lg text-[13px] transition-all duration-150 active:scale-95 -ml-px border-l border-transparent",
+                  "flex items-center px-1 sm:px-1.5 py-1.5 rounded-r-lg text-[13px] transition-all duration-150 active:scale-95 -ml-px border-l border-transparent shrink-0 whitespace-nowrap",
                   imageMode === "on"
                     ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200 border-l-violet-200/60 hover:bg-violet-100"
                     : "bg-gray-50 text-gray-400 ring-1 ring-gray-200 cursor-not-allowed"
@@ -717,12 +722,12 @@ export default function InputBar() {
                 Auto = follow the user's input language. Explicit picks
                 force the model to respond in that language regardless
                 of what the user typed. Also drives Web Speech recognition.lang. */}
-            <div ref={languageRef} className="relative">
+            <div ref={languageRef} className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setLanguageOpen((o) => !o)}
                 className={cn(
-                  "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95",
+                  "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95 shrink-0 whitespace-nowrap",
                   outputLanguage !== "auto"
                     ? "bg-amber-50 text-amber-800 ring-1 ring-amber-200"
                     : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"
@@ -793,12 +798,12 @@ export default function InputBar() {
             }} />
 
             {/* Tools picker */}
-            <div ref={toolsRef} className="relative">
+            <div ref={toolsRef} className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setToolsOpen((o) => !o)}
                 className={cn(
-                  "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95",
+                  "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95 shrink-0 whitespace-nowrap",
                   toolsOpen
                     ? "bg-[#f5f1ea] text-[var(--dmoop-text-primary)]"
                     : "text-[var(--dmoop-text-secondary)] hover:bg-[#f5f1ea] hover:text-[var(--dmoop-text-primary)]"

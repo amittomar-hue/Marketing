@@ -190,12 +190,12 @@ export default function BrandAgent({ onInsert }: { onInsert: (prompt: string) =>
   };
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95 max-w-[180px]",
+          "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-150 active:scale-95 max-w-[180px] shrink-0 whitespace-nowrap",
           open
             ? "bg-[#f5f1ea] text-[var(--dmoop-text-primary)]"
             : hasDocs
