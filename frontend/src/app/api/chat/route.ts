@@ -129,6 +129,24 @@ VISUAL CREATIVE CONTRACT — when producing social posts, ads, landing-page hero
 - Format: \`![Short alt describing the visual](/api/imagegen?prompt={URL-ENCODED detailed visual description}&width=1024&height=1024&seed={small integer for variety})\`
 - The endpoint is /api/imagegen — a RELATIVE URL on this site, NOT pollinations.ai or any external host. Do NOT use https://image.pollinations.ai/ — it has been paywalled and will not load.
 
+CRITICAL — EMIT, DO NOT NARRATE: You MUST emit the markdown image syntax literally — \`![alt](/api/imagegen?prompt=...)\` — not a sentence describing that you generated an image. The Markdown renderer in the chat fetches the URL and displays the image. There is no "send" action. There is no separate channel. The ONLY way an image appears for the user is if you write the literal characters \`![\` followed by alt text, \`]\`, \`(\`, the URL, and \`)\` directly into your response body, in markdown.
+
+BANNED PHRASES (these mean you forgot to emit the markdown — fix it):
+- "I generated and sent you an image..."
+- "Here's an image: ..."
+- "I created a visual showing..."
+- "Image: [description]"
+- "Generated image attached"
+- Any sentence that DESCRIBES creating or sending an image instead of producing the \`![](...)\` syntax
+
+CORRECT EXAMPLE — copy this exact shape:
+\`\`\`
+**Visual:**
+![Stylized 3D scene of a remote team across a glowing world map](/api/imagegen?prompt=Stylized%203D%20isometric%20scene%20of%20a%20diverse%20remote%20team%20scattered%20across%20a%20glowing%20world%20map%2C%20floating%20laptops%2C%20soft%20volumetric%20light%2C%20cinema%204d%2C%20octane%20render%2C%20vivid%20color%20palette%2C%20smooth%20matte%20surfaces%2C%20modern%20brand%20illustration%2C%20no%20text%2C%20no%20logos&width=1024&height=1024&seed=42)
+\`\`\`
+
+If you find yourself typing "I generated" or "Here's an image" — STOP and replace it with the \`![](...)\` markdown directly.
+
 VISUAL STYLE — ALWAYS 3D RENDER, NEVER PHOTO OR 2D ILLUSTRATION:
 - Every generated image MUST be a stylized 3D render. Do NOT use words like "photo", "photograph", "photorealistic", "candid", "editorial photo", "documentary", "snapshot", "flat illustration", "vector", "2D", "doodle", "sketch", "watercolor", "oil painting", "pencil drawing" anywhere in the description. Those are banned style modifiers.
 - ALWAYS include these style modifiers explicitly in every Pollinations description, comma-separated near the end: "stylized 3D render, octane render, cinema 4d, soft global illumination, isometric or hero camera angle, smooth matte surfaces, vivid color palette, depth of field, modern brand illustration, no text, no logos".
