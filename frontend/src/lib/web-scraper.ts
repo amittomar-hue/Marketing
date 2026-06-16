@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────
 // Server-side site scraper. When the user pastes a URL or mentions a
-// domain ("check eximius.ai then create the GTM"), we fetch the home
+// domain ("check acmehire.io then create the GTM"), we fetch the home
 // page + a handful of strategically-named internal pages (about,
 // products, pricing, customers, blog) so the model has the REAL site
 // content to ground on, not Tavily snippets.
@@ -48,7 +48,7 @@ export interface ScrapeResult {
 //   "https://example.com/path"
 //   "example.com"
 //   "www.example.com"
-//   "check eximius.ai"
+//   "check acmehire.io"
 // Avoids false positives: requires a recognized TLD or known protocol.
 const URL_OR_HOST_RE =
   /\b(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)(\/[^\s"'<>]*)?/gi;

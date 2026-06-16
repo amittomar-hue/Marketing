@@ -247,7 +247,7 @@ export default function LandingPage() {
                     background: "linear-gradient(135deg, #f3eee6 0%, #ebe5da 100%)",
                     border: "1px solid rgba(165, 138, 110, 0.15)",
                   }}>
-                  Check eximius.ai — then create a GTM and give it to me as a Word doc.
+                  Check acmehire.io — then create a GTM and give it to me as a Word doc.
                 </div>
               </div>
 
@@ -262,7 +262,7 @@ export default function LandingPage() {
                     <span className="ml-2 text-[9.5px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">scraped 5 pages</span>
                   </p>
                   <p className="text-[12px] sm:text-[14px] text-[var(--dmoop-text-primary)] leading-relaxed mt-1.5">
-                    <strong className="font-semibold">TL;DR.</strong> Eximius.ai is an AI hiring platform — automated screening, ranking, and candidate engagement. GTM should target Series B-D startups and mid-market recruiting agencies via signal-based outbound + content-led PLG.
+                    <strong className="font-semibold">TL;DR.</strong> Acmehire.io is an AI hiring platform — automated screening, ranking, and candidate engagement. GTM should target Series B-D startups and mid-market recruiting agencies via signal-based outbound + content-led PLG.
                   </p>
 
                   <p className="text-[12.5px] sm:text-[13.5px] font-semibold text-[var(--dmoop-text-primary)] mt-3 mb-1.5">## ICP &amp; Positioning</p>
@@ -291,7 +291,7 @@ export default function LandingPage() {
                   </div>
 
                   <p className="text-[10.5px] sm:text-[11.5px] text-[var(--dmoop-text-tertiary)] pt-3 mt-3 border-t border-[var(--dmoop-border-soft)] truncate">
-                    Sources [W1] eximius.ai/about · [W2] eximius.ai/product · [W3] eximius.ai/pricing
+                    Sources [W1] acmehire.io/about · [W2] acmehire.io/product · [W3] acmehire.io/pricing
                   </p>
 
                   {/* Download button */}
