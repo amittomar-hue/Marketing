@@ -59,26 +59,54 @@ export default async function ResourcePage({ params }: PageProps) {
     year: "numeric",
   });
 
-  const jsonLd = {
+  const articleJsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: article.title,
     description: article.summary,
     datePublished: article.publishedAt,
-    author: { "@type": "Organization", name: article.author },
+    dateModified: article.publishedAt,
+    wordCount: article.content.split(/\s+/).filter(Boolean).length,
+    timeRequired: `PT${article.readMinutes}M`,
+    inLanguage: "en-US",
+    articleSection: article.category,
+    author: { "@type": "Organization", name: article.author, url: "https://www.dmoop.com" },
     publisher: {
       "@type": "Organization",
       name: "DMOOP",
+      url: "https://www.dmoop.com",
       logo: { "@type": "ImageObject", url: "https://www.dmoop.com/dmoop-logo.png" },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": `https://www.dmoop.com/resources/${article.slug}` },
+  };
+
+  // BreadcrumbList helps AI Overviews / Google understand the site
+  // hierarchy and is one of the highest-rewarded schema patterns for
+  // AEO citation — included for every article reader page.
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.dmoop.com" },
+      { "@type": "ListItem", position: 2, name: "Resources", item: "https://www.dmoop.com/resources" },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: article.title,
+        item: `https://www.dmoop.com/resources/${article.slug}`,
+      },
+    ],
   };
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--dmoop-bg-app)" }}>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
       {/* Navbar */}

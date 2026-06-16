@@ -42,8 +42,54 @@ const TILE_COLOR: Record<ResourceCategory, { bg: string; fg: string }> = {
 export default function ResourcesIndexPage() {
   const items = listResources();
 
+  // CollectionPage tells search engines this page is a curated listing
+  // of related Article items — improves AI Overviews citation for
+  // "best marketing resources" / "B2B marketing blog" queries and
+  // teaches the model the relationship between this index and the
+  // per-article reader pages.
+  const collectionJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": "https://www.dmoop.com/resources#collection",
+    name: "DMOOP Resources — marketing strategy, playbooks, benchmarks",
+    description:
+      "Blogs, case studies, whitepapers, and guides from the DMOOP team. Marketing strategy for B2B SaaS leaders shipping campaigns in 2026.",
+    url: "https://www.dmoop.com/resources",
+    inLanguage: "en-US",
+    isPartOf: { "@type": "WebSite", "@id": "https://www.dmoop.com#website" },
+    publisher: { "@type": "Organization", name: "DMOOP", url: "https://www.dmoop.com" },
+    mainEntity: {
+      "@type": "ItemList",
+      itemListOrder: "https://schema.org/ItemListOrderDescending",
+      numberOfItems: items.length,
+      itemListElement: items.map((r, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: `https://www.dmoop.com/resources/${r.slug}`,
+        name: r.title,
+      })),
+    },
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.dmoop.com" },
+      { "@type": "ListItem", position: 2, name: "Resources", item: "https://www.dmoop.com/resources" },
+    ],
+  };
+
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--dmoop-bg-app)" }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       {/* Navbar */}
       <nav className="sticky top-0 z-30 border-b border-[var(--dmoop-border-soft)] backdrop-blur-xl bg-white/70">
         <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
