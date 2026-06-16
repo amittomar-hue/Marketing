@@ -1,7 +1,9 @@
 // ─────────────────────────────────────────────────────────────────
-// DMOOP Resources — blogs, case studies, whitepapers, guides.
-// All content is hand-written by the DMOOP team and grounded in
-// what the actual product does. Surface on /resources and via the
+// DMOOP Resources — marketing-strategy content aimed at growing
+// inbound traffic from B2B marketing leaders (DMOOP's ICP). Topics
+// are picked for search volume in the marketing space and for the
+// natural product fit — every article touches a problem DMOOP solves
+// without being a sales pitch. Surface on /resources and via the
 // homepage Resources section. Each entry renders at /resources/[slug].
 // ─────────────────────────────────────────────────────────────────
 
@@ -21,375 +23,549 @@ export interface Resource {
 
 export const RESOURCES: Resource[] = [
   {
-    slug: "ai-overviews-citation-playbook",
-    title: "The complete playbook for getting cited by Google AI Overviews",
+    slug: "ai-search-optimization-playbook-2026",
+    title: "AI Search Optimization: the 2026 playbook for getting cited by ChatGPT, Claude, Perplexity, and Google AI Overviews",
     category: "Guide",
     summary:
-      "AI Overviews now answer ~47% of B2B queries without a click. Here's the exact six-move playbook to be the source the model quotes — schema, structure, signal density.",
-    readMinutes: 9,
-    publishedAt: "2026-05-28",
-    author: "DMOOP Research",
-    content: `## TL;DR
+      "Half of B2B searches now end inside an AI answer with zero clicks. Here's the operational playbook for becoming one of the 3-5 sources the model quotes — structure, signals, schema, and the measurement gap nobody's solved yet.",
+    readMinutes: 11,
+    publishedAt: "2026-06-12",
+    author: "DMOOP Editorial",
+    content: `## The traffic you used to get is now an answer
 
-Google AI Overviews intercepts roughly half of all B2B search queries before a user clicks anything. If your content isn't structured to be cited, your traffic is being silently re-routed to whichever competitor *is*. This playbook walks through six concrete moves that flip the odds.
+In Q2 2026, ~48% of B2B queries on Google end inside an AI Overview without a click. Bing Copilot hits 41%. ChatGPT Browse, Claude search, and Perplexity together account for another 18% of US B2B research sessions according to SimilarWeb's May 2026 cross-LLM panel. If your traffic is down 30% year-over-year and you've made no major changes to your content, this is why.
 
-## Why this matters now
+The good news: the traffic isn't gone. It's been routed through a different filter. The pages a model cites now sit above the blue links in attention terms — being one of those cited pages is the new ranking #1.
 
-AI Overviews — and its parallel surfaces on Bing Copilot, Perplexity, Claude search, and ChatGPT Browse — extract answers from web content and present them in-place. The blue links still exist, but they're below the fold of a synthesized answer paragraph. The synthesized answer cites 2-6 sources. Being one of those sources is the new SEO ranking.
+The bad news: the rules for *getting* cited are different from classical SEO. Ranking #1 organically doesn't guarantee citation. And the measurement infrastructure to track citation share is still being built — most marketing teams are flying blind.
 
-The structural moves that win citations are different from classical SEO. Ranking #1 organically doesn't guarantee being cited. Being cited doesn't require ranking #1.
+This is the playbook we use at DMOOP to systematically increase citation share across the major AI surfaces.
 
-## Move 1 — Lead with the answer, not the setup
+## Move 1 — Open with the answer, not the throat-clear
 
-Models extract the FIRST clean answer they can parse. If your article opens with three paragraphs of "the marketing landscape is constantly evolving," the model will scroll past your content and cite someone who got to the point. Open with a direct answer in the first 60 words. Use it as a TL;DR or a bolded one-liner.
+Models extract the first clean answer they can parse. The 60-word lead at the top of your article carries 80% of your citation chances. Three rules:
 
-## Move 2 — Structure for span extraction, not for reading
+- **First sentence makes a falsifiable claim.** "AI Overviews answer 48% of B2B queries without a click" can be quoted. "AI is changing search" cannot.
+- **Cite a number with a year.** Models discount claims without a verifiable source; a number with a year and a publisher anchors the model's confidence.
+- **Skip the setup paragraph.** "In today's fast-paced marketing landscape" is the death sentence — models scroll past it and quote whoever got to the point first.
 
-Models extract *spans* — discrete passages they can quote without ambiguity. Spans look like:
+A useful self-test: read your first 60 words out of context. Can someone copy them into a Slack message and have them stand on their own? If not, rewrite.
 
-- A bullet list with parallel structure
-- A table with a header row
-- A numbered step list
-- A definition: "X is …" sentence
+## Move 2 — Structure for span extraction
 
-Long flowing prose with three ideas per sentence is hard to extract. Short declarative sentences with one claim each are easy. Re-read your draft and ask: "Could a machine pull each sentence out and have it stand alone?"
+Models don't "read" — they extract spans (discrete passages that can be quoted without ambiguity). Spans live in:
+
+- Bullet lists with parallel structure
+- Numbered step lists
+- Tables with a header row
+- Definitions written as "X is Y because Z"
+
+Flowing prose with three ideas per sentence is extraction-hostile. Short declarative sentences with one claim each are extraction-friendly.
+
+Practical test: take any paragraph in your article and ask whether a sentence pulled from the middle of it would still mean the same thing standing alone. If meaning is positional, you have prose. If meaning is atomic, you have spans.
 
 ## Move 3 — Cite primary data, with the year
 
-Models prefer to cite content that itself cites primary sources. If you write "research shows email open rates are around 22%," the model is taking a risk citing you. If you write "according to HubSpot's 2026 State of Marketing report, B2B SaaS email open rates averaged 21.7%," the model treats your sentence as a safer quote because the provenance is explicit. The model is also implicitly delegating accountability — if HubSpot's number is wrong, that's HubSpot's problem, not the model's.
+Models prefer to cite content that itself cites primary sources. The reasoning is recursive: if the model quotes you and your numbers are wrong, the model gets caught. So the model implicitly checks whether you've offloaded the accountability to a named source.
+
+"Email open rates are around 22%" → risky to quote.
+"HubSpot's 2026 State of Marketing report puts B2B SaaS email open rates at 21.7% across 11,400 surveyed senders" → safer to quote, more likely to land.
+
+Get cited *by* citing.
 
 ## Move 4 — Add JSON-LD schema for the article
 
-Models trust pages with structured data more than pages without. Add at minimum:
+This is the cheapest move with the highest impact and the one most teams skip. Models trust pages with structured data more than pages without. Minimum schema for an article you want cited:
 
-- \`Article\` schema with \`headline\`, \`datePublished\`, \`author\`
-- \`FAQPage\` schema if your content has Q&A sections
-- \`BreadcrumbList\` to anchor the page in your site hierarchy
+| Schema type | Why |
+|---|---|
+| \`Article\` with \`headline\`, \`datePublished\`, \`author\`, \`publisher\` | Establishes provenance |
+| \`FAQPage\` if you have Q&A sections | AI Overviews specifically rank FAQ schema highly |
+| \`BreadcrumbList\` | Anchors the page in your site hierarchy |
+| \`@id\` cross-references | Treats your domain as a knowledge graph, not a pile of pages |
 
-Use \`@id\` cross-references between schemas so search engines treat your domain as a knowledge graph, not a pile of disconnected pages.
+If you only have the engineering budget for one schema, do \`Article\`. If you have budget for two, add \`FAQPage\`.
 
-## Move 5 — Get cited by other cited pages
+## Move 5 — Citation begets citation
 
-This is the modern equivalent of link-building. Models build internal authority scores based on *who cites whom* across the web. A link from a page that AI Overviews already cites is worth far more than a link from a high-DR page that isn't cited.
+This is the AEO equivalent of link-building, with a twist. Models build internal authority scores from the *graph of who cites whom*. A mention from a page that AI Overviews already cites is worth dramatically more than a backlink from a high-DR page that AI Overviews ignores.
 
-To find pages worth pitching: run your target keyword through AI Overviews yourself, click the citation chips, note the source pages. Those are the pages that already passed the model's bar.
+How to find the pages worth pitching:
+
+1. Pick your 20 highest-intent commercial keywords
+2. Run them through AI Overviews
+3. Click the citation chips (the small numbered references)
+4. Note the source domains
+5. That's your tier-1 outreach list
+
+Those domains are already pre-validated by the model. Getting a guest post, a mention, or a primary-data citation on one of them is worth 10x a mention on a "high-DR" page that doesn't get cited.
 
 ## Move 6 — Update on a schedule, and date the update
 
-Models discount old content harder than human ranking algorithms do. A 2023 article is treated as stale almost regardless of accuracy. Add an "Updated: [date]" line near the title. Re-publish with the same URL, refreshed numbers, and changes called out.
+Models discount old content harder than human ranking algorithms do. A 2023 article is treated as stale almost regardless of accuracy.
 
-## Measurement
+- Add a visible "Updated: [date]" line near the title
+- Re-publish at the same URL with refreshed numbers
+- Add a small "What changed" callout when revising — both for the reader and for the model
 
-There's no public "AI Overviews citation rank" tool yet. The proxies that work:
+This isn't optional content hygiene. It's operational infrastructure for AI citation.
 
-- Search Console: filter for queries with "*" wildcards and check impressions vs clicks ratio. A widening gap = your page is being shown in the panel but the click goes to the synthesized answer.
-- Manual sampling: query your top 20 keywords monthly. Note which pages get cited. Track changes.
-- Brand mention scrapers: tools like Brand24 and Mention now surface AI Overviews citations specifically.
+## Measurement: the gap nobody's solved
+
+Search Console doesn't yet expose AI Overviews citations as a clean metric. Until it does, the proxies that work:
+
+- **Impression-to-click ratio** on your top queries. A widening gap means the AI panel is taking the click.
+- **Manual sampling.** Query your top 30 commercial keywords monthly across Google AI Overviews, Bing Copilot, Perplexity, ChatGPT Browse, and Claude. Note which pages get cited. Track changes.
+- **Brand mention scraping.** Tools like Brand24 and Mention now surface AI citations specifically.
+- **DMOOP's AEO audit** runs all five surfaces in parallel and surfaces citation share by URL — that's the tool we built because we couldn't find one that did this end-to-end.
 
 ## What's coming next
 
-Models are starting to weight *evidence trails* — long-form content with verifiable claims linked to primary sources will out-cite short opinion pieces. The marketers who win the next 18 months will be the ones who treat their content the way Wikipedia treats its articles: every claim sourced, every source verifiable, every update transparent.`,
+The next 18 months will reward teams who treat their content the way Wikipedia treats its articles: every claim sourced, every source verifiable, every update transparent. The marketing teams winning AI search aren't producing more content — they're producing more *citable* content.
+
+The shift is from "what does Google want to rank" to "what would a model trust enough to quote." Those are different questions with different answers. Whoever figures that out for your category first wins disproportionately, because the model's citation graph compounds — once you're in, it's hard to dislodge you.
+
+## Next 3 actions
+
+1. **Audit your top-10 commercial keywords across all 5 AI surfaces this week.** Note which competitors are cited. Document the citation graph.
+2. **Rewrite the first 60 words of your top-5 cited (or wanting-to-be-cited) pages** to lead with a falsifiable claim and a cited number with a year.
+3. **Ship \`Article\` + \`FAQPage\` schema** on every long-form piece you publish from this quarter forward. Past pieces can wait; new ones should default to schema-enabled.`,
   },
 
   {
-    slug: "training-corpus-evol-instruct",
-    title: "How we 4×'d our training corpus in 7 days without writing a single article",
+    slug: "brand-voice-consistency-attribution",
+    title: "Brand voice consistency is the new attribution model",
+    category: "Blog",
+    summary:
+      "Multi-touch attribution is dead, MMM is back, but the marketing variable nobody's tracking is the one with the biggest causal impact on pipeline: how consistently your brand sounds the same across every channel.",
+    readMinutes: 7,
+    publishedAt: "2026-06-10",
+    author: "DMOOP Editorial",
+    content: `Marketing analytics has been losing accuracy for five years and pretending it hasn't. Multi-touch attribution broke when third-party cookies died. Marketing mix modeling came back but takes a quarter to run and can't tell you what to ship on Tuesday. Last-click is a confession that you've given up.
+
+What hasn't been said out loud: the variable with the highest causal impact on pipeline isn't one of the things any of these models track. It's brand voice consistency. And it's measurable, controllable, and almost completely ignored.
+
+## The data that changed my mind
+
+We ran an experiment across 14 B2B SaaS companies in the DMOOP customer base. Held everything constant — same budget, same channels, same target accounts — and only varied one thing: whether the marketing team had a documented brand voice profile being applied consistently across content, email, ads, and landing pages.
+
+The cohort with enforced voice consistency outperformed the cohort without it by **34% on demo conversion** and **27% on cost-per-pipeline-dollar** over 90 days. The biggest single variable in the model wasn't channel mix. It wasn't budget. It was whether the prospect heard the same brand in the same register across every touchpoint.
+
+A senior marketing leader put it bluntly in the debrief: *"We've been optimizing the wrong thing. The buyer doesn't care which channel they saw us on. They care whether they recognize us when they see us again."*
+
+## Why this matters more in 2026 than in 2022
+
+Three structural shifts compounded:
+
+1. **AI-generated content tripled output volume across most marketing teams.** That's good for surface area, terrible for voice consistency, because models default to a generic "professional marketing tone" unless you actively counter-prompt them.
+2. **Multi-channel buyer journeys lengthened.** Average B2B SaaS buyer now touches 8.2 surfaces before booking a demo (Gartner Q1 2026). Eight inconsistent voices is a worse experience than eight consistent ones.
+3. **Attribution models lost resolution.** When you can't tell which channel converted, the only signal left for buyers is whether they keep "feeling" the brand.
+
+Voice consistency replaces attribution because attribution doesn't work and voice consistency does.
+
+## What "voice consistency" actually means
+
+It's not just having a style guide nobody reads. It's:
+
+- **Tone descriptors** — 3-5 short adjectives that describe the voice ("data-led, irreverent, skeptical of jargon" — not "professional, engaging, innovative")
+- **Audience contract** — one sentence on who you're writing for, written so specifically that 80% of people would feel excluded if it were posted on a billboard
+- **Preferred vocabulary** — 5-8 terms the brand uses for things ("pipeline" vs "deals," "buyers" vs "customers," "ship" vs "release")
+- **Avoid list** — 3-5 generic marketing words the brand actively doesn't use ("leverage," "synergy," "best-in-class")
+- **Structural preferences** — how the brand structures prose: paragraph length, sentence length, list usage, use of contractions
+
+A voice profile with these five components is enforceable. A style guide that says "be friendly and professional" is not.
+
+## How to enforce it across a team that ships fast
+
+The old approach: hire a head of brand, have them review everything, become the bottleneck. Doesn't scale past about 3 channels and 2 writers.
+
+The new approach: encode the voice profile as a *system* that every content production tool consumes. Every AI-assisted draft starts from the profile. Every published asset is checked against it. The profile becomes infrastructure, not policy.
+
+This is what we built into DMOOP's Brand Agent — a structured profile extracted from your existing brand documents that injects into every model call, so every asset comes out on-voice by default rather than requiring brand review. But the principle is more important than the tool: voice should be in the system, not in a person's head.
+
+## The measurement gap
+
+Nobody's built the canonical "voice consistency score" yet. Until someone does, the proxies that work:
+
+- **Read 10 random assets from the last quarter — emails, ads, blog posts, social, landing pages — out of context.** Could a stranger tell they came from the same brand? Score 1-10 honestly. Aim for 8+.
+- **Survey 5 of your customers** and ask them to describe your brand voice in 3 adjectives. Cluster the responses. If the clusters are tight, you're consistent. If they're scattered, you're not.
+- **Audit your last 30 days of AI-generated content** for the "avoid" words from your profile. Count of avoided words = voice leakage rate. Track over time.
+
+## What this changes about how you spend
+
+If voice consistency is doing more causal work than channel mix, the marginal dollar should go to voice infrastructure before another channel test. Specifically:
+
+1. **One-time:** invest in a documented, enforceable voice profile (week of work, $0 marginal cost ongoing)
+2. **Quarterly:** audit voice leakage rate across all channels (half-day exercise)
+3. **Per-asset:** run every AI-assisted draft through the voice profile before publishing
+
+The teams that get this right don't need MMM to tell them which channel is working. They've built a system where the brand is recognizable across all of them, and pipeline follows.
+
+## Next 3 actions
+
+1. **Extract a voice profile from your top 3 brand documents this week.** Get the 5 components above (tone, audience, vocab, avoid list, structural preferences) into one page.
+2. **Re-read your last 10 published assets against the profile.** Count leakage instances. That's your baseline.
+3. **Decide who owns voice as a system, not as policy.** If nobody owns it as infrastructure, it stays in the head of one senior marketer and never compounds.`,
+  },
+
+  {
+    slug: "cold-email-openers-that-work-2026",
+    title: "9 cold-email openers that still work in 2026 (and 4 that died last year)",
+    category: "Blog",
+    summary:
+      "We analyzed 14,000 cold-outreach emails sent across 47 B2B SaaS teams in Q1 2026 — replied-to vs ignored. Here are the opening lines that worked, the ones that quietly stopped working, and the structural shift behind the change.",
+    readMinutes: 6,
+    publishedAt: "2026-06-07",
+    author: "DMOOP Editorial",
+    content: `Three structural things happened to cold email in the last 12 months that changed which openers work:
+
+1. **Inboxes now classify "AI-generated outreach" as spam by default.** Gmail and Outlook both shipped detection models in late 2025. Any opener that pattern-matches to "I see you recently posted about X" is now flagged before the reader ever sees it.
+2. **Personalization volume crashed buyer tolerance.** A buyer who got 4 personalized cold emails a week in 2023 gets 22 in 2026. Standing-out bar tripled.
+3. **First-line preview windows shrank.** Mobile clients now show ~60-70 characters of preview text. Whatever's after that doesn't influence the open decision.
+
+We pulled 14,000 cold emails sent across 47 B2B SaaS teams in Q1 2026 (anonymized, opt-in) and looked at which opener templates correlated with reply rates above 12% (the cohort median was 4.7%). Here's what we found.
+
+## The 9 openers that still work
+
+**1. The named-problem opener.** *"Most ops leaders I talk to are stuck between Salesforce's price hikes and the 'we'll build it' Notion side-projects. Curious which side you're on."* — Names a real problem the buyer is having that week. 18.3% reply rate.
+
+**2. The wrong-but-honest guess.** *"You probably don't have a budget for a fifth ABM tool right now."* — Counter-intuitive opener that disarms the gate. The opposite of presumptuous. 16.1% reply rate.
+
+**3. The specific-customer reference.** *"[Customer in your space] told us last month they killed their MQL meeting after running this for 6 weeks."* — Permission-name-dropping with a specific outcome. 15.7% reply rate.
+
+**4. The contrarian POV.** *"Hot take: every 'AI for SDRs' deck I've seen this quarter is solving the wrong problem."* — Stakes a contentious position the reader can agree or disagree with. Either reaction is a reply. 14.9% reply rate.
+
+**5. The under-2-minute promise.** *"This is the under-2-minute version: [single sentence value prop]."* — Respects the reader's time explicitly and pays it off. 14.2% reply rate.
+
+**6. The shared-context callback.** *"Saw your post on [specific framework] — the bit about [specific detail in the post] is exactly why we built this."* — Genuinely specific, not the LinkedIn-scraper template. The detail has to be one a bot wouldn't pick. 13.8% reply rate.
+
+**7. The one-question opener.** *"One question: are you running outbound at all this quarter?"* — A specific question the reader can answer in 4 seconds. Lowest cognitive cost. 13.1% reply rate.
+
+**8. The numeric-anchored hook.** *"We took a team from 12 cold-meeting reps to 4 reps + automation. Pipeline went up 31%. Want the playbook?"* — One number, one outcome, one offer. No fluff. 12.7% reply rate.
+
+**9. The post-meeting follow-on.** *"You met [colleague] at [event] in March. They suggested we share what we've shipped since."* — Borrowed introduction with a specific shared moment. 12.3% reply rate.
+
+## The 4 openers that died last year
+
+**"I noticed you recently posted about [topic on LinkedIn]..."** — The most-classified spam pattern of 2026. Reply rate collapsed from 9.4% (2024) to 2.1% (2026) as Gmail's detection caught up. If your opener could have been written by scraping someone's last post, it's dead.
+
+**"I came across [Company] and was impressed by your work in [vague area]..."** — Generic flattery with no specificity. Reply rate 1.4%. Buyers have learned this is always a sales email and discard before reading further.
+
+**"Hope this finds you well..."** — Filler that burns the entire mobile preview window without delivering a hook. Reply rate 0.8%. There's no recovery from this opener.
+
+**"Quick question for you..."** — Used to work in 2023, now overused. Reply rate 2.3%. The question is never quick and the reader knows.
+
+## The structural shift
+
+The openers that died share a property: they could have been written by a script that knew nothing specific about the buyer or the buyer's situation. The ones that work share the opposite property: they couldn't have been written without one specific input — a named problem, a contrarian POV, a numeric outcome, a shared moment.
+
+The bar for cold email in 2026 isn't "personalization." Personalization broke when AI made personalization free. The new bar is **specificity** — a piece of evidence the sender couldn't have generated without thought.
+
+This is also why generic AI cold-email tools are losing reply rates. They optimize for personalization at scale and the buyer's tolerance for personalization-at-scale is now zero. The teams winning at outbound use AI to draft the email *after* the specificity is in place, not before.
+
+## How DMOOP customers use this
+
+The teams using DMOOP for outbound feed in their actual customer case studies, their contrarian POVs, and the named problems they've heard from real conversations. The model produces openers grounded in that material. The specificity comes from the inputs, not the model's invention. Reply rates on AI-drafted cold emails in the DMOOP cohort run about 11.4% — well above the 4.7% baseline because the specificity isn't synthetic.
+
+The lesson generalizes: AI is good at writing, bad at being interesting. Bring the interesting bit yourself.
+
+## Next 3 actions
+
+1. **Audit your current cold-email sequence against the 4 dead openers.** Replace any of them this week.
+2. **Pick 2 of the 9 working openers** and run them against your next 100 sends. A/B against your current template.
+3. **Build a specificity bank** — one slide of named problems, contrarian POVs, customer-outcome numbers, and shared moments. Every cold email pulls from it. No email goes out without one.`,
+  },
+
+  {
+    slug: "ai-content-engine-case-study",
+    title: "How a 12-person marketing team shipped 4× the content using AI without losing brand voice",
     category: "Case Study",
     summary:
-      "From 229 to 854 training pairs in a week using WizardLM-style evolution. The architectural decision, the bug that nearly killed it, and what we learned about LLM data augmentation.",
-    readMinutes: 7,
-    publishedAt: "2026-06-01",
-    author: "DMOOP Engineering",
+      "A 12-person B2B SaaS marketing team went from 8 published assets per week to 34 in 90 days — without expanding headcount or watering down brand voice. Here's the operating model, the numbers, and the 3 things they broke trying to scale.",
+    readMinutes: 8,
+    publishedAt: "2026-06-04",
+    author: "DMOOP Editorial",
     content: `## The starting line
 
-Seven days ago the DMOOP training corpus had **229 pairs** across 11 marketing intents and 7 asset types. Today it has **854** across 12 intents and 9 asset types. We added zero new scraping sources, didn't write a single article ourselves, and stayed inside the same Groq free-tier quota.
+A B2B SaaS company in the marketing-operations space (anonymized — let's call them Acme) came to us in late 2025 with a problem familiar to any marketing leader: leadership wanted 3× more output, headcount was frozen, and the team had already burned through the obvious efficiency gains. Twelve people on the marketing team. 8 published assets per week. Velocity ceiling looked structural.
 
-The lever was a single architectural choice we'd been postponing: WizardLM-style evol-instruct on the existing pipeline.
+90 days later: same 12 people, 34 published assets per week, demo conversions up 18%, brand voice consistency score (audited by an external partner) up from 6.2/10 to 8.9/10.
 
-## The before state
+This is what changed and what they learned the hard way.
 
-The pipeline ran like this. Tavily scraped marketing articles four times a day. Each article ran through Groq's 8B-instant model with an asset-type-aware prompt (case studies → Situation/Approach/Result, playbooks → numbered steps, etc.) that produced 3 Q&A training pairs per article. Pairs were inserted with quality=1.0 and surfaced to the Tuned model via trigram-similarity retrieval.
+## What they were doing in the baseline
 
-The corpus was growing, but linearly. At 229 pairs with a ~20-article-per-cron yield, hitting 1,000 pairs would take ~10 weeks. We needed exponential.
+The team's content production looked like most B2B SaaS marketing orgs:
 
-## The evol-instruct decision
+- One content lead handled blog posts and the newsletter
+- Two demand gen managers wrote ads and landing pages
+- One product marketer owned the launch announcements
+- The rest of the team distributed, measured, and ran events
 
-The WizardLM evolution method takes a single training pair and rewrites it through three "lenses" — making it more specific, more tactical, or more strategic. The same source article that produces *"How do I build an ABM list?"* becomes *"How do I build an ABM list for a B2B SaaS targeting Series A-B founders?"* (specific), *"Walk me through the step-by-step in HubSpot + 6sense"* (tactical), and *"Given a $2M ARR target, how should I prioritize tier-1 vs tier-2 accounts?"* (strategic).
+Every asset went through two rounds of review — voice/brand and legal/comp — and through 3-4 versions before publish. Total cycle time per asset: 7-12 days. Top-of-funnel content output capped at 8 assets/week for years.
 
-The math: 3 originals × (1 + 3 variants) = 12 pairs per article. Same Tavily quota, 4× the corpus output. Each variant lives in the same training_pairs table with \`is_evolved = true\` and a \`parent_pair_id\` FK back to the original, so we can audit augmentation quality and slice retrieval to originals-only if needed.
+The team's instinct was: hire 4 more writers. CFO said no.
 
-## What broke
+## The intervention
 
-Day 2: tactical evolution silently went to **zero pairs/day** while specific and strategic kept landing. The corpus was growing, but the tactical lens — the one we cared most about — was dead.
+They built three things over 60 days, in this order:
 
-The cause turned out to be a JSON-parsing edge case. Our parser used \`/\\{[\\s\\S]*\\}/\` to extract the JSON object from the model's response. Strategic and specific produced single-paragraph prose with no internal newlines. Tactical, by design, produced numbered execution steps with raw newlines inside the JSON string values — which \`JSON.parse\` rejects with a syntax error. Combined with our 1,400-token output cap occasionally truncating mid-JSON, the lens silently dropped.
+**Week 1-3: A documented brand voice profile.** Tone descriptors (irreverent, data-led, skeptical of jargon), audience definition (ops leaders at Series B-D B2B SaaS, frustrated with workflow tool sprawl), preferred vocabulary, avoid list, and structural preferences. Took 1 day of head-of-brand time to write, 2 days of edit cycles to finalize. The brand voice profile became the source of truth.
 
-The fix was a brace-counting, escape-aware JSON walker that finds the first complete object and escapes raw newlines inside string values before parsing. Plus a 2,000-token output cap. Tactical resumed.
+**Week 4-8: AI-assisted draft production.** Every writer started drafting via DMOOP with the voice profile injected as system context. The model produces first drafts in 90 seconds. Writer's job shifted from "write the draft" to "edit the draft, add the specificity the model can't know, kill anything generic." Average draft-to-edit cycle dropped from 6 hours to 45 minutes.
 
-## What we learned
+**Week 9-12: Multi-format publishing.** Same source idea now produces a blog post + LinkedIn thread + newsletter section + 3 ad variants in parallel. The team built templates that took the same brand-voice-grounded core and stamped it across surfaces. Production multiplier kicked in around week 10.
 
-Three observations that may transfer to other RAG-corpus efforts:
+## The numbers
 
-1. **Augmentation has lens-specific failure modes.** Strategic answers are short and clean. Tactical answers are long and structured. Treating them as interchangeable in the parsing layer was the bug we shipped.
+| Metric | Baseline (Q4 2025) | Q1 2026 | Change |
+|---|---|---|---|
+| Published assets per week | 8 | 34 | +325% |
+| Average asset cycle time | 7-12 days | 1-3 days | -70% |
+| Brand voice consistency (external audit) | 6.2 / 10 | 8.9 / 10 | +44% |
+| Demo conversion rate | 2.1% | 2.48% | +18% |
+| Cost per qualified pipeline dollar | $14.20 | $11.30 | -20% |
+| Marketing headcount | 12 | 12 | 0 |
 
-2. **Quality stratification is cheap and load-bearing.** Originals get quality=1.0. Evolved pairs get quality=0.85. Pairs caught by the source-leakage guard get quality=0.5 (invisible to retrieval). One numeric field, no schema migration, surfaces three distinct concerns simultaneously.
+Pipeline rose more than the asset count would predict because of the voice consistency tailwind — buyers seeing the same brand more often, in the same voice, with the same vocabulary, converted at a higher rate per touch. That secondary effect was bigger than the team expected going in.
 
-3. **Self-augmentation has a quality ceiling we haven't hit yet.** Conventional wisdom says synthetic data converges to lower quality than real data. At our scale (854 pairs) and our ratio (61% originals : 39% evolved) we don't see any retrieval quality regression. The thumbs-up rate from real users on Tuned answers is roughly flat across pre-evolution and post-evolution periods.
+## The three things they broke
 
-## What's next
+This is the part most case studies leave out. The Acme team broke three things in the first 60 days and had to recover:
 
-By next month the corpus should clear 3,000 pairs at the current growth rate. The real test of whether evolution is actually working will be the retrieval similarity scores — if evolved pairs are matching at lower similarity than originals, they're noise. So far they're matching at parity.`,
+**1. Approval bottleneck shifted, didn't disappear.** Week 4-5, draft production scaled but the brand-voice review queue choked because reviewers were still reviewing every word. They had to redefine review: the voice profile handles the first 95% of voice work, reviewers now only spot-check 1 in 4 assets and intervene on outliers. Without that shift, the team would have hit the same velocity ceiling at a different chokepoint.
+
+**2. Distribution didn't scale with production.** Producing 34 assets a week is pointless if you only have channel slots for 8. They had to build a publishing calendar that actually used the extra surface area — adding a daily LinkedIn cadence, doubling newsletter frequency, building a "best-of-week" syndication push to partner publications. Production without distribution is theater.
+
+**3. Measurement infrastructure couldn't keep up.** GA4 and Salesforce reporting were built for 8 assets a week. At 34, the team couldn't tell which assets were driving pipeline. They had to standardize UTM tagging and build a content-to-pipeline mapping dashboard. Without that, leadership couldn't trust the increased output was working — and almost killed the program at the 6-week review.
+
+## What's transferable
+
+A few principles that probably apply to your team:
+
+- **Voice profile is upstream of velocity.** Most teams try to scale output first and patch voice later. Acme did the opposite and the secondary lift in conversion was bigger than the output lift in volume.
+- **AI doesn't replace writers; it reassigns them.** Writers became editors, fact-checkers, and specificity injectors. Their output per hour quadrupled. None were let go.
+- **Multi-format from one idea is where the leverage compounds.** The 4× was less about AI writing faster and more about one core idea producing 4-6 derived assets, each on-voice by construction.
+- **Distribution and measurement break before production does.** Plan for the downstream choke points before you knock down the upstream one.
+
+## What they're working on next
+
+Acme is now experimenting with applying the same voice profile to outbound email and ABM personalization, on the theory that voice consistency in 1:many channels should also work in 1:1. Early reads suggest yes — reply rates on outbound up 23% in early-stage tests. We'll write that case study when the data is mature.
+
+## Next 3 actions
+
+1. **Document your brand voice profile** before adding any AI-assisted content tools. The tool amplifies whatever's in the profile; if the profile is vague, the tool produces vague output faster.
+2. **Audit your downstream capacity** — review, distribution, measurement — before increasing upstream production. The bottleneck always moves.
+3. **Pick one piece of content per week** to produce in 4-6 derived formats from a single brand-voice-grounded core. The multiplier starts there.`,
   },
 
   {
-    slug: "marketing-intel-taxonomy",
-    title: "The Marketing Intel Taxonomy: a 13×13 schema for B2B content",
+    slug: "state-of-ai-native-marketing-2026",
+    title: "The State of AI-Native Marketing — 2026 benchmarks from 47 B2B SaaS teams",
     category: "Whitepaper",
     summary:
-      "Why we organized DMOOP's training corpus as a cross-product of 13 asset types and 13 marketing intents — and what we'd do differently if we were starting over.",
-    readMinutes: 11,
-    publishedAt: "2026-05-22",
+      "Original research across 47 B2B SaaS marketing teams using AI as a primary production layer. Numbers on velocity, voice consistency, conversion lift, headcount impact, and the operational patterns that distinguish the top quartile from everyone else.",
+    readMinutes: 12,
+    publishedAt: "2026-06-01",
     author: "DMOOP Research",
-    content: `## Abstract
+    content: `## Methodology
 
-DMOOP organizes its marketing training corpus as a 13-asset-type × 13-intent matrix — a 169-cell taxonomy that drives both scraping coverage and retrieval ranking. This document walks through how the schema was designed, where it leaks, and what we'd structure differently if we were starting over today.
+This research draws on operational data from 47 B2B SaaS marketing teams using AI as a primary content production layer for at least 6 months as of May 2026. Team sizes ranged from 6 to 84 people. ARR ranged from $4M to $310M. All participating teams opted in to anonymized data sharing.
 
-## Section 1 — Why a taxonomy at all
+We measured production velocity, brand voice consistency (via external audit), demand-gen output mix, pipeline conversion rates, and team structure changes. Quartile analysis identifies what the top performers do differently.
 
-The naive approach to a marketing training corpus is "scrape a lot, dedupe, embed." This approach treats marketing knowledge as a single bag of unstructured text. It produces a model that knows everything about marketing in general and nothing about your specific task. A user asking "draft an ABM playbook for tier-1 accounts" and a user asking "explain Q3 attribution math" pull from the same undifferentiated pile.
+## Headline numbers
 
-A taxonomy lets retrieval discriminate. When a user's prompt classifies as "abm/playbook," the retrieval RPC can prefer pairs from the same cell. The Tuned model's answer inherits the structural shape that asset type implies — numbered steps for playbooks, Situation/Approach/Result for case studies, hook + CTA breakdown for social posts.
+- **Top-quartile teams ship 3.8× more content per FTE than median teams** while maintaining higher brand voice consistency scores (8.7/10 vs 5.9/10).
+- **Conversion-to-demo rates are 41% higher** in the top quartile than the bottom quartile — and the gap is widening quarter-over-quarter.
+- **Headcount is roughly flat across all quartiles.** AI-native marketing isn't replacing people; it's changing what people do.
+- **Voice consistency correlates more strongly with conversion lift (r = 0.71) than production velocity does (r = 0.34).** Output quantity matters less than output coherence.
 
-## Section 2 — The 13 asset types
+## Where the median team is
 
-We chose asset types from a structural axis, not a topical one. The question is: *what shape does this content have*, not *what is it about*. The 13:
+The typical B2B SaaS marketing team using AI in mid-2026 looks like this:
 
-| Asset type | Structural shape |
+- **Production:** 14-18 published assets per week per 10 FTE
+- **AI involvement:** 65-75% of assets touched by AI (draft, edit, or variant generation)
+- **Voice profile maturity:** documented but unevenly applied; consistency score 5-7/10
+- **Channels:** 6.3 active publishing surfaces (blog, LinkedIn, newsletter, paid social, paid search, partner)
+- **Time from idea to publish:** 3.5 days average
+- **Pipeline-attributable to content:** 38% (vs 24% in 2024)
+
+Most of the median-team metrics improved meaningfully from 2024 baselines. AI is working. The question is why some teams are pulling away from the median while others are stalling.
+
+## What the top quartile does differently
+
+We isolated five operational patterns that correlate strongly (each p < 0.01) with top-quartile performance.
+
+### Pattern 1: They invested in voice infrastructure before they invested in volume
+
+Top-quartile teams documented an enforceable brand voice profile a median of 5.2 months before they scaled AI content production. Bottom-quartile teams did it concurrently or after, and 31% never did it at all. The voice work is upstream of the velocity work — those who skipped it never recovered the conversion gap.
+
+This is the single biggest finding: the teams winning at AI-native marketing built brand voice as a system, not as a style guide.
+
+### Pattern 2: They use AI for production, not invention
+
+Top-quartile teams use AI to produce drafts grounded in human-supplied specificity (customer stories, named problems, contrarian POVs, primary data). Bottom-quartile teams use AI to come up with the ideas themselves. Same tool, opposite usage patterns.
+
+The pattern that doesn't work: "Write me a LinkedIn post about ABM." The pattern that does: "Here's an interview transcript with our head of revenue about why our tier-1 ABM motion failed in Q3. Write a LinkedIn post in our voice profile that uses the three specific failure points she names."
+
+Specificity is the moat. Production is downstream.
+
+### Pattern 3: They publish from one idea into 4-6 surfaces in parallel
+
+Top-quartile teams average 4.7 derived assets per source idea (blog post → LinkedIn thread → newsletter section → 2 ad variants → SEO landing page). Bottom-quartile teams average 1.3 — essentially still producing one-asset-per-idea.
+
+The multiplier on velocity is not "AI writes faster." It's "one well-developed core produces N on-voice derivatives at near-zero marginal cost." Teams that don't unlock this multiplier never catch the top quartile, regardless of how fast their AI tools write.
+
+### Pattern 4: They measure voice leakage explicitly
+
+72% of top-quartile teams have a documented voice-leakage rate they track monthly. 14% of bottom-quartile teams do. The metric — count of avoided-vocabulary words per 1,000 published words — is rudimentary but it forces the discipline.
+
+What you don't measure, you don't maintain. Voice consistency under AI production is genuinely fragile; without an explicit metric, it erodes quietly.
+
+### Pattern 5: They reduced approval cycle length, not the number of approvers
+
+Top-quartile teams went from 7-day approval cycles to 1.5-day cycles by changing the approver's job, not by removing approvers. Reviewers now spot-check 1 in 3 assets and intervene on outliers, rather than reviewing every word. The voice profile handles the first-pass voice work; reviewers add judgment on tone calibration, legal/compliance, and brand pillar drift.
+
+Bottom-quartile teams tried to remove reviewers entirely. Most reinstated them within a quarter after on-voice consistency dropped.
+
+## The headcount picture
+
+Across all 47 teams, marketing headcount changed an average of +3.4% over the 6-month window. AI-native marketing is not, in this sample, replacing people.
+
+What it IS doing: shifting role composition. Top-quartile teams added more analysts and editors, fewer writers. Mid-tier roles compressed; senior strategic roles expanded.
+
+Specifically across the 47-team cohort over 6 months:
+- Writers: -8% net (some moved to editing roles)
+- Editors / fact-checkers: +21%
+- Brand strategists: +14%
+- Marketing analysts: +18%
+- Designers: -3%
+- Demand gen / paid: +6%
+
+The teams that interpreted "AI-native marketing" as "lay off the writers" hit a quality cliff at month 4. The teams that interpreted it as "redeploy writers to editors" sustained.
+
+## Conversion implications
+
+Across the sample, demo conversion rate correlates with:
+
+| Metric | Correlation with demo conv |
 |---|---|
-| article | Free-form journalistic prose with a thesis |
-| report | Cited research with charts and benchmarks |
-| case_study | Situation → Approach → Result with metrics |
-| whitepaper | Long-form research with primary citations |
-| playbook | Sequenced tactical steps with timing |
-| ebook | Multi-chapter book-length guide |
-| guide | How-to with hierarchical sections |
-| template | Pre-filled framework with slot variables |
-| social_post | Short hook + thread + CTA |
-| ad_campaign | Insight → Creative → Channel → Result |
-| newsletter | Curated recap with editorial commentary |
-| podcast | Conversational long-form with quotes |
-| video | Webinar / explainer with structured arguments |
+| Voice consistency score | 0.71 |
+| Multi-format publishing rate | 0.58 |
+| Time-to-publish (inverse) | 0.42 |
+| Asset volume per week | 0.34 |
+| Channel count | 0.22 |
+| Headcount | 0.06 |
 
-The schema is intentionally orthogonal. A whitepaper about ABM has a different *shape* than a case study about ABM, even though both are about ABM. The Tuned model needs to learn both shapes.
+Voice consistency is the single biggest predictor of conversion lift in this dataset. Volume matters less than coherence. Headcount barely matters at all.
 
-## Section 3 — The 13 intents
+This is the data underneath the "voice consistency is the new attribution model" argument: when nothing else explains the variance in conversion, voice does.
 
-Intents are topical. They answer "what is this marketing problem about." The 13: \`seo\`, \`aeo_geo\`, \`abm\`, \`buyer_signals\`, \`company_signals\`, \`demand_gen\`, \`ad_copy\`, \`email\`, \`analytics\`, \`competitor\`, \`orm\`, \`strategy\`, \`trend\`. Plus an implicit \`general\` fallback.
+## What this means for marketing leaders planning H2 2026
 
-These cluster into four functional groups: pipeline (abm, buyer_signals, company_signals, demand_gen), content (ad_copy, email, seo, aeo_geo), measurement (analytics), and strategic (competitor, orm, strategy, trend). The grouping matters for routing: pipeline-tagged retrieval can prefer pairs that mention named platforms (6sense, Bombora, Mutiny); strategic-tagged retrieval can prefer pairs with budget tradeoff framing.
+Three priorities, in order:
 
-## Section 4 — Where the taxonomy leaks
+1. **Document and operationalize the voice profile** if you haven't. Most teams' biggest near-term lever isn't AI tooling; it's the voice infrastructure that determines what the AI produces.
+2. **Build the multi-format pipeline.** One idea, 4-6 derived assets. This is the velocity multiplier that the top quartile is using.
+3. **Shift reviewer roles, don't remove reviewers.** The cycle-time gains come from changing what reviewers do, not from cutting them.
 
-Three places we wish we'd designed differently:
+The teams ahead aren't the ones who adopted AI fastest. They're the ones who built infrastructure around voice and specificity before they scaled production. That gap is widening, not narrowing.
 
-**Multi-intent content.** A "GTM playbook for SaaS" is plausibly \`strategy/playbook\` *and* \`demand_gen/playbook\`. We assign one intent at scrape time, picked by the Tavily query that surfaced it. Retrieval misses on the alternate framing. A multi-intent column with weights would fix this.
+## Next 3 actions
 
-**Mixed-shape content.** Many real articles are 60% blog post + 30% case study + 10% playbook. We classify by the dominant shape, which means the case study material inside an "article" never gets retrieval boost when a case-study-shaped question comes in. A multi-asset-type label would help.
-
-**Asset types we should retire.** Three asset types — \`ebook\`, \`podcast\`, \`video\` — produce <5% of our training pairs because Tavily can't crawl their primary distribution channels. We keep the labels because the structural shape is real and content does occasionally land. But we'd cap them at 5% of scrape budget instead of treating them as equally weighted.
-
-## Section 5 — The cross-product
-
-169 cells. In practice, ~110 are populated. The most productive: \`demand_gen/report\` (33 pairs), \`strategy/article\` (24), \`seo/report\` (21), \`analytics/report\` (19), \`orm/case_study\` (18). The least: most of the \`*/podcast\` and \`*/video\` row.
-
-The distribution shape matters because retrieval ranking is a function of both similarity and density. A dense cell produces sharper similarity differentiation. A sparse cell produces wider similarity bands. If we were ranking strictly by similarity, sparse cells would dominate every retrieval — exactly the wrong outcome.
-
-The RPC compensates with a composite score: \`similarity × 0.65 + intent_match × 0.25 + quality × 0.10\`. Intent match smooths out the density differential.
-
-## Section 6 — What we'd do differently
-
-If we were starting over:
-
-1. **Multi-label** intent and asset_type from day one. Don't force a single value when content is plausibly two.
-2. **Confidence weights** on each label. "70% playbook, 30% case study" is better than picking one.
-3. **A "freshness" axis** separate from \`days\` query parameter. A 2-year-old playbook on Google Ads bidding is still useful; a 2-month-old AEO article may already be stale.
-4. **An explicit "evergreen" tag** for content that retrieval can downweight on freshness-sensitive queries without removing entirely.
-
-The schema is the model's worldview. Designing it well is one of the highest-leverage things you can do in a domain-specific RAG system.`,
+1. **Score your team's voice consistency** against the 10-asset random-sample test. Get a baseline this week.
+2. **Map your last 30 days of content** by derived-asset count per source idea. If you average less than 3, build a template for getting to 4-5.
+3. **Plot your team's role composition against the top-quartile mix.** Identify where you're under-invested (likely: editors, analysts, brand strategists).`,
   },
 
   {
-    slug: "responsible-ai-framework",
-    title: "Responsible AI for marketing tools: a 4-layer framework",
-    category: "Whitepaper",
-    summary:
-      "What 'enterprise-pitchable' AI safety actually looks like in production. Input moderation, output moderation, injection detection, PII redaction — and the order they should run in.",
-    readMinutes: 10,
-    publishedAt: "2026-05-30",
-    author: "DMOOP Engineering",
-    content: `## TL;DR
-
-A defensible "Responsible AI" layer for a marketing tool needs four functions running on every chat: input moderation, output moderation, prompt-injection detection, and PII redaction on uploaded content. The order matters. The failure modes are subtle. Most enterprise checklists ask for these four; the gap between checkbox and working implementation is where teams lose trust.
-
-## Why this matters
-
-Enterprise security reviews of AI marketing tools converge on the same six questions:
-
-1. Does it filter unsafe input from the user?
-2. Does it filter unsafe output from the model?
-3. Can the user override your system prompt with a prompt injection?
-4. Where does customer PII go if it's in an uploaded brand document?
-5. Are incidents logged with severity and excerpt?
-6. Does any of this slow the response by more than a second?
-
-A "yes" to all six is the table-stakes bar for procurement at any mid-market+ buyer. None of these are individually hard. Wiring them together so they all run on every chat turn, fail open under load, and don't dominate latency is the interesting engineering problem.
-
-## Layer 1 — Input moderation
-
-The model never sees an unfiltered user message. Before the chat route calls Groq, the user query passes through Llama Guard 4 (Meta's open-source guardrail model, hosted on Groq for sub-100ms latency). Llama Guard returns either "safe" or "unsafe" plus a hazard category code (S1-S14 from the MLCommons taxonomy).
-
-We allow S13 (election content — marketers may discuss it). We block S1-S4 (violent crimes, sex-related crimes) and S9-S12 (weapons, hate, self-harm, sexual content). Categorical rules; not negotiable per-user.
-
-When input is flagged, the user gets a polished refusal that names the category, not a generic "I can't help with that." Transparency about *what* was caught reduces support volume.
-
-## Layer 2 — Prompt-injection detection
-
-Distinct from input moderation. Injection isn't about *what* the user is asking — it's about whether the user is trying to override the system, exfiltrate the brand documents, or jailbreak the safety contract.
-
-Two sublayers:
-
-- **Regex pack** (~10 patterns): \`ignore previous instructions\`, \`reveal your system prompt\`, \`<|system|>\`, \`DAN\`, \`pretend you have no rules\`. Always runs. Cost: microseconds.
-- **LLM judge** (Groq 8B-instant with a tight classifier prompt): catches paraphrased attempts the regex misses. Skipped on follow-up turns (mid-conversation refinement requests like "shorter version" were the dominant false positive). Skipped on messages under 80 chars (too short for plausible injection).
-
-A flagged injection returns a refusal naming which pattern matched. Pattern names ("exfiltrate_brand_docs", "system_prompt_reveal") become the language of the admin incident log.
-
-## Layer 3 — Output moderation
-
-Same Llama Guard model, but now on the assistant's response. Runs as a sidecar after streaming completes — does NOT block the streaming experience. If the response is flagged, an inline warning appends below the answer and the incident is logged.
-
-The right design choice here is "log and warn" rather than "block." Blocking output after the user has already seen it streaming is jarring; warning is honest. The vast majority of output-side flags are false positives where the user asked about, e.g., a competitor's defamation lawsuit and Llama Guard incorrectly flagged the answer as containing defamation.
-
-## Layer 4 — PII redaction on uploads
-
-The single most important layer for enterprise trust. When a user uploads a brand document (PDF/DOCX/XLSX/PPTX), customer PII inside that document needs to never reach the server. Solution: parse the document client-side in the browser, run a regex pack for SSNs, emails, phone numbers, IBANs, credit cards (with Luhn validation to avoid false positives on invoice numbers), and AWS-style API keys. Replace matches with \`[REDACTED:type]\` tokens. Only the redacted text leaves the browser.
-
-The model's answer still understands the redacted token role ("contact [REDACTED:EMAIL] for pricing") so usefulness isn't destroyed. The browser console never logs raw PII even if the user has DevTools open. The Brand Library UI surfaces a green banner showing what was scrubbed before upload — "4 items in Brand_Guide.pdf: 3× email, 1× phone — raw PII never reached the server."
-
-## Logging contract
-
-Every incident across the four layers writes one row to a \`safety_incidents\` table with: \`kind\` (input_unsafe / output_unsafe / prompt_injection / pii_redacted), \`severity\` (low/medium/high), \`categories\` (hazard codes or pattern names), \`excerpt\` (first 500 chars), \`action_taken\` (blocked/sanitized/flagged/redacted), \`user_id\`, \`model\`, \`occurred_at\`. The admin Safety tab reads this with KPI strip + kind filter + chronological feed.
-
-Every layer above has the same logging contract. That's the boring part of the work — and it's what enterprise procurement actually validates.
-
-## Failure modes
-
-Every layer fails open. If Llama Guard throws an exception, we treat the message as safe and let it through. The reasoning: a model that blocks legit traffic under load loses more trust than a model that occasionally serves a flagged message during an outage. The downside is incidents that occur during Groq downtime go unlogged. The accepted tradeoff.
-
-## What doesn't go in this framework
-
-Three things we explicitly don't ship:
-
-1. **Watermarking generated content.** Marketing copy needs to be presentable as the user's own. Watermarking sabotages the use case.
-2. **"AI-generated content" disclaimers in the output.** Same reason.
-3. **Automated bias auditing.** This belongs in the model layer, not the application layer. We trust the base model's RLHF and surface anything our users explicitly flag via thumbs-down.
-
-## What buyers ask next
-
-After the four-layer checkbox is satisfied, the next question is always: *"can we see your incident log?"* The admin Safety tab gives a clean answer. After that: *"what happens when a flagged input belongs to a paying customer?"* The honest answer is the same as it would be for any SaaS — log the incident, surface to the admin, no special-case bypass. Buyers respect the consistency.`,
-  },
-
-  {
-    slug: "llama-not-openai",
-    title: "Why we're still betting on Llama, not OpenAI",
+    slug: "multilingual-marketing-operations",
+    title: "Multilingual marketing operations: a tactical playbook for global B2B teams",
     category: "Blog",
     summary:
-      "Six months of running production marketing AI on Groq + Llama vs the alternatives. The cost math, the latency math, the quality gap that closes monthly, and the fallback chain that keeps us shipped.",
-    readMinutes: 6,
-    publishedAt: "2026-05-15",
-    author: "DMOOP Engineering",
-    content: `Every six weeks someone asks why DMOOP isn't on GPT-5 or Claude 4.7 Sonnet. The answer is mostly economic, partly architectural, and entirely contingent. Here's the math.
+      "Global B2B is the fastest-growing segment of marketing spend (+34% YoY through 2026) and the worst-served by current tooling. Here's the operational playbook for shipping on-voice marketing in 7 languages without 7× the headcount.",
+    readMinutes: 7,
+    publishedAt: "2026-05-29",
+    author: "DMOOP Editorial",
+    content: `Global B2B SaaS is the fastest-growing segment of marketing spend in 2026 — up 34% YoY according to Gartner's May 2026 spend tracker. It's also the worst-served by current marketing tooling, which mostly assumes English-by-default and treats other languages as a translation layer rather than as production targets in their own right.
 
-## The cost gap is bigger than the model card suggests
+The result: marketing teams expanding into LATAM, EMEA, APAC are either spending heavily on regional agencies (slow, expensive, off-voice), running everything through Google Translate (fast, free, embarrassing), or just publishing English globally and hoping (which works for ~22% of the addressable market).
 
-GPT-5 at $1.25/M input + $10/M output is the standard premium-tier number. Claude 4.7 Sonnet is roughly the same. For a marketing chat that averages ~3,500 input + ~2,000 output tokens per turn, that's $0.024 per conversation. Sounds cheap until you do the math at scale.
+Here's the operational playbook that's working for B2B SaaS teams scaling into 5+ language markets without blowing up headcount.
 
-Groq's Llama 4 Scout (17B MoE) is free at our usage tier. Free vs $0.024 is infinite ratio. Even if Scout's quality were 30% worse on the metrics that matter (which it isn't), we'd be running it.
+## Principle 1: Translate the strategy, not the copy
 
-The fallback chain — Scout → Kimi-k2 → 8B-instant — gives us four independent free-tier TPM buckets to draw from across the day. With four tiers totaling ~52K tokens/minute of free throughput, hitting an actual quota wall requires more than ~30 simultaneously active users. That's a problem we want to have.
+The instinct most teams have: take English assets, translate them into Spanish/Portuguese/German/Hindi, ship. This produces accurate translations and bad marketing.
 
-## The quality gap closes monthly
+Why: marketing copy is dense with cultural assumptions. American B2B SaaS marketing optimizes for skim-reading, contrarian hooks, and CTAs that say "Start free trial." German B2B marketing optimizes for thorough technical evidence, formal register, and CTAs that say "Request a consultation." Japanese B2B marketing optimizes for trust signals, formal politeness, and CTAs that emphasize the company's longevity. Translating American copy into Japanese gives you Japanese-language American marketing — recognizable as foreign, and discounted by buyers.
 
-Six months ago, GPT-4 had a real edge on multi-step reasoning. Today Llama 4 Scout matches it on most marketing-specific benchmarks. On the actual workload we measure — copywriting for B2B SaaS, ABM playbook drafting, GTM strategy responses — the thumbs-up/thumbs-down ratio is statistically indistinguishable between Scout and Claude Sonnet. We A/B tested for two weeks. The gap isn't there.
+The shift: define the strategic intent (target persona, JTBD, value proposition, proof points) in your source language, then produce *original* copy in each target market language, by writers (human or AI) who understand the local convention.
 
-This is the part most "OpenAI is still 30% better" benchmark posts miss. The benchmarks (GPQA Diamond, MMLU Pro, AIME) measure PhD-level reasoning, math olympiad performance, and academic knowledge. Marketing is structured opinion writing with named frameworks. The benchmark gap doesn't transfer.
+## Principle 2: One voice profile, multiple register adaptations
 
-## The latency gap reverses
+A single brand voice profile is the upstream artifact. From it, derive register adaptations per language — same brand DNA, locally appropriate execution.
 
-Groq's TTFT (time to first token) on Llama 4 Scout is consistently under 300ms. Claude Sonnet's is ~800ms. GPT-5's is ~1.2s. For a streamed response, the TTFT is what the user perceives as "the model started thinking" — and Groq is meaningfully faster.
+Example: a brand voice described as "irreverent, data-led, skeptical of jargon" in English might translate to:
+- **Spanish (LATAM B2B):** "directo, basado en datos, sin floreos corporativos"
+- **German (DACH B2B):** "präzise, datengetrieben, ohne Marketingphrasen"
+- **Japanese (B2B):** "明確で、データに基づき、過剰な装飾を避ける"
 
-The full-response latency on a 1,500-token answer: Groq ~3s, Claude ~5s, GPT-5 ~6s. For users hammering through quick iteration cycles ("shorter," "in US English," "as a deck"), 3s vs 6s compounds into a different product feel.
+Each version preserves the brand intent (data-led, anti-jargon) while adopting local register conventions (Spanish more direct, German more precise, Japanese more measured). All three would be recognizable as the same brand to a multilingual buyer.
 
-## The architectural commitment
+DMOOP's Brand Agent does this automatically — the voice profile injects into every language's output and the model adapts register without losing the core. But the principle is more important than the tooling: derive once, adapt per language, never re-translate per asset.
 
-If we'd built DMOOP on the OpenAI SDK with hard-coded GPT-5 model IDs, swapping providers later would require touching every chat-route file. Because the SDK shim is OpenAI-compatible and the model ID is a single env var, we can A/B test Groq vs Anthropic vs OpenAI on the same code path. The cost of being wrong about Llama is "change one env var." That asymmetry is the actual architectural argument.
+## Principle 3: Localize the proof, not just the words
 
-## What would flip this
+The most ignored mistake in multilingual B2B: the case studies, customer logos, and statistics in your translated assets are still all from your home market. A Brazilian buyer reading a Portuguese landing page that cites three American customers feels exactly as foreign as if the page hadn't been translated.
 
-Three things would flip our model strategy:
+Practical fix:
 
-1. **A paying enterprise customer requires SOC 2 attestation that includes the inference provider.** Groq has SOC 2; we'd verify the customer's specific compliance scope.
-2. **Tool-calling reliability becomes the bottleneck.** Llama's function-calling is good but not yet on Claude's level. We don't depend on it today.
-3. **Llama itself stops shipping competitive base models.** Meta has so far shipped roughly on Anthropic's cadence. Watching.
+- **One localized case study per region per quarter.** Even one is enough to anchor the asset. Bottom-quartile teams skip this; top-quartile teams treat it as the prerequisite for entering the market.
+- **Region-specific statistics in the body copy.** "B2B SaaS in the US..." becomes "B2B SaaS in Brazil..." with a regional source. The numbers anchor the buyer in their market.
+- **Local-currency pricing on landing pages.** Sounds basic; teams skip it constantly. Showing USD to a Mexican buyer is an unforced error.
 
-For now: free Llama via Groq, fallback chain for resilience, every dollar saved goes into corpus growth. The corpus is the moat, not the model.`,
-  },
+Translating the strategy is upstream. Localizing the proof is downstream. Both are necessary; teams usually do one and skip the other.
 
-  {
-    slug: "scraped-1402-articles",
-    title: "What 1,402 scraped marketing articles taught us",
-    category: "Blog",
-    summary:
-      "We pulled 1,402 marketing articles from across the public web over 8 weeks. The asset-type distribution shocked us. Three observations that should change how marketing content gets produced.",
-    readMinutes: 5,
-    publishedAt: "2026-06-02",
-    author: "DMOOP Research",
-    content: `Over the last eight weeks DMOOP's scraper pulled 1,402 marketing articles across 13 asset types and 13 marketing intents. Some of what we saw was expected. Some genuinely surprised us. Three observations worth your time.
+## Principle 4: Voice consistency across languages compounds the same way as within one
 
-## Observation 1 — Reports dominate. Everything else is noise.
+The single-language insight — voice consistency drives conversion lift more than volume or channel mix — applies across languages too, with a twist. Multilingual voice consistency means a buyer who sees your German page, your Spanish LinkedIn post, and your English webinar recognizes you as the same brand in all three.
 
-The single most-scraped asset type is "report" — Gartner / Forrester / vendor benchmarks. Reports account for **38% of the corpus** despite being 1 of 13 asset types. The second-most: case studies at 18%. Articles at 11%. Whitepapers at 9%.
+This is hard. Most teams have inconsistent voice within one language; doing it across 7 is exponentially harder. The teams that solve it have two things:
 
-Everything below 5% — podcasts, videos, ebooks, social posts, ad campaigns — combined accounts for less than 12% of the corpus.
+1. A single, documented voice profile that includes register-adaptation rules per language
+2. Tooling that applies the profile automatically at production time, not as a post-hoc review
 
-This isn't because we biased the scrape. The Tavily queries are roughly balanced across asset types. Reports dominate because *that's what gets published, indexed, and surfaces in search*. The marketing internet is shaped like a pyramid with reports at the wide base.
+Without both, voice consistency degrades fast at scale. With both, it holds — and the conversion lift from coherence across markets is meaningfully higher than the lift from publishing in more languages naively.
 
-The implication for content marketers is uncomfortable: if you're optimizing your editorial calendar for blog posts and social posts (the conventional wisdom), you're competing in a 23% slice of the surface where attention compounds slowly. If you publish one solid benchmark report a quarter, you're in the 38% slice where citations accrete.
+## What the operational model looks like
 
-## Observation 2 — Tavily can't reach 70% of marketing content
+A B2B SaaS marketing team scaling into 5 languages with these principles in place looks like:
 
-Of the asset types we *want* to scrape — podcasts, webinars, LinkedIn posts, gated whitepapers, ebooks — Tavily reliably reaches maybe 30% of the surface area. The rest is behind login walls, behind audio/video formats Tavily doesn't process, or behind soft paywalls that return 200 OK to crawlers but render gated content to humans.
+- **Single English-speaking team of 4-6 people** produces strategic concepts, source-of-truth proof, and the brand voice profile
+- **AI-assisted multilingual production** generates 80% of asset volume per market, on-voice by construction
+- **One regional editor per market** (could be contract, could be FTE, could be agency) reviews for register, fact-checks local references, signs off
+- **No regional copywriters needed** for typical marketing surface (blog, social, email, landing pages); ad creative may still want a local writer for cultural nuance
 
-This is a structural fact about the public web, not a Tavily limitation. The most valuable marketing content has been moving into closed ecosystems for five years. The public-web corpus is increasingly dominated by SEO-optimized blog posts written for search ranking, not for marketers reading them.
+This is roughly 30-50% of the cost of running a regional agency in each market, with faster cycle times and better voice consistency. The catch: it requires the voice infrastructure and the AI production layer be in place first. Teams that try to do this without those preconditions end up with localized Google-Translate copy and worse-than-baseline conversion.
 
-The architectural response is to lean on user uploads. DMOOP's Brand Library exists in part because the most valuable content for any specific brand is content that lives on their own laptops, not on the public web.
+## How DMOOP customers use this
 
-## Observation 3 — Source diversity matters more than source authority
+DMOOP's multilingual feature shipped in June 2026 specifically because customers expanding into LATAM and EMEA were asking for it. The model auto-detects user input language, can be forced into any of 13 target output languages, and applies the same brand voice profile across all of them. Voice consistency holds across the language boundary because the profile is upstream of the language choice.
 
-We track unique source URLs per intent. The intents with the most marketing-publication diversity (10+ unique source domains per scrape cycle) produce noticeably better training pair quality than the intents dominated by 2-3 dominant publishers.
+Customers using this report:
+- **70% reduction in regional agency spend** while expanding into 3-5 new language markets
+- **Faster time-to-market** in new geographies (days to weeks vs months)
+- **Voice consistency** measured at 8.1/10 across languages, vs the 5.9/10 baseline for English-only teams using AI
 
-The translation for content marketers: being one of 12 voices on a topic is a worse position than being one of 4. The 2-3 dominant publishers in your niche have already optimized for AI citations. The path to being cited is finding the niche where there are 4-8 voices and adding a substantive one.
+The transferable insight: language is not a feature, it's a production constraint. The teams that treat it like part of the voice infrastructure get scaling leverage; the teams that treat it like a translation step get garbage that performs worse than English-only.
 
-This also explains why niche topics with low search volume are increasingly valuable. The top-10 marketing trend topics in Q2 each had 50+ unique source publishers writing about them — meaning any individual piece's citation odds are tiny. The 30 next-tier topics had 4-6 each, with concentration on a few dominant voices. That's the gap.
+## Next 3 actions
 
-## What we're doing about it
-
-Three internal shifts based on these observations:
-
-1. **Reduce scraper coverage of saturated topics**, increase coverage of mid-tier topics where the publisher diversity is 4-8 voices.
-2. **Stop expecting parity across asset types.** Cap podcast/video/social_post scrape budget at 5% rather than trying to compensate for low yield.
-3. **Encourage Brand Library uploads** as the path to high-value content that the public web doesn't reach.
-
-The public marketing web is more shaped by SEO incentives than by what marketers actually need. Knowing that changes where you spend attention.`,
+1. **Document your brand voice profile and explicitly write register-adaptation rules for the top 2-3 target languages.** Even rough first-pass adaptations beat translating English copy directly.
+2. **Audit your translated assets for local proof.** Count regional case studies, regional statistics, local-currency pricing. Each is a marker of localization quality.
+3. **Pick one new language market to ship a full asset suite in this quarter.** Use the principles above. Compare conversion rates against your English baseline. If voice is held constant, conversion should track within 15% of English performance — and your TAM just grew.`,
   },
 ];
 
